@@ -3,13 +3,12 @@ Copyright (c) 2023 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import Graph.Lean.Util.Imports
--- import Graph.Lean.CoreM
-import Graph.Lean.Data.NameMap
-import Graph.Lean.IO.Process
-import Graph.Lean.Name
-import Std.Lean.Util.Path
-import Cli
+import Lean
+import Cli.Basic
+import ImportGraph.Lean.Path
+import ImportGraph.Imports
+import ImportGraph.Name
+import ImportGraph.Process
 
 /-!
 # `lake exe graph`
@@ -20,6 +19,7 @@ This is a replacement for Lean 3's `leanproject import-graph` tool.
 open Cli
 
 open Lean Meta
+open Graph
 
 /-- Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format. -/
 def asDotGraph (graph : NameMap (Array Name)) (header := "import_graph") : String := Id.run do
@@ -34,7 +34,7 @@ open Lean Core System
 
 open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
-def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
+unsafe def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   let to := match args.flag? "to" with
   | some to => to.as! ModuleName
   | none => `Graph.Lean -- autodetect the main module from the `lakefile.lean`?
@@ -42,7 +42,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | some fr => some <| fr.as! ModuleName
   | none => none
   searchPathRef.set compile_time_search_path%
-  let dotFile ← unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
+  let dotFile ← withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let mut graph := env.importGraph
     if let .some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
@@ -76,7 +76,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   return 0
 
 /-- Setting up command line options and help text for `lake exe graph`. -/
-def graph : Cmd := `[Cli|
+unsafe def graph : Cmd := `[Cli|
   graph VIA importGraphCLI; ["0.0.1"]
   "Generate representations of a Lean import graph." ++
   "By default generates the import graph up to `Graph.Lean`." ++
@@ -98,5 +98,5 @@ def graph : Cmd := `[Cli|
 ]
 
 /-- `lake exe graph` -/
-def main (args : List String) : IO UInt32 :=
+unsafe def main (args : List String) : IO UInt32 :=
   graph.validate args
