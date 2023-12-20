@@ -6,6 +6,7 @@ Authors: Scott Morrison
 import Lean
 import Cli.Basic
 import ImportGraph.Lean.Path
+import ImportGraph.Lean.TermUnsafe
 import ImportGraph.Imports
 import ImportGraph.Name
 import ImportGraph.Process
@@ -34,7 +35,7 @@ open Lean Core System
 
 open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
-unsafe def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
+def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   let to := match args.flag? "to" with
   | some to => to.as! ModuleName
   | none => `Graph.Lean -- autodetect the main module from the `lakefile.lean`?
@@ -42,7 +43,7 @@ unsafe def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | some fr => some <| fr.as! ModuleName
   | none => none
   searchPathRef.set compile_time_search_path%
-  let dotFile ← withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
+  let dotFile ← unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let mut graph := env.importGraph
     if let .some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
@@ -74,29 +75,3 @@ unsafe def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
         throw ex
   return 0
-
-/-- Setting up command line options and help text for `lake exe graph`. -/
-unsafe def graph : Cmd := `[Cli|
-  graph VIA importGraphCLI; ["0.0.1"]
-  "Generate representations of a Lean import graph." ++
-  "By default generates the import graph up to `Graph.Lean`." ++
-  "If you are working in a downstream project, use `lake exe graph --to MyProject`."
-
-  FLAGS:
-    reduce;               "Remove transitively redundant edges."
-    to : ModuleName;      "Only show the upstream imports of the specified module."
-    "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
-    "exclude-meta";       "Exclude any files starting with `Graph.Lean.[Tactic|Lean|Util|Mathport]`."
-    "include-deps";       "Include used files from other projects (e.g. lake packages)"
-
-  ARGS:
-    ...outputs : String;  "Filename(s) for the output. " ++
-      "If none are specified, generates `import_graph.dot`. " ++
-      "Automatically chooses the format based on the file extension. " ++
-      "Currently `.dot` is supported, " ++
-      "and if you have `graphviz` installed then any supported output format is allowed."
-]
-
-/-- `lake exe graph` -/
-unsafe def main (args : List String) : IO UInt32 :=
-  graph.validate args
