@@ -14,7 +14,7 @@ def graph : Cmd := `[Cli|
     to : ModuleName;      "Only show the upstream imports of the specified module."
     "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
     "exclude-meta";       "Exclude any files starting with `Graph.Lean.[Tactic|Lean|Util|Mathport]`."
-    "include-deps": Nat;       "Include used files from other projects (e.g. lake packages)"
+    "include-deps";       "Include used files from other projects (e.g. lake packages)"
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. " ++

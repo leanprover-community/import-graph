@@ -5,6 +5,7 @@ Authors: Scott Morrison
 -/
 import Lean
 import Cli.Basic
+import ImportGraph.CurrentModule
 import ImportGraph.Lean.Path
 import ImportGraph.Lean.TermUnsafe
 import ImportGraph.Imports
@@ -20,6 +21,7 @@ This is a replacement for Lean 3's `leanproject import-graph` tool.
 open Cli
 
 open Lean Meta
+open ImportGraph
 open Graph
 
 /-- Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format. -/
@@ -36,9 +38,9 @@ open Lean Core System
 open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
-  let to := match args.flag? "to" with
-  | some to => to.as! ModuleName
-  | none => `Graph.Lean -- autodetect the main module from the `lakefile.lean`?
+  let to ← match args.flag? "to" with
+  | some to => pure <| to.as! ModuleName
+  | none => getCurrentModule
   let from? := match args.flag? "from" with
   | some fr => some <| fr.as! ModuleName
   | none => none
