@@ -16,6 +16,8 @@ Use this as `searchPathRef.set compile_time_search_path%`.
 
 open Lean System
 
+namespace ImportGraph
+
 -- Ideally this instance would be constructed simply by `deriving instance ToExpr for FilePath`
 -- but for now we have decided not to upstream the `ToExpr` derive handler from `Mathlib`.
 -- https://leanprover.zulipchat.com/#narrow/stream/348111-std4/topic/ToExpr.20derive.20handler/near/386476438

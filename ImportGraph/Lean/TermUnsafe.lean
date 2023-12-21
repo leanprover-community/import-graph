@@ -20,7 +20,7 @@ def cool :=
 ```
 -/
 
-namespace Std.TermUnsafe
+namespace ImportGraph.TermUnsafe
 open Lean Meta Elab Term
 
 /-- Construct an auxiliary name based on the current declaration name and the given `hint` base. -/
