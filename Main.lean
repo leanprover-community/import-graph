@@ -1,5 +1,11 @@
 import ImportGraph.Cli
 
+/-!
+# `lake exe graph`
+
+This is a replacement for Lean 3's `leanproject import-graph` tool.
+-/
+
 open Cli
 
 /-- Setting up command line options and help text for `lake exe graph`. -/

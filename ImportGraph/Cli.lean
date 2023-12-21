@@ -7,22 +7,15 @@ import Lean
 import Cli.Basic
 import ImportGraph.CurrentModule
 import ImportGraph.Lean.Path
+import ImportGraph.Lean.Process
 import ImportGraph.Lean.TermUnsafe
 import ImportGraph.Imports
 import ImportGraph.Name
-import ImportGraph.Process
-
-/-!
-# `lake exe graph`
-
-This is a replacement for Lean 3's `leanproject import-graph` tool.
--/
 
 open Cli
 
-open Lean Meta
+open Lean
 open ImportGraph
-open Graph
 
 /-- Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format. -/
 def asDotGraph (graph : NameMap (Array Name)) (header := "import_graph") : String := Id.run do
@@ -45,7 +38,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | some fr => some <| fr.as! ModuleName
   | none => none
   searchPathRef.set compile_time_search_path%
-  let dotFile ← unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
+  let dotFile ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let mut graph := env.importGraph
     if let .some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
@@ -63,6 +56,11 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if args.hasFlag "reduce" then
       graph := graph.transitiveReduction
     return asDotGraph graph
+  catch err =>
+    -- TODO: try to build `to` first, so this doesn't happen
+    throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
+      s!"try if `lake build {to}` fixes the issue"
+    throw err
   match args.variableArgsAs! String with
   | #[] => writeFile "import_graph.dot" dotFile
   | outputs => for o in outputs do

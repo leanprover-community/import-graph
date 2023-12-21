@@ -6,9 +6,13 @@ Authors: Scott Morrison
 
 /-!
 # Running external commands.
+
+This is copied from `Mathlib.Lean.IO.Process`.
 -/
 
-namespace Graph
+namespace ImportGraph
+
+open ImportGraph
 
 /--
 Pipe `input` into stdin of the spawned process,
@@ -18,7 +22,7 @@ Note: duplicated from `Mathlib.Lean.IO.Process`.
 -/
 -- TODO We could reduce some code duplication by centralising some functions like this,
 -- which are used here, in `cache`, and in https://github.com/leanprover-community/llm.
-def Graph.runCmdWithInput' (cmd : String) (args : Array String)
+def runCmdWithInput' (cmd : String) (args : Array String)
     (input : String := "") (throwFailure := true) : IO (UInt32 × String × String) := do
   let child ← IO.Process.spawn
     { cmd := cmd, args := args, stdin := .piped, stdout := .piped, stderr := .piped }
@@ -42,4 +46,4 @@ Note: duplicated from `Mathlib.Lean.IO.Process`.
 -/
 def runCmdWithInput (cmd : String) (args : Array String)
     (input : String := "") (throwFailure := true) : IO String := do
-  return (← Graph.runCmdWithInput' cmd args input throwFailure).2.1
+  return (← runCmdWithInput' cmd args input throwFailure).2.1
