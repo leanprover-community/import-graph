@@ -4,9 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import Lean
+import Std.Lean.NameMap
 import ImportGraph.RequiredModules
-import ImportGraph.Lean.List
-import ImportGraph.Lean.NameMap
 
 /-!
 # Tools for analyzing imports.
@@ -140,7 +139,7 @@ def transitiveFilteredUpstream (node : Name) (graph : NameMap (Array Name))
         | none => transitiveFilteredUpstream source graph filter
         | some repl => .cons repl <| transitiveFilteredUpstream source graph filter
       -- If the node is not filtered, we leave the edge `source → node` intact.
-      else [source]).eraseDup'
+      else [source]).eraseDups
 
 /--
 Filters the `graph` removing all nodes where `filter n` returns false. Additionally,
@@ -159,13 +158,13 @@ def filterGraph (graph : NameMap (Array Name)) (filter : Name → Bool)
   -- and remove all imports starting with `Mathlib` to avoid loops.
   let replImports := graph.toList.bind
     (fun ⟨n, i⟩ => if filter n then i.toList else [])
-    |>.eraseDup' |>.filter (¬ Name.isPrefixOf `Mathlib ·) |>.toArray
+    |>.eraseDups |>.filter (¬ Name.isPrefixOf `Mathlib ·) |>.toArray
   let graph := graph.filterMap (fun node edges => if filter node then none else some <|
     -- If the node `node` is not filtered, modify the `edges` going into `node`.
     edges.toList.bind (fun source =>
       if filter source then
         transitiveFilteredUpstream source graph filter (replacement := replacement)
-      else [source]) |>.eraseDup'.toArray)
+      else [source]) |>.eraseDups.toArray)
   -- Add a replacement node if provided.
   match replacement with
   | none => graph

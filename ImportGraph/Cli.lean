@@ -5,12 +5,12 @@ Authors: Scott Morrison
 -/
 import Lean
 import Cli.Basic
+import Std.Lean.IO.Process
+import Std.Lean.Util.Path
+import Std.Util.TermUnsafe
 import ImportGraph.CurrentModule
-import ImportGraph.Lean.Path
-import ImportGraph.Lean.Process
-import ImportGraph.Lean.TermUnsafe
 import ImportGraph.Imports
-import ImportGraph.Name
+import ImportGraph.Lean.Name
 
 open Cli
 
@@ -75,3 +75,5 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
         throw ex
   return 0
+
+#minimize_imports
