@@ -9,10 +9,16 @@ import Std.Data.HashMap.Basic
 import Std.Lean.Name
 import Std.Lean.SMap
 
+/-!
+TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
+is deemed to specific for upstreaming to Std.
+-/
 namespace Lean.Name
 
 open Lean Meta Elab
 open Std
+
+namespace ImportGraph
 
 /-- Note: copied from `Mathlib.Lean.Name` -/
 private def isBlackListed (declName : Name) : CoreM Bool := do

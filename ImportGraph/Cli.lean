@@ -3,11 +3,9 @@ Copyright (c) 2023 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import Lean
 import Cli.Basic
 import Std.Lean.IO.Process
 import Std.Lean.Util.Path
-import Std.Util.TermUnsafe
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
@@ -43,7 +41,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if let .some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
     if ¬(args.hasFlag "include-deps") then
-      let p := getModule to
+      let p := ImportGraph.getModule to
       graph := graph.filterMap (fun n i =>
         if p.isPrefixOf n then (i.filter (isPrefixOf p)) else none)
     if args.hasFlag "exclude-meta" then
@@ -75,5 +73,3 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
         throw ex
   return 0
-
-#minimize_imports
