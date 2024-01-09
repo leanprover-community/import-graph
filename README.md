@@ -1,4 +1,4 @@
-# lean-graph
+# import-graph
 
 A simple tool to create import graphs of lake packages.
 
