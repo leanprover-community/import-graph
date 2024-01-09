@@ -33,3 +33,7 @@ There are a few commands implemented, which help you analysing the imports of a 
   in the current file.
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
+
+## Credits
+
+This code has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4) and has mainly been written by Scott Morrison and a few other mathlib contributors.
