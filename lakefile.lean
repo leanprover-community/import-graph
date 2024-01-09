@@ -5,7 +5,7 @@ package «importGraph» where
   -- add package configuration options here
 
 require Cli from git "https://github.com/leanprover/lean4-cli" @ "main"
-require std from git "https://github.com/joneugster/std4" @ "upstream_from_mathlib_for_graph"
+require std from git "https://github.com/leanprover/std4" @ "main"
 
 @[default_target]
 lean_lib «ImportGraph» where
