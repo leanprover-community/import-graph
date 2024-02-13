@@ -45,12 +45,13 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       graph := graph.filterMap (fun n i =>
         if p.isPrefixOf n then (i.filter (isPrefixOf p)) else none)
     if args.hasFlag "exclude-meta" then
-      let filterMeta : Name → Bool := fun n => (
-        isPrefixOf `Graph.Lean.Tactic n ∨
-        isPrefixOf `Graph.Lean n ∨
-        isPrefixOf `Graph.Lean.Mathport n ∨
-        isPrefixOf `Graph.Lean.Util n)
-      graph := graph.filterGraph filterMeta (replacement := `«Graph.Lean.Tactics»)
+      -- Mathlib-specific exclusion of tactics
+      let filterMathlibMeta : Name → Bool := fun n => (
+        isPrefixOf `Mathlib.Tactic n ∨
+        isPrefixOf `Mathlib.Lean n ∨
+        isPrefixOf `Mathlib.Mathport n ∨
+        isPrefixOf `Mathlib.Util n)
+      graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
     if args.hasFlag "reduce" then
       graph := graph.transitiveReduction
     return asDotGraph graph
