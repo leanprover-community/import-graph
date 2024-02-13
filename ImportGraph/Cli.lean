@@ -47,11 +47,11 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if args.hasFlag "exclude-meta" then
       -- Mathlib-specific exclusion of tactics
       let filterMathlibMeta : Name → Bool := fun n => (
-        isPrefixOf `Mathlib.Lean.Tactic n ∨
+        isPrefixOf `Mathlib.Tactic n ∨
         isPrefixOf `Mathlib.Lean n ∨
-        isPrefixOf `Mathlib.Lean.Mathport n ∨
-        isPrefixOf `Mathlib.Lean.Util n)
-      graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Lean.Tactics»)
+        isPrefixOf `Mathlib.Mathport n ∨
+        isPrefixOf `Mathlib.Util n)
+      graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
     if args.hasFlag "reduce" then
       graph := graph.transitiveReduction
     return asDotGraph graph
