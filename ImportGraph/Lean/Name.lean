@@ -8,6 +8,7 @@ import Lean.CoreM
 import Std.Data.HashMap.Basic
 import Std.Lean.Name
 import Std.Lean.SMap
+import Lean.Meta.Match.MatcherInfo
 
 /-!
 TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
