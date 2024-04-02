@@ -255,7 +255,7 @@ elab "#find_home" bang:"!"? n:ident : command => do
   let stx ← getRef
   let mut homes := #[]
   let n ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
-  let env := if bang.isSome then some (← getEnv) else none
+  let env ← if bang.isSome then some <$> getEnv else pure none
   for i in (← Elab.Command.liftCoreM do n.findHome env) do
     homes := homes.push i
   logInfoAt stx[0] m!"{homes}"
