@@ -236,7 +236,7 @@ def Lean.Name.findHome (n : Name) (env : Option Environment) : CoreM NameSet := 
         candidates := candidates.erase i
   return candidates
 
-open Elab in
+open Elab Command in
 /--
 Find locations as high as possible in the import hierarchy
 where the named declaration could live.
@@ -254,8 +254,8 @@ uses one lemma from each, then `#find_home! lemma` returns the current file.
 elab "#find_home" bang:"!"? n:ident : command => do
   let stx ← getRef
   let mut homes := #[]
-  let n ← resolveGlobalConstNoOverloadWithInfo n
-  let env := if bang.isSome then some (← getEnv) else none
+  let n ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
+  let env ← if bang.isSome then some <$> getEnv else pure none
   for i in (← Elab.Command.liftCoreM do n.findHome env) do
     homes := homes.push i
   logInfoAt stx[0] m!"{homes}"
