@@ -64,6 +64,6 @@ returns `ImportGraph`.
 -/
 def getModule (name : Name) (s := "") : Name :=
   match name with
-    | .anonymous => s
+    | .anonymous => .mkSimple s
     | .num _ _ => panic s!"panic in `getModule`: did not expect numerical name: {name}."
     | .str pre s => getModule pre s
