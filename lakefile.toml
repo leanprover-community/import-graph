@@ -7,8 +7,8 @@ git = "https://github.com/leanprover/lean4-cli"
 rev = "main"
 
 [[require]]
-name = "std"
-git = "https://github.com/leanprover/std4"
+name = "batteries"
+git = "https://github.com/leanprover-community/batteries"
 rev = "main"
 
 [[lean_lib]]
