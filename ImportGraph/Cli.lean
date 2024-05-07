@@ -4,8 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import Cli.Basic
-import Std.Lean.IO.Process
-import Std.Lean.Util.Path
+import Batteries.Lean.IO.Process
+import Batteries.Lean.Util.Path
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
