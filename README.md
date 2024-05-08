@@ -36,4 +36,4 @@ There are a few commands implemented, which help you analysing the imports of a 
 
 ## Credits
 
-This code has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4) and has mainly been written by Scott Morrison and a few other mathlib contributors.
+This code has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4) and has mainly been written by Kim Morrison and a few other mathlib contributors.
