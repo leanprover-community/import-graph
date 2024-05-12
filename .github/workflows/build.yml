@@ -24,4 +24,4 @@ jobs:
       - name: run tests
         id: test
         run: |
-          find test/*.lean -exec lake env lean {} \;
+          lake test
