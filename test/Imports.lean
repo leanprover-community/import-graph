@@ -7,23 +7,19 @@ def importTest : CoreM Unit := do
   let x ← redundantImports
   logInfo s!"{x.toArray}"
 
-/-
-info:
-Found the following transitively redundant imports:
+/--
+info: Found the following transitively redundant imports:
 ImportGraph.RequiredModules
 -/
+#guard_msgs in
 #redundant_imports
 
-/-
-info:
-import ImportGraph.Imports
--/
+/-- info: import ImportGraph.Imports -/
+#guard_msgs in
 #minimize_imports
 
-/-
-info:
-[ImportGraph.Imports]
--/
+/-- info: [ImportGraph.Imports] -/
+#guard_msgs in
 #find_home importTest
 
 
@@ -50,8 +46,6 @@ elab "#my_test" : command => do
   logInfo s!"{mi.toArray}"
   pure ()
 
-/-
-info:
-#[ImportGraph.RequiredModules]
--/
+/-- info: #[ImportGraph.Imports] -/
+#guard_msgs in
 #my_test
