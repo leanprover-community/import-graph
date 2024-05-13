@@ -5,23 +5,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: install elan
-        run: |
-          set -o pipefail
-          curl -sSfL https://github.com/leanprover/elan/releases/download/v3.0.0/elan-x86_64-unknown-linux-gnu.tar.gz | tar xz
-          ./elan-init -y
-          echo "$HOME/.elan/bin" >> $GITHUB_PATH
-      - uses: actions/checkout@v4
+      - uses: leanprover/lean-action@v1-alpha
+        with:
+          check-reservoir-eligibility: true
+      # use setup from lean-action to perform the following steps
       - name: print lean and lake versions
         run: |
           lean --version
           lake --version
-      - run: lake build
       - name: verify `lake exe graph` works
         run: |
           lake exe graph
           rm import_graph.dot
-      - name: run tests
-        id: test
-        run: |
-          lake test
