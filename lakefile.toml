@@ -1,5 +1,6 @@
 name = "importGraph"
 defaultTargets = ["ImportGraph", "graph"]
+testRunner = "test"
 
 [[require]]
 name = "Cli"
@@ -22,3 +23,7 @@ root = "Main"
 # at the expense of increased binary size on Linux.
 # Remove this line if you do not need such functionality.
 supportInterpreter = true
+
+[[lean_exe]]
+name = "test"
+srcDir = "scripts"
