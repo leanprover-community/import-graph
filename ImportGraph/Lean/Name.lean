@@ -5,19 +5,17 @@ Authors: Jon Eugster
 -/
 import Lean.Data.Name
 import Lean.CoreM
-import Std.Data.HashMap.Basic
-import Std.Lean.Name
-import Std.Lean.SMap
+import Batteries.Data.HashMap.Basic
+import Batteries.Lean.SMap
 import Lean.Meta.Match.MatcherInfo
 
 /-!
 TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
-is deemed to specific for upstreaming to Std.
+is deemed to specific for upstreaming to Batteries.
 -/
 namespace Lean.Name
 
 open Lean Meta Elab
-open Std
 
 namespace ImportGraph
 
@@ -48,11 +46,11 @@ gathered together into a `HashMap` according to the module they are defined in.
 
 Note: copied from `Mathlib.Lean.Name`
 -/
-def allNamesByModule (p : Name → Bool) : CoreM (Std.HashMap Name (Array Name)) := do
-  (← getEnv).constants.foldM (init := Std.HashMap.empty) fun names n _ => do
+def allNamesByModule (p : Name → Bool) : CoreM (Batteries.HashMap Name (Array Name)) := do
+  (← getEnv).constants.foldM (init := Batteries.HashMap.empty) fun names n _ => do
     if p n && !(← isBlackListed n) then
       let some m ← findModuleOf? n | return names
-      -- TODO use `Std.HashMap.modify` when we bump Std4 (or `alter` if that is written).
+      -- TODO use `Batteries.HashMap.modify` when we bump `batteries` (or `alter` if that is written).
       match names.find? m with
       | some others => return names.insert m (others.push n)
       | none => return names.insert m #[n]
