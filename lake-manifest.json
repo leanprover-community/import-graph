@@ -13,7 +13,11 @@
   {"url": "https://github.com/leanprover-community/batteries",
    "type": "git",
    "subDir": null,
+<<<<<<< HEAD
    "rev": "54bb04c3119f24fde14b9068c4b2e69db52a1450",
+=======
+   "rev": "2506c85498141bc8ab3ee745bcb06021c3ed9a80",
+>>>>>>> nightly-testing
    "name": "batteries",
    "manifestFile": "lake-manifest.json",
    "inputRev": "main",
