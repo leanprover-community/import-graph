@@ -6,7 +6,6 @@ Authors: Jon Eugster
 import Lean.Data.Name
 import Lean.CoreM
 import Batteries.Data.HashMap.Basic
-import Batteries.Lean.Name
 import Batteries.Lean.SMap
 import Lean.Meta.Match.MatcherInfo
 
