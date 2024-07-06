@@ -218,6 +218,10 @@ elab "#min_imports" : command => do
     |>.toList.map (fun n => "import " ++ n.toString)
   logInfo <| Format.joinSep imports "\n"
 
+elab "#minimize_imports" : command => do
+  logWarning m!"'#minimize_imports' is deprecated: please use '#min_imports'"
+  elabCommand (← `(command| #min_imports))
+
 /--
 Find locations as high as possible in the import hierarchy
 where the named declaration could live.
