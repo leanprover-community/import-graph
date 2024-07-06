@@ -236,6 +236,47 @@ def Lean.Name.findHome (n : Name) (env : Option Environment) : CoreM NameSet := 
         candidates := candidates.erase i
   return candidates
 
+open Server in
+/-- Tries to resolve the module `modName` to a source file URI.
+This has to be done in the Lean server
+since the `Environment` does not keep track of source URIs. -/
+@[server_rpc_method]
+def getModuleUri (modName : Name) : RequestM (RequestTask Lsp.DocumentUri) :=
+  RequestM.asTask do
+    let rc ← readThe RequestContext
+    let some uri ← documentUriFromModule rc.srcSearchPath modName
+      | throw $ RequestError.invalidParams s!"couldn't find URI for module '{modName}'"
+    return uri
+
+structure GoToModuleLinkProps where
+  modName : Name
+  deriving Server.RpcEncodable
+
+/-- When clicked, this widget component jumps to the source of the module `modName`,
+assuming a source URI can be found for the module. -/
+@[widget_module]
+def GoToModuleLink : Widget.Module where
+  javascript := "
+    import * as React from 'react'
+    import { EditorContext, useRpcSession } from '@leanprover/infoview'
+
+    export default function(props) {
+      const ec = React.useContext(EditorContext)
+      const rs = useRpcSession()
+      return React.createElement('a',
+        {
+          className: 'link pointer dim',
+          onClick: async () => {
+            try {
+              const uri = await rs.call('getModuleUri', props.modName)
+              ec.revealPosition({ uri, line: 0, character: 0 })
+            } catch {}
+          }
+        },
+        props.modName)
+    }
+  "
+
 open Elab Command in
 /--
 Find locations as high as possible in the import hierarchy
@@ -253,9 +294,14 @@ uses one lemma from each, then `#find_home! lemma` returns the current file.
 -/
 elab "#find_home" bang:"!"? n:ident : command => do
   let stx ← getRef
-  let mut homes := #[]
+  let mut homes : Array MessageData := #[]
   let n ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo n
-  let env ← if bang.isSome then some <$> getEnv else pure none
-  for i in (← Elab.Command.liftCoreM do n.findHome env) do
-    homes := homes.push i
+  let env? ← bang.mapM fun _ => getEnv
+  for modName in (← Elab.Command.liftCoreM do n.findHome env?) do
+    let p : GoToModuleLinkProps := { modName }
+    homes := homes.push $ .ofWidget
+      (← liftCoreM $ Widget.WidgetInstance.ofHash
+        GoToModuleLink.javascriptHash $
+        Server.RpcEncodable.rpcEncode p)
+      (toString modName)
   logInfoAt stx[0] m!"{homes}"
