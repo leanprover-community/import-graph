@@ -13,7 +13,7 @@ import ImportGraph.RequiredModules
 Provides the commands
 
 * `#redundant_imports` which lists any transitively redundant imports in the current module.
-* `#minimize_imports` which attempts to construct a minimal set of imports for the declarations
+* `#min_imports` which attempts to construct a minimal set of imports for the declarations
   in the current file.
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl` suggests files higher up the import hierarchy to which `decl` could be moved.
@@ -213,7 +213,7 @@ This must be run at the end of the file,
 and is not aware of syntax and tactics,
 so the results will likely need to be adjusted by hand.
 -/
-elab "#minimize_imports" : command => do
+elab "#min_imports" : command => do
   let imports := (← getEnv).minimalRequiredModules.qsort Name.lt
     |>.toList.map (fun n => "import " ++ n.toString)
   logInfo <| Format.joinSep imports "\n"
