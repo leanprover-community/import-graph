@@ -221,7 +221,7 @@ elab "#min_imports" : command => do
 -- deprecated since 2024-07-06
 elab "#minimize_imports" : command => do
   logWarning m!"'#minimize_imports' is deprecated: please use '#min_imports'"
-  elabCommand (← `(command| #min_imports))
+  Elab.Command.elabCommand (← `(command| #min_imports))
 
 /--
 Find locations as high as possible in the import hierarchy
