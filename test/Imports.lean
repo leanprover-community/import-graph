@@ -16,12 +16,11 @@ ImportGraph.RequiredModules
 
 /-- info: import ImportGraph.Imports -/
 #guard_msgs in
-#minimize_imports
+#min_imports
 
 /-- info: [ImportGraph.Imports] -/
 #guard_msgs in
 #find_home importTest
-
 
 open Elab Command in
 elab "#my_test" : command => do
