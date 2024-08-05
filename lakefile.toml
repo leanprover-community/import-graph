@@ -10,7 +10,7 @@ rev = "main"
 [[require]]
 name = "batteries"
 git = "https://github.com/leanprover-community/batteries"
-rev = "nightly-testing"
+rev = "main"
 
 [[lean_lib]]
 name = "ImportGraph"
