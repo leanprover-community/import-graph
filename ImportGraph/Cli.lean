@@ -5,7 +5,6 @@ Authors: Kim Morrison
 -/
 import Cli.Basic
 import Batteries.Lean.IO.Process
-import Batteries.Lean.Util.Path
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
