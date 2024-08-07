@@ -205,7 +205,7 @@ def Lean.Environment.minimalRequiredModules (env : Environment) : Array Name :=
   let redundant := findRedundantImports env required
   required.filter fun n => ¬ redundant.contains n
 
-/-- Lexikographic order of Names for sorting imports -/
+/-- Lexicographic order of Names for sorting imports -/
 def sortImportsLt : Name → Name → Bool
   | a, b => a.toString < b.toString
 
