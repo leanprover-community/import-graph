@@ -205,6 +205,10 @@ def Lean.Environment.minimalRequiredModules (env : Environment) : Array Name :=
   let redundant := findRedundantImports env required
   required.filter fun n => ¬ redundant.contains n
 
+/-- Lexikographic order of Names for sorting imports -/
+def sortImportsLt : Name → Name → Bool
+  | a, b => a.toString < b.toString
+
 /--
 Try to compute a minimal set of imports for this file,
 by analyzing the declarations.
@@ -214,7 +218,7 @@ and is not aware of syntax and tactics,
 so the results will likely need to be adjusted by hand.
 -/
 elab "#min_imports" : command => do
-  let imports := (← getEnv).minimalRequiredModules.qsort Name.lt
+  let imports := (← getEnv).minimalRequiredModules.qsort sortImportsLt
     |>.toList.map (fun n => "import " ++ n.toString)
   logInfo <| Format.joinSep imports "\n"
 
