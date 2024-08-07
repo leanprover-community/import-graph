@@ -1,11 +1,11 @@
-# import-graph
+# importGraph
 
 A simple tool to create import graphs of lake packages.
 
 
 ## Requirements
 
-For creating different output formats than `.dot` (for example to create a `.pdf` file), you should have `graphviz` installed.
+For creating different output formats than `.dot` (for example to create a `.pdf` file), you should have [`graphviz`](https://graphviz.org/) installed.
 
 ## Usage
 
@@ -22,7 +22,9 @@ See `lake exe graph --help` for more options.
 
 ## Installation
 
-This is only relevant if your project does not already require `import-graph` through another lake package (e.g. mathlib). If it does, do not follow these instructions; instead just use the tool with `lake exe graph`!
+The installation works exactly like for any [Lake package](https://reservoir.lean-lang.org/).
+
+*This only relevant if your project does not already require `importGraph` through another lake package (e.g. mathlib). If it does, do not follow these instructions; instead just use the tool with `lake exe graph`!*
 
 You can import this in any lean projects by the following line to your `lakefile.lean`:
 
