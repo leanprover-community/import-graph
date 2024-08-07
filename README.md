@@ -9,13 +9,9 @@ For creating different output formats than `.dot` (for example to create a `.pdf
 
 ## Usage
 
-You can import this in any lean projects by the following line to your `lakefile.lean`:
+If you are using mathlib, the tool will already be available. If not, see installation notes below.
 
-```lean
-require importGraph from git "https://github.com/leanprover-community/import-graph" @ "main"
-```
-
-After running `lake update -R importGraph` in your project, you can create import graphs with
+Once available in your project, you can create import graphs with
 
 ```bash
 lake exe graph
@@ -23,6 +19,27 @@ lake exe graph
 
 A typical command is `lake exe graph --reduce --to MyModule my_graph.pdf` where `MyModule` follows the same module naming you would use to `import` it in lean.
 See `lake exe graph --help` for more options.
+
+## Installation
+
+This is only relevant if your project does not already require `import-graph` through another lake package (e.g. mathlib). If it does, do not follow these instructions; instead just use the tool with `lake exe graph`!
+
+You can import this in any lean projects by the following line to your `lakefile.lean`:
+
+```lean
+require importGraph from git "https://github.com/leanprover-community/import-graph" @ "main"
+```
+
+or, if you have a `lakefile.toml`, it would be
+
+```
+[[require]]
+name = "importGraph"
+git = "[https://github.com/leanprover-community/batteries](https://github.com/leanprover-community/import-graph)"
+rev = "main"
+```
+
+Then, you might need to call `lake update -R importGraph` in your project.
 
 ## Commands
 
