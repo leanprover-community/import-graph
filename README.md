@@ -48,7 +48,7 @@ Then, you might need to call `lake update -R importGraph` in your project.
 There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Imports` to your lean file.
 
 * `#redundant_imports`: lists any transitively redundant imports in the current module.
-* `#minimize_imports`: attempts to construct a minimal set of imports for the declarations
+* `#min_imports`: attempts to construct a minimal set of imports for the declarations
   in the current file.
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
