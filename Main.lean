@@ -16,7 +16,7 @@ def graph : Cmd := `[Cli|
    If you are working in a downstream project, use `lake exe graph --to MyProject`."
 
   FLAGS:
-    reduce;               "Remove transitively redundant edges."
+    "show-transitive";    "Show transitively redundant edges."
     to : ModuleName;      "Only show the upstream imports of the specified module."
     "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
     "exclude-meta";       "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."

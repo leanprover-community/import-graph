@@ -51,7 +51,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         isPrefixOf `Mathlib.Mathport n ∨
         isPrefixOf `Mathlib.Util n)
       graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
-    if args.hasFlag "reduce" then
+    if !args.hasFlag "show-transitive" then
       graph := graph.transitiveReduction
     return asDotGraph graph
   catch err =>
