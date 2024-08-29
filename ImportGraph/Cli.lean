@@ -41,8 +41,8 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       graph := graph.downstreamOf (NameSet.empty.insert f)
     let toModule := ImportGraph.getModule to
     let includeLean := args.hasFlag "include-lean"
-    let includeStd := args.hasFlag "include-std"
-    let includeDeps := args.hasFlag "include-deps"
+    let includeStd := args.hasFlag "include-std" || includeLean
+    let includeDeps := args.hasFlag "include-deps" || includeStd
     let filter (n : Name) : Bool :=
       toModule.isPrefixOf n ||
       bif isPrefixOf `Std n then includeStd else
