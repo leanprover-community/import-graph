@@ -18,14 +18,14 @@ open ImportGraph
 /-- Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
     Nodes in the `unused` set will be shaded light gray. -/
 def asDotGraph
-    (graph : NameMap (Array Name)) (used : NameSet := {}) (header := "import_graph") :
+    (graph : NameMap (Array Name)) (unused : NameSet := {}) (header := "import_graph") :
     String := Id.run do
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
-    if used.contains n then
-      lines := lines.push s!"  \"{n}\";"
-    else
+    if unused.contains n then
       lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=lightgray];"
+    else
+      lines := lines.push s!"  \"{n}\";"
     -- Then add edges
     for i in is do
       lines := lines.push s!"  \"{i}\" -> \"{n}\";"
@@ -46,10 +46,14 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   searchPathRef.set compile_time_search_path%
   let dotFile ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let mut graph := env.importGraph
-    let used ← do
-      let ctx := { options := {}, fileName := "<input>", fileMap := default }
-      let state := { env }
-      Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules to) ctx state)
+    let unused ←
+      match args.flag? "to"  with
+      | some _ =>
+        let ctx := { options := {}, fileName := "<input>", fileMap := default }
+        let state := { env }
+        let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules to) ctx state)
+        pure <| graph.fold (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
+      | none => pure NameSet.empty
     if let Option.some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
     if ¬(args.hasFlag "include-deps") then
@@ -66,7 +70,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
     if args.hasFlag "reduce" then
       graph := graph.transitiveReduction
-    return asDotGraph graph (used := used)
+    return asDotGraph graph (unused := unused)
   catch err =>
     -- TODO: try to build `to` first, so this doesn't happen
     throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
