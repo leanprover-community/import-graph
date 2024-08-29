@@ -67,7 +67,7 @@ def Name.transitivelyRequiredModules (n : Name) (env : Environment) : CoreM Name
 
 /--
 Finds all constants defined in the specified module,
-and identifies all modules contains constants which are transitively required by those constants.
+and identifies all modules containing constants which are transitively required by those constants.
 -/
 def Environment.transitivelyRequiredModules (env : Environment) (module : Name) : CoreM NameSet := do
   let mut requiredModules : NameSet := {}
