@@ -41,9 +41,13 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       graph := graph.downstreamOf (NameSet.empty.insert f)
     let toModule := ImportGraph.getModule to
     let includeLean := args.hasFlag "include-lean"
+    let includeStd := args.hasFlag "include-std"
     let includeDeps := args.hasFlag "include-deps"
     let filter (n : Name) : Bool :=
-      toModule.isPrefixOf n || bif (isPrefixOf `Lean n) then includeLean else includeDeps
+      toModule.isPrefixOf n ||
+      bif isPrefixOf `Std n then includeStd else
+      bif isPrefixOf `Lean n || isPrefixOf `Init n then includeLean else
+      includeDeps
     graph := graph.filterMap (fun n i => if filter n then (i.filter filter) else none)
     if args.hasFlag "exclude-meta" then
       -- Mathlib-specific exclusion of tactics
