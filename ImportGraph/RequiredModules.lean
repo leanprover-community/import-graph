@@ -72,6 +72,7 @@ and identifies all modules contains constants which are transitively required by
 def Environment.transitivelyRequiredModules (env : Environment) (module : Name) : CoreM NameSet := do
   let mut requiredModules : NameSet := {}
   for (_, ci) in env.constants.map₁.toList do
+    if !ci.name.isInternal then
     if let some m := env.getModuleFor? ci.name then
       if m = module then
         for r in (← ci.name.transitivelyRequiredModules env) do
