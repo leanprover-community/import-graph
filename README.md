@@ -17,8 +17,20 @@ Once available in your project, you can create import graphs with
 lake exe graph
 ```
 
-A typical command is `lake exe graph --reduce --to MyModule my_graph.pdf` where `MyModule` follows the same module naming you would use to `import` it in lean.
-See `lake exe graph --help` for more options.
+A typical command is
+
+```
+lake exe graph --to MyModule my_graph.pdf
+```
+where `MyModule` follows the same module naming you would use to `import` it in lean. See `lake exe graph --help` for more options.
+
+### Json
+
+To create a Json file, you can use `.xdot_json` as output type:
+
+```
+lake exe graph my_graph.xdot_json
+```
 
 ## Installation
 
