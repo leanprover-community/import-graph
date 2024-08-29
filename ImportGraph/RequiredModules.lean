@@ -36,6 +36,44 @@ def Name.requiredModules (n : Name) : CoreM NameSet := do
   return requiredModules
 
 /--
+Return the names of the constants used in the specified declaration,
+and the constants they use transitively.
+-/
+def Name.transitivelyUsedConstants (n : Name) : CoreM NameSet := do
+  let mut usedConstants : NameSet := {}
+  let mut thisBatch : NameSet := NameSet.empty.insert n
+  let mut nextBatch : NameSet := {}
+  let mut done : NameSet := {}
+  while !thisBatch.isEmpty do
+    for n in thisBatch do
+      done := done.insert n
+      for m in (← getConstInfo n).getUsedConstantsAsSet do
+        if !done.contains m then
+          usedConstants := usedConstants.insert m
+          nextBatch := nextBatch.insert m
+    thisBatch := nextBatch
+    nextBatch := {}
+  return usedConstants
+
+/--
+Return the names of the modules in which constants used transitively
+in the specified declaration were defined.
+
+Note that this will *not* account for tactics and syntax used in the declaration,
+so the results may not suffice as imports.
+-/
+def Name.transitivelyRequiredModules (n : Name) : CoreM NameSet := do
+  let env ← getEnv
+  let mut requiredModules : NameSet := {}
+  for m in (← n.transitivelyUsedConstants) do
+    match env.getModuleFor? m with
+    | some m =>
+      if ¬ (`Init).isPrefixOf m then
+        requiredModules := requiredModules.insert m
+    | none => pure ()
+  return requiredModules
+
+/--
 Return the names of the modules in which constants used in the current file were defined.
 
 Note that this will *not* account for tactics and syntax used in the file,
