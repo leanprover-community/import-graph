@@ -15,20 +15,38 @@ open Cli
 open Lean
 open ImportGraph
 
-/-- Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
-    Nodes in the `unused` set will be shaded light gray. -/
+/--
+Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
+* Nodes in the `unused` set will be shaded light gray.
+* Nodes which start with the `markedModule` and edges into them will be highlighted in green.
+-/
 def asDotGraph
-    (graph : NameMap (Array Name)) (unused : NameSet := {}) (header := "import_graph") :
+    (graph : NameMap (Array Name))
+    (unused : NameSet := {})
+    (header := "import_graph")
+    (markedModule : Option Name := none) :
     String := Id.run do
+
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
     if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=lightgray];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
+    else if isInModule markedModule n then
+      -- mark node
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\"];"
     else
       lines := lines.push s!"  \"{n}\";"
     -- Then add edges
     for i in is do
-      lines := lines.push s!"  \"{i}\" -> \"{n}\";"
+      if isInModule markedModule n then
+        if isInModule markedModule i then
+          -- draw the main project close together
+          lines := lines.push s!"  \"{i}\" -> \"{n}\" [weight=100];"
+        else
+          -- mark edges into the main project
+          lines := lines.push s!"  \"{i}\" -> \"{n}\" [penwidth=4, color=\"#71b144\"];"
+      else
+        lines := lines.push s!"  \"{i}\" -> \"{n}\";"
   lines := lines.push "}"
   return "\n".intercalate lines.toList
 
@@ -45,6 +63,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | none => none
   searchPathRef.set compile_time_search_path%
   let dotFile ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
+    let p := ImportGraph.getModule to
     let mut graph := env.importGraph
     let unused ←
       match args.flag? "to"  with
@@ -57,7 +76,6 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if let Option.some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
     if ¬(args.hasFlag "include-deps") then
-      let p := ImportGraph.getModule to
       graph := graph.filterMap (fun n i =>
         if p.isPrefixOf n then (i.filter (isPrefixOf p)) else none)
     if args.hasFlag "exclude-meta" then
@@ -70,12 +88,16 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
     if args.hasFlag "reduce" then
       graph := graph.transitiveReduction
-    return asDotGraph graph (unused := unused)
+
+    let markedModule : Option Name := if args.hasFlag "mark-module" then p else none
+
+    return asDotGraph graph (unused := unused) (markedModule := markedModule)
   catch err =>
     -- TODO: try to build `to` first, so this doesn't happen
     throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
       s!"try if `lake build {to}` fixes the issue"
     throw err
+
   match args.variableArgsAs! String with
   | #[] => writeFile "import_graph.dot" dotFile
   | outputs => for o in outputs do

@@ -21,6 +21,7 @@ def graph : Cmd := `[Cli|
     "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
     "exclude-meta";       "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
     "include-deps";       "Include used files from other projects (e.g. lake packages)"
+    "mark-module";        "visually highlight the current module. Only sensible in combination with `--include-deps`"
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \

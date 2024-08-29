@@ -22,3 +22,11 @@ def getCurrentModule : IO Name := do
     -- Would be better to read the `.defaultTargets` from the
     -- `← getRootPackage` from `Lake`, but I can't make that work with the monads involved.
     return manifest.name.capitalize
+
+/--
+Helper which only returns `true` if the `module` is provided and the name `n` lies
+inside it.
+ -/
+def isInModule (module : Option Name) (n : Name) := match module with
+  | some m => m.isPrefixOf n
+  | none => false
