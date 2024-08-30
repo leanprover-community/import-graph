@@ -22,7 +22,17 @@ ImportGraph.RequiredModules
 #guard_msgs in
 #find_home importTest
 
-open Elab Command in
+open Elab Command
+
+elab "#transitivelyRequiredModules_test" : command => do
+  let env ← getEnv
+  let unused ← liftCoreM <| env.transitivelyRequiredModules `ImportGraph.RequiredModules
+  logInfo s!"{unused.contains `Init.Data.Option.Lemmas}"
+
+/-- info: true -/
+#guard_msgs in
+#transitivelyRequiredModules_test
+
 elab "#my_test" : command => do
   -- functionality of `#redundant_imports`
   let expected := #[`ImportGraph.RequiredModules]

@@ -1,6 +1,6 @@
 name = "importGraph"
 defaultTargets = ["ImportGraph", "graph"]
-testRunner = "test"
+testRunner = "ImportGraphTest"
 
 [[require]]
 name = "Cli"
@@ -24,6 +24,5 @@ root = "Main"
 # Remove this line if you do not need such functionality.
 supportInterpreter = true
 
-[[lean_exe]]
-name = "test"
-srcDir = "scripts"
+[[lean_lib]]
+name = "ImportGraphTest"
