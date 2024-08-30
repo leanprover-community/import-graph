@@ -18,17 +18,23 @@ open ImportGraph
 Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
 * Nodes in the `unused` set will be shaded light gray.
 * Nodes which start with the `markedModule` and edges into them will be highlighted in green.
+* Nodes in `directDeps` are marked with a green border and green text.
 -/
 def asDotGraph
     (graph : NameMap (Array Name))
     (unused : NameSet := {})
     (header := "import_graph")
-    (markedModule : Option Name := none) :
+    (markedModule : Option Name := none)
+    (directDeps : NameSet := {}) :
     String := Id.run do
 
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
-    if unused.contains n then
+    if directDeps.contains n then
+      -- note: `fillcolor` defaults to `color` if not specified
+      let fill := if unused.contains n then "#e0e0e0" else "white"
+      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2];"
+    else if unused.contains n then
       lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
     else if isInModule markedModule n then
       -- mark node
@@ -77,9 +83,18 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let toModule := ImportGraph.getModule to
     let includeLean := args.hasFlag "include-lean"
     let includeStd := args.hasFlag "include-std" || includeLean
-    let includeDeps := args.hasFlag "include-deps" || args.hasFlag "mark-module" || includeStd
+    let includeDeps := args.hasFlag "include-deps" || includeStd
+
+    -- `directDeps` are excempt from being filtered out.
+    let directDeps := if args.hasFlag "mark-module" then
+        graph.fold (fun acc n deps => if toModule.isPrefixOf n then
+          -- append all dependencies of `n` which are not in the module
+          deps.filter (!toModule.isPrefixOf ·) |>.foldl NameSet.insert acc
+        else acc) NameSet.empty
+      else NameSet.empty
+
     let filter (n : Name) : Bool :=
-      toModule.isPrefixOf n ||
+      toModule.isPrefixOf n || directDeps.contains n ||
       bif isPrefixOf `Std n then includeStd else
       bif isPrefixOf `Lean n || isPrefixOf `Init n then includeLean else
       includeDeps
@@ -97,7 +112,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
 
     let markedModule : Option Name := if args.hasFlag "mark-module" then p else none
 
-    return asDotGraph graph (unused := unused) (markedModule := markedModule)
+    return asDotGraph graph (unused := unused) (markedModule := markedModule) (directDeps := directDeps)
   catch err =>
     -- TODO: try to build `to` first, so this doesn't happen
     throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
