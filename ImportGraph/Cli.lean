@@ -22,7 +22,7 @@ def asDotGraph
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
     if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=lightgray];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
     else
       lines := lines.push s!"  \"{n}\";"
     -- Then add edges
