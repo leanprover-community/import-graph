@@ -43,7 +43,7 @@ def asDotGraph
           lines := lines.push s!"  \"{i}\" -> \"{n}\" [weight=100];"
         else
           -- mark edges into the main project
-          lines := lines.push s!"  \"{i}\" -> \"{n}\" [penwidth=4, color=\"#71b144\"];"
+          lines := lines.push s!"  \"{i}\" -> \"{n}\" [penwidth=2, color=\"#71b144\"];"
       else
         lines := lines.push s!"  \"{i}\" -> \"{n}\";"
   lines := lines.push "}"
