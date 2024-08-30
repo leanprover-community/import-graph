@@ -77,7 +77,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let toModule := ImportGraph.getModule to
     let includeLean := args.hasFlag "include-lean"
     let includeStd := args.hasFlag "include-std" || includeLean
-    let includeDeps := args.hasFlag "include-deps" || includeStd
+    let includeDeps := args.hasFlag "include-deps" || args.hasFlag "mark-module" || includeStd
     let filter (n : Name) : Bool :=
       toModule.isPrefixOf n ||
       bif isPrefixOf `Std n then includeStd else

@@ -21,9 +21,9 @@ def graph : Cmd := `[Cli|
     "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
     "exclude-meta";       "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
     "include-deps";       "Include used files from other libraries (not including Lean itself and `std`)"
-    "mark-module";        "visually highlight the current module. Only sensible in combination with `--include-deps`"
-    "include-std";        "Include used files from the Lean standard library (implies 'include-deps')"
-    "include-lean";       "Include used files from Lean itself (implies 'include-deps' and 'include-std')"
+    "mark-module";        "Visually highlight the current module. (implies `--include-deps`)"
+    "include-std";        "Include used files from the Lean standard library (implies `--include-deps`)"
+    "include-lean";       "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \
