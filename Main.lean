@@ -20,7 +20,7 @@ def graph : Cmd := `[Cli|
     to : ModuleName;      "Only show the upstream imports of the specified module."
     "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
     "exclude-meta";       "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
-    "include-deps";       "Include used files from other projects (e.g. lake packages)"
+    "include-deps";       "Include used files from other libraries (not including Lean itself and `std`)"
     "include-std";        "Include used files from the Lean standard library (implies 'include-deps')"
     "include-lean";       "Include used files from Lean itself (implies 'include-deps' and 'include-std')"
 
