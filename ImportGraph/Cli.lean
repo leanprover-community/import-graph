@@ -8,7 +8,6 @@ import Batteries.Lean.IO.Process
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
-import ImportGraph.Unused
 
 open Cli
 
