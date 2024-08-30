@@ -1,13 +1,5 @@
 digraph "import_graph" {
-  "ImportGraph.Unused" [style=filled, fillcolor=lightgray];
-  "ImportGraph.CurrentModule";
-  "ImportGraph.Lean.Name";
-  "ImportGraph.RequiredModules";
-  "ImportGraph.Imports";
-  "ImportGraph.RequiredModules" -> "ImportGraph.Imports";
-  "ImportGraph.Cli";
-  "ImportGraph.CurrentModule" -> "ImportGraph.Cli";
-  "ImportGraph.Imports" -> "ImportGraph.Cli";
-  "ImportGraph.Lean.Name" -> "ImportGraph.Cli";
-  "ImportGraph.Unused" -> "ImportGraph.Cli";
+  "ImportGraphTest.Unused" [style=filled, fillcolor="#e0e0e0"];
+  "ImportGraphTest.Used" [style=filled, fillcolor="#e0e0e0"];
+  "ImportGraphTest.Unused" -> "ImportGraphTest.Used";
 }

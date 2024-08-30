@@ -8,7 +8,6 @@ import Batteries.Lean.IO.Process
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
-import ImportGraph.Unused
 
 open Cli
 
@@ -30,7 +29,7 @@ def asDotGraph
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
     if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=lightgray];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
     else if isInModule markedModule n then
       -- mark node
       lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\"];"
@@ -75,9 +74,16 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       | none => pure NameSet.empty
     if let Option.some f := from? then
       graph := graph.downstreamOf (NameSet.empty.insert f)
-    if ¬(args.hasFlag "include-deps") then
-      graph := graph.filterMap (fun n i =>
-        if p.isPrefixOf n then (i.filter (isPrefixOf p)) else none)
+    let toModule := ImportGraph.getModule to
+    let includeLean := args.hasFlag "include-lean"
+    let includeStd := args.hasFlag "include-std" || includeLean
+    let includeDeps := args.hasFlag "include-deps" || includeStd
+    let filter (n : Name) : Bool :=
+      toModule.isPrefixOf n ||
+      bif isPrefixOf `Std n then includeStd else
+      bif isPrefixOf `Lean n || isPrefixOf `Init n then includeLean else
+      includeDeps
+    graph := graph.filterMap (fun n i => if filter n then (i.filter filter) else none)
     if args.hasFlag "exclude-meta" then
       -- Mathlib-specific exclusion of tactics
       let filterMathlibMeta : Name → Bool := fun n => (
@@ -86,7 +92,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         isPrefixOf `Mathlib.Mathport n ∨
         isPrefixOf `Mathlib.Util n)
       graph := graph.filterGraph filterMathlibMeta (replacement := `«Mathlib.Tactics»)
-    if args.hasFlag "reduce" then
+    if !args.hasFlag "show-transitive" then
       graph := graph.transitiveReduction
 
     let markedModule : Option Name := if args.hasFlag "mark-module" then p else none

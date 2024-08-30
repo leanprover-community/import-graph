@@ -214,7 +214,7 @@ and is not aware of syntax and tactics,
 so the results will likely need to be adjusted by hand.
 -/
 elab "#min_imports" : command => do
-  let imports := (← getEnv).minimalRequiredModules.qsort Name.lt
+  let imports := (← getEnv).minimalRequiredModules.qsort (·.toString < ·.toString)
     |>.toList.map (fun n => "import " ++ n.toString)
   logInfo <| Format.joinSep imports "\n"
 
