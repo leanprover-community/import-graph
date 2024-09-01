@@ -24,6 +24,10 @@ lake exe graph --to MyModule my_graph.pdf
 ```
 where `MyModule` follows the same module naming you would use to `import` it in lean. See `lake exe graph --help` for more options.
 
+### Troubleshoot
+
+* make sure to `lake build` your project (or the specified `--to` module) before using `lake exe graph`!
+
 ### Json
 
 To create a Json file, you can use `.xdot_json` or `.json` as output type:
@@ -39,6 +43,16 @@ lake exe graph my_graph.html
 ```
 
 creates a stand-alone HTML file visualising the import structure.
+
+## Commands
+
+There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Imports` to your lean file.
+
+* `#redundant_imports`: lists any transitively redundant imports in the current module.
+* `#min_imports`: attempts to construct a minimal set of imports for the declarations
+  in the current file.
+  (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
+* `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 
 ## Installation
 
@@ -62,16 +76,6 @@ rev = "main"
 ```
 
 Then, you might need to call `lake update -R importGraph` in your project.
-
-## Commands
-
-There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Imports` to your lean file.
-
-* `#redundant_imports`: lists any transitively redundant imports in the current module.
-* `#min_imports`: attempts to construct a minimal set of imports for the declarations
-  in the current file.
-  (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
-* `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 
 ## Contribution
 

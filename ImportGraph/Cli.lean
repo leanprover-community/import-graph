@@ -117,7 +117,11 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       let dotFile := asDotGraph graph (unused := unused) (markedModule := markedModule)
       outFiles := outFiles.insert "dot" dotFile
     if extensions.contains "gexf" then
-      let (out, _) ← CoreM.toIO (Graph.toGexf graph p) ctx state
+      -- filter out the top node as it makes the graph less pretty
+      let graph₂ := match args.flag? "to" with
+        | none => graph.filter (fun n _ => n != to)
+        | some _ => graph
+      let (out, _) ← CoreM.toIO (Graph.toGexf graph₂ p) ctx state
       outFiles := outFiles.insert "gexf" out
     return outFiles
 

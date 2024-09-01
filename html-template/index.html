@@ -115,7 +115,7 @@
   </div>
 
 <script type="text/javascript">
-  
+
 var params = new URLSearchParams(window.location.search);
 var docs_url = params.get("docs_url") || "https://leanprover-community.github.io/mathlib4_docs/";
 
@@ -186,7 +186,11 @@ var render_gexf = (gexf) => {
     node_data.proj = path;
     if (graph.getNodeAttribute(node, 'in_module')) {
       node_data.path = path.slice(1);
-      node_data.label = node_data.path.join('.')
+      if (path.length <= 1) {
+        node_data.label = path.join('.')
+      } else {
+        node_data.label = node_data.path.join('.')
+      }
     } else {
       node_data.path = path;
     }
@@ -267,7 +271,7 @@ var render_gexf = (gexf) => {
 
   //size the nodes
   for (let [node, node_data] of graph.nodeEntries()) {
-    node_data.size = 2 + Math.pow(node_data.decl_count, 1/2) * 20 / Math.pow(max_decls, 1/2);
+    node_data.size = 2 + Math.sqrt(node_data.decl_count) * 9 / Math.sqrt(max_decls);
   }
 
   // set up the edge weights, to make the layout somewhat ok
@@ -344,7 +348,8 @@ var render_gexf = (gexf) => {
     defaultEdgeType: "arrow",
     defaultEdgeColor: "#c0c0c0",
     minArrowSize: 30,
-    zIndex: true,
+    labelRenderedSizeThreshold: 9,
+      zIndex: true,
     nodeReducer: (node, data) => {
       var res = { ...data };
 
