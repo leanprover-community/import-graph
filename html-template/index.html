@@ -1,0 +1,509 @@
+
+<!doctype html>
+<html class="no-js" lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Mathlib import graph</title>
+
+  <!-- NOTE: currently the Lean script searches for these imports to replace them (exact search)!
+       If you modify it, modify the Lean script (ImportGraph/Cli.lean) accordingly! -->
+  <script src="vendor/sigma.min.js"></script>
+  <script src="vendor/graphology.min.js"></script>
+  <script src="vendor/graphology-library.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    html, body {
+      height: 100%; width: 100%;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+    .sigma {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+    }
+    p, label, .summary {
+      text-align: center;
+    }
+    .summary {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+    .key-wrapper {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    #key {
+      list-style: none;
+      columns: 10em auto;
+    }
+    .summary, .key-wrapper {
+      text-shadow:
+         0    0   5px white,
+        -1px -1px 0 white,
+         0   -1px 0 white,
+         1px -1px 0 white,
+         1px  0   0 white,
+         1px  1px 0 white,
+         0    1px 0 white,
+        -1px  1px 0 white,
+        -1px  0   0 white;
+      }
+
+    ul > li {
+      white-space: nowrap;
+    }
+    ul > li:hover {
+      font-weight: bold;
+    }
+
+    #key > li > span {
+      width: 1ch;
+      height: 1ch;
+      display: inline-block;
+      margin-right: 0.25em;
+      border: 1px solid gray;
+      margin-bottom: -1px
+    }
+
+    .status.active .placeholder {
+      visibility: hidden;
+    }
+    .status {
+      position: relative;
+    }
+    .status .message {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      text-align: center;
+    }
+    .pause-checkbox {
+      position: absolute;
+      right: 0;
+      top: 0;
+      padding: .5em;
+    }
+  </style>
+</head>
+<body>
+  <div class="sigma" id="sigma-example"></div>
+  <div class="summary">
+    <!-- Note `<h1>Import Graph</h1>` is searched for by `lake exe graph`, keep it updated there. -->
+    <h1>Import Graph</h1>
+    <p>Built with <a href="https://www.sigmajs.org/">Sigma.js</a>.
+    Node sizes indicate the number of declarations in the file.</p>
+    <label class="pause-checkbox"><input type="checkbox" id="pause" checked/> Pause graph layout</label>
+  </div>
+  <div class="key-wrapper">
+    <ul id="key"></ul>
+    <div class="status" id="statusWrapper">
+      <p class="placeholder">Hover over a node to show only the files it imports. Hover over a directory name to highlight only the files in that directory</p>
+      <div class="message" id="statusMessage"></div>
+    </div>
+  </div>
+
+<script type="text/javascript">
+  
+var params = new URLSearchParams(window.location.search);
+var docs_url = params.get("docs_url") || "https://leanprover-community.github.io/mathlib4_docs/";
+
+// From stackoverflow
+/**
+ * Converts an HSL color value to RGB. Conversion formula
+ * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+ * Assumes h, s, and l are contained in the set [0, 1] and
+ * returns r, g, and b in the set [0, 255].
+ *
+ * @param   {number}  h       The hue
+ * @param   {number}  s       The saturation
+ * @param   {number}  l       The lightness
+ * @return  {Array}           The RGB representation
+ */
+function hslToRgb(h, s, l){
+  var r, g, b;
+
+  if(s == 0){
+    r = g = b = l; // achromatic
+  } else{
+    var hue2rgb = function hue2rgb(p, q, t){
+      if(t < 0) t += 1;
+      if(t > 1) t -= 1;
+      if(t < 1/6) return p + (q - p) * 6 * t;
+      if(t < 1/2) return q;
+      if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+      return p;
+    }
+
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    var p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
+
+var common_prefix = function(a, b) {
+  for (var i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] != b[i]) break;
+  }
+  return i;
+}
+
+let container = document.getElementById('sigma-example');
+let key = document.getElementById('key');
+let pause = document.getElementById('pause');
+
+var render_gexf = (gexf) => {
+  let graph = graphologyLibrary.gexf.parse(graphology.Graph, gexf);
+  let rev_graph = graphologyLibrary.operators.reverse(graph);
+
+  // interaction state
+  var state = {
+    hoveredNode: undefined,
+    hoveredDescendants: undefined,
+    hoveredPath: undefined,
+    defaultNode: params.get("highlight"),
+  };
+  var default_hover = !!params.get("default_hover");
+
+  // unpack the node labels into data
+  for (let [node, node_data] of graph.nodeEntries()) {
+    let path = node.split('.');
+    node_data.proj = path;
+    if (graph.getNodeAttribute(node, 'in_module')) {
+      node_data.path = path.slice(1);
+      node_data.label = node_data.path.join('.')
+    } else {
+      node_data.path = path;
+    }
+  }
+
+  // represent the directory tree as a nested map
+  var tree = new Map();
+  for (let [node, node_data] of graph.nodeEntries()) {
+    var at = tree;
+    for (let p of node_data.path) {
+      var curr = at.get(p);
+      if (!curr) {
+        curr = new Map();
+        at.set(p, curr);
+      }
+      at = curr;
+    }
+  }
+
+  // return [f, depth] where f is in [0, 1) and corresponds to some measure
+  // of order within the heirarchy.
+  var get_frac = function (path, max_depth=Infinity) {
+    var pos = 0;
+    var width = 1;
+    var at = tree;
+    for (let [i, p] of path.entries()) {
+      var key_arr = Array.from(at.keys()).sort();
+      width /= key_arr.length;
+      var ind = key_arr.indexOf(p);
+      if (ind == -1) {
+        pos = NaN;
+        break;
+      }
+      pos += width * ind;
+      if (i >= max_depth) {
+        break;
+      }
+      at = at.get(p);
+    }
+    return [pos, path.length];
+  };
+
+  var get_color = function (node_data, s=1, l=0.5) {
+    var [h, d] = get_frac(node_data.path, 0);
+    var [r, g, b] = hslToRgb(h, s, l);
+    return 'rgb(' + [r, g, b].join(',') + ')'
+  };
+
+  // build the key
+  while(key.firstChild) key.removeChild(key.lastChild);
+  var keyElems = new Map();
+  for (let top_level of Array.from(tree.keys()).sort()) {
+    var li = document.createElement('li');
+    var sp = document.createElement('span');
+    sp.style.backgroundColor = get_color({path: [top_level]});
+    sp.style.borderColor = get_color({path: [top_level]}, 1, 0.4);
+    li.appendChild(sp);
+    li.appendChild(document.createTextNode(top_level));
+    key.appendChild(li);
+    keyElems.set(top_level, li);
+  }
+
+  // get max decl count
+  let max_decls = 0
+  for (let [node, node_data] of graph.nodeEntries()) {
+    if (node_data.decl_count > max_decls) {
+      max_decls = node_data.decl_count
+    }
+  }
+
+  // color the nodes
+  for (let [node, node_data] of graph.nodeEntries()) {
+    graph.setNodeAttribute(node, 'color', get_color(node_data));
+    graph.setNodeAttribute(node, 'dark_color', get_color(node_data, 1, 0.4));
+    graph.setNodeAttribute(node, 'dim_color', get_color(node_data, 0.5, 7/8));
+    graph.setNodeAttribute(node, 'very_dim_color', get_color(node_data, 0.5, 15/16));
+  }
+
+  //size the nodes
+  for (let [node, node_data] of graph.nodeEntries()) {
+    node_data.size = 2 + Math.pow(node_data.decl_count, 1/2) * 20 / Math.pow(max_decls, 1/2);
+  }
+
+  // set up the edge weights, to make the layout somewhat ok
+  for (let [key, attrs, s, t, sdata, tdata] of graph.edgeEntries()) {
+    var ncommon = common_prefix(sdata.path, tdata.path);
+    if (sdata.proj != tdata.proj) {
+      attrs.weight = 1
+    }
+    else if (ncommon == 0) {
+      attrs.weight = 2;
+    }
+    else if (ncommon == 1) {
+      attrs.weight = 4;
+    }
+    else {
+      attrs.weight = 8;
+    }
+    // attrs.weight = (sdata.proj == tdata.proj) * Math.pow(5, ncommon) + 1;
+  }
+
+  // pick a somewhat arbitrary initial layout
+  let sorted_nodes = Array.from(graph.nodes()).sort();
+  for (let [i, node] of sorted_nodes.entries()) {
+    let node_data = graph.getNodeAttributes(node);
+    // var [theta, r] = get_frac(node_data.path);
+    // r = 1;
+    // graphologyLibrary.traversal.bfsFromNode(graph, node, function(node, attr, depth) {
+    //   r = Math.max(r, depth + 1);
+    // });
+    var theta = i / sorted_nodes.length;
+    var r = 1;
+    node_data.x = 0.1*r * Math.cos(theta * 2 * Math.PI);
+    node_data.y = 0.1*r * Math.sin(theta * 2 * Math.PI);
+  }
+
+  var force_atlas_settings = {
+    barnesHutOptimize: false,
+    strongGravityMode: false,
+    gravity: 0.05,
+    scalingRatio: 10,
+    slowDown: 10,
+    edgeWeightInfluence: 1,
+  };
+
+  // run the optimizer a little
+  graphologyLibrary.layoutForceAtlas2.assign(graph, {
+    iterations: 10,
+    settings: force_atlas_settings,
+  });
+
+  // now send it to a background task
+  var worker = new graphologyLibrary.FA2Layout(graph, {
+    settings: force_atlas_settings,
+  });
+
+  if (!pause.checked) {
+    worker.start();
+  }
+
+  pause.addEventListener('change', (event) => {
+    if (event.currentTarget.checked) {
+      worker.stop();
+    } else {
+      worker.start();
+    }
+  });
+
+  window.graph = graph;
+  if (window.renderer) {
+    window.renderer.kill();
+    delete window.renderer;
+  }
+  window.renderer = new Sigma.Sigma(graph, container, {
+    defaultEdgeType: "arrow",
+    defaultEdgeColor: "#c0c0c0",
+    minArrowSize: 30,
+    zIndex: true,
+    nodeReducer: (node, data) => {
+      var res = { ...data };
+
+      if (state.hoveredNode) {
+        if (state.hoveredNode === node) {
+          res.highlighted = true;
+        }
+        if (state.hoveredDescendants.has(node)) {
+          res.zIndex = 2;
+        }
+        else if (state.hoveredAncestors.has(node)) {
+          res.color = res.dim_color;
+        }
+        else {
+          res.label = undefined;
+          res.color = res.very_dim_color;
+        }
+      }
+      else if (state.hoveredPath) {
+        if (data.path[0] == state.hoveredPath) {
+          res.zIndex = 2;
+        }
+        else {
+          res.label = undefined;
+          res.color = res.dim_color;
+        }
+      }
+      else if (state.defaultNode) {
+        if (state.defaultNode === node) {
+          res.highlighted = true;
+        }
+      }
+
+      return res;
+    },
+    edgeReducer: (edge, data) => {
+      var res = { ...data };
+
+      if (state.hoveredNode) {
+        if (state.hoveredDescendants.has(graph.source(edge))) {
+          res.size = 1.5;
+        }
+        else if (state.hoveredNode == graph.target(edge)) {
+          res.color = graph.getNodeAttributes(state.hoveredNode).dark_color;
+        }
+        else {
+          res.hidden = true;
+        }
+      }
+      else if (state.hoveredPath) {
+        let src = graph.getNodeAttributes(graph.source(edge));
+        let target = graph.getNodeAttributes(graph.target(edge));
+        if (src.path[0] == state.hoveredPath && target.path[0] == state.hoveredPath) {
+          res.color = get_color({path: [state.hoveredPath]}, 1, 0.4);
+        }
+        else if (src.path[0] == state.hoveredPath) {
+          res.color = "#808080";
+        }
+        else {
+          res.color = "#E0E0E0"
+        }
+      }
+
+      return res;
+    },
+  });
+
+  let statusElem = document.getElementById('statusWrapper');
+  let statusMsgElem = document.getElementById('statusMessage');
+  let setStatus = function(html) {
+    if (html) {
+      statusElem.classList.add('active');
+      statusMsgElem.innerHTML = html;
+    }
+    else {
+      statusElem.classList.remove('active');
+      statusMsgElem.innerHTML = '';
+    }
+  }
+
+  for (let [top_level, li] of keyElems) {
+    li.addEventListener('mouseenter', (event) => {
+      setHoveredNode(undefined);
+      state.hoveredPath = top_level;
+      let nfiles = 0;
+      let ndecls = 0;
+      for (let [n, node_data] of graph.nodeEntries()) {
+        if (node_data.path[0] == top_level) {
+          nfiles += 1;
+          ndecls += node_data.decl_count;
+        }
+      }
+      setStatus("Highlighting " + nfiles + " files consisting of "+ndecls+" declarations");
+      renderer.refresh();
+    });
+    li.addEventListener('mouseleave', (event) => {
+      state.hoveredPath = undefined;
+      setHoveredNode(default_hover ? state.defaultNode : undefined);
+      setStatus(null);
+      renderer.refresh();
+    });
+  }
+
+  // Bind graph interactions:
+  let setHoveredNode = function(node) {
+    if (node) {
+      state.hoveredNode = node;
+      var descendants = new Set();
+      var ancestors = new Set();
+      let ndecls = graph.getNodeAttribute(node, 'decl_count')
+      // let ndecls_trans = 0;
+      graphologyLibrary.traversal.bfsFromNode(graph, node, function(node2, attr, depth) {
+        descendants.add(node2);
+        // ndecls_trans += graph.getNodeAttribute(node2, 'decl_count');
+      });
+      graphologyLibrary.traversal.bfsFromNode(rev_graph, node, function(node, attr, depth) {
+        ancestors.add(node);
+      });
+      state.hoveredDescendants = descendants;
+      state.hoveredAncestors = ancestors;
+      setStatus(`imported by ${descendants.size - 1} files; importing ${ancestors.size - 1} files; ${ndecls} declarations in this file.`);
+      container.style.cursor = "pointer";
+    } else {
+      state.hoveredNode = undefined;
+      state.hoveredDescendants = undefined;
+      state.hoveredAncestors = undefined;
+      setStatus(null);
+      container.style.cursor = "inherit";
+    }
+
+    renderer.refresh();
+  }
+  renderer.on("enterNode", ({ node }) => { setHoveredNode(node);  });
+  renderer.on("leaveNode", () => { setHoveredNode(default_hover ? state.defaultNode : undefined); });
+  renderer.on("clickNode", ({ node }) => {
+    let path = graph.getNodeAttribute(node, 'path');
+    window.open(docs_url + path.join('/') + ".html");
+  });
+
+  setHoveredNode(default_hover ? state.defaultNode : undefined);
+};
+
+// NOTE: currently the Lean script searches for this line to replace it (exact search)!
+// If you modify it, modify the Lean script (ImportGraph/Cli.lean) accordingly!
+fetch("imports.gexf").then((res) => res.text()).then(render_gexf)
+
+container.addEventListener("dragover",  ev => {
+  event.preventDefault();
+});
+container.addEventListener('drop', ev => {
+  ev.preventDefault();
+  for (const item of ev.dataTransfer.items) {
+    if (item.kind == "file") {
+      item.getAsFile().text().then(render_gexf);
+      break;
+    }
+  }
+});
+</script>
+
+</body>
+</html>

@@ -26,11 +26,19 @@ where `MyModule` follows the same module naming you would use to `import` it in 
 
 ### Json
 
-To create a Json file, you can use `.xdot_json` as output type:
+To create a Json file, you can use `.xdot_json` or `.json` as output type:
 
 ```
 lake exe graph my_graph.xdot_json
 ```
+
+### HTML
+
+```
+lake exe graph my_graph.html
+```
+
+creates a stand-alone HTML file visualising the import structure.
 
 ## Installation
 
@@ -65,10 +73,18 @@ There are a few commands implemented, which help you analysing the imports of a 
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 
+## Contribution
+
+Please open PRs/Issues if you have troubles or would like to contribute new features!
+
 ## Credits
 
-This code has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4) and has mainly been written by Kim Morrison and a few other mathlib contributors.
+The main tool has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4),
+originally written by Kim Morrison and other mathlib contributors.
+
+The HTML visualisation has been incorporated from
+[a project by Eric Wieser](https://github.com/eric-wieser/mathlib-import-graph).
 
 ### Maintainers
 
-For issues, questions, or feature requests, please reach out to [Jon Eugster](https://leanprover.zulipchat.com/#narrow/dm/385895-Jon-Eugster).
+Primarily maintained by [Jon Eugster](https://leanprover.zulipchat.com/#narrow/dm/385895-Jon-Eugster), Kim Morrison, and the wider leanprover community.

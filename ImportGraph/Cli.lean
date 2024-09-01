@@ -8,6 +8,7 @@ import Batteries.Lean.IO.Process
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
+import ImportGraph.Gexf
 
 open Cli
 
@@ -54,6 +55,18 @@ open Lean Core System
 open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
+  -- file extensions that should be created
+  let extensions : Array String := match args.variableArgsAs! String with
+    | #[] => #["dot"]
+    | outputs => outputs.foldl (fun acc (o : String) =>
+      match FilePath.extension o with
+       | none => if acc.contains "dot" then acc else acc.push "dot"
+       | some "gexf" => if acc.contains "gexf" then acc else acc.push "gexf"
+       | some "html" => if acc.contains "gexf" then acc else acc.push "gexf"
+       -- currently all other formats are handled by passing the `.dot` file to
+       -- graphviz
+       | some _ => if acc.contains "dot" then acc else acc.push "dot" ) #[]
+
   let to ← match args.flag? "to" with
   | some to => pure <| to.as! ModuleName
   | none => getCurrentModule
@@ -61,14 +74,15 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | some fr => some <| fr.as! ModuleName
   | none => none
   searchPathRef.set compile_time_search_path%
-  let dotFile ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
+
+  let outFiles ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let p := ImportGraph.getModule to
+    let ctx := { options := {}, fileName := "<input>", fileMap := default }
+    let state := { env }
     let mut graph := env.importGraph
     let unused ←
       match args.flag? "to"  with
       | some _ =>
-        let ctx := { options := {}, fileName := "<input>", fileMap := default }
-        let state := { env }
         let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules to) ctx state)
         pure <| graph.fold (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
       | none => pure NameSet.empty
@@ -97,7 +111,16 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
 
     let markedModule : Option Name := if args.hasFlag "mark-module" then p else none
 
-    return asDotGraph graph (unused := unused) (markedModule := markedModule)
+    -- Create all output files that are requested
+    let mut outFiles : HashMap String String := {}
+    if extensions.contains "dot" then
+      let dotFile := asDotGraph graph (unused := unused) (markedModule := markedModule)
+      outFiles := outFiles.insert "dot" dotFile
+    if extensions.contains "gexf" then
+      let (out, _) ← CoreM.toIO (Graph.toGexf graph p) ctx state
+      outFiles := outFiles.insert "gexf" out
+    return outFiles
+
   catch err =>
     -- TODO: try to build `to` first, so this doesn't happen
     throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
@@ -105,14 +128,32 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     throw err
 
   match args.variableArgsAs! String with
-  | #[] => writeFile "import_graph.dot" dotFile
+  | #[] => writeFile "import_graph.dot" (outFiles.find! "dot")
   | outputs => for o in outputs do
      let fp : FilePath := o
      match fp.extension with
      | none
-     | "dot" => writeFile fp dotFile
+     | "dot" => writeFile fp (outFiles.find! "dot")
+     | "gexf" => IO.FS.writeFile fp (outFiles.find! "gexf")
+     | "html" =>
+        -- use `html-template/index.html` and insert any dependencies to make it
+        -- a stand-alone HTML file.
+        let gexFile := (outFiles.find! "gexf")
+        let mut html ← IO.FS.readFile "html-template/index.html"
+        for dep in #[
+            "vendor/sigma.min.js",
+            "vendor/graphology.min.js",
+            "vendor/graphology-library.min.js" ] do
+          let depContent ← IO.FS.readFile ("html-template" / dep)
+          html := html.replace s!"<script src=\"{dep}\"></script>"
+            s!"<script>{depContent}</script>"
+        html := html.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)"
+          s!"render_gexf(\"{gexFile.replace "\n" ""|>.replace "\"" "\\\""}\")"
+          |>.replace "<h1>Import Graph</h1>"
+          s!"<h1>Import Graph for {to}</h1>"
+        IO.FS.writeFile fp html
      | some ext => try
-        _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] dotFile
+        _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles.find! "dot")
       catch ex =>
         IO.eprintln s!"Error occurred while writing out {fp}."
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."

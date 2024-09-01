@@ -29,7 +29,7 @@ def graph : Cmd := `[Cli|
     ...outputs : String;  "Filename(s) for the output. \
       If none are specified, generates `import_graph.dot`. \
       Automatically chooses the format based on the file extension. \
-      Currently `.dot` is supported, \
+      Currently supported formats are `.dot`, `.gexf`, `.html`, \
       and if you have `graphviz` installed then any supported output format is allowed."
 ]
 
