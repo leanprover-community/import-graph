@@ -139,12 +139,14 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         -- use `html-template/index.html` and insert any dependencies to make it
         -- a stand-alone HTML file.
         let gexFile := (outFiles.find! "gexf")
-        let mut html ← IO.FS.readFile "html-template/index.html"
-        for dep in #[
-            "vendor/sigma.min.js",
-            "vendor/graphology.min.js",
-            "vendor/graphology-library.min.js" ] do
-          let depContent ← IO.FS.readFile ("html-template" / dep)
+        -- The directory where the import-graph soure is located
+        let exeDir := (FilePath.parent (← IO.appPath) |>.get!) / ".." / ".." / ".."
+        let mut html ← IO.FS.readFile <| ← IO.FS.realPath ( exeDir / "html-template" / "index.html")
+        for dep in (#[
+            "vendor" / "sigma.min.js",
+            "vendor" / "graphology.min.js",
+            "vendor" / "graphology-library.min.js" ] : Array FilePath) do
+          let depContent ← IO.FS.readFile <| ← IO.FS.realPath (exeDir / "html-template" / dep)
           html := html.replace s!"<script src=\"{dep}\"></script>"
             s!"<script>{depContent}</script>"
         html := html.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)"
