@@ -25,7 +25,7 @@ def isBlackListed {m} [Monad m] [MonadEnv m] (declName : Name) : m Bool := do
   <||> isRec declName <||> isMatcher declName
 
 /-- Get all declarations in the specified file. -/
-def getNumberOfDeclsInFile (module : Name) : CoreM (NameSet) := do
+def getDeclsInFile (module : Name) : CoreM NameSet := do
   let env ← getEnv
   match env.moduleIdxForModule? module with
     | none => return {}
@@ -51,7 +51,7 @@ Metadata can be stored in forms of attributes, currently we record the following
 -/
 def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) : CoreM String := do
   let sizes : NameMap Nat ← graph.foldM (fun acc n _ => do
-    pure <| acc.insert n (← getNumberOfDeclsInFile n).size ) {}
+    pure <| acc.insert n (← getDeclsInFile n).size ) {}
     -- graph.fold (fun acc _ i => i.foldl (fun acc₂ j => acc₂.insert j ((acc₂.findD j 0) + 1)) acc) {}
 
   let nodes : String := graph.fold (fun acc n _ => acc ++ nodeTemplate n module (sizes.findD n 0)) ""
