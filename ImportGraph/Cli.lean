@@ -56,16 +56,16 @@ open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   -- file extensions that should be created
-  let extensions : Array String := match args.variableArgsAs! String with
-    | #[] => #["dot"]
+  let extensions : HashSet String := match args.variableArgsAs! String with
+    | #[] => HashSet.empty.insert "dot"
     | outputs => outputs.foldl (fun acc (o : String) =>
       match FilePath.extension o with
-       | none => if acc.contains "dot" then acc else acc.push "dot"
-       | some "gexf" => if acc.contains "gexf" then acc else acc.push "gexf"
-       | some "html" => if acc.contains "gexf" then acc else acc.push "gexf"
+       | none => acc.insert "dot"
+       | some "gexf" => acc.insert "gexf"
+       | some "html" => acc.insert "gexf"
        -- currently all other formats are handled by passing the `.dot` file to
        -- graphviz
-       | some _ => if acc.contains "dot" then acc else acc.push "dot" ) #[]
+       | some _ => acc.insert "dot" ) {}
 
   let to ← match args.flag? "to" with
   | some to => pure <| to.as! ModuleName

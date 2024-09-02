@@ -26,7 +26,7 @@ def isBlackListed (env : Environment) (declName : Name) : Bool :=
 
 /-- Get number of non-blacklisted declarations per file. -/
 def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
-  env.const2ModIdx.fold (fun acc n idx =>
+  env.const2ModIdx.fold (fun acc n (idx : ModuleIdx) =>
     let mod := env.allImportedModuleNames.get! idx
     if isBlackListed env n then acc else acc.insert mod ((acc.findD mod 0) + 1)
     ) {}
