@@ -84,8 +84,8 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let includeLean := args.hasFlag "include-lean"
     let includeStd := args.hasFlag "include-std" || includeLean
     let includeDeps := args.hasFlag "include-deps" || includeStd
-    -- `includeDirectDeps` does not imply `includeDeps`, e.g. `import Lean`.
-    let includeDirectDeps := args.hasFlag "include-direct-deps"
+    -- `includeDirect` does not imply `includeDeps`, e.g. `import Lean`.
+    let includeDirect := args.hasFlag "include-direct"
 
     -- If the flag is set, `directDeps` contains files which are not in the module
     -- but directly imported by a file in the module
@@ -98,7 +98,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       bif isPrefixOf `Std n then includeStd else
       bif isPrefixOf `Lean n || isPrefixOf `Init n then includeLean else
       includeDeps
-    let filterDirect (n : Name) : Bool := includeDirectDeps ∧ directDeps.contains n
+    let filterDirect (n : Name) : Bool := includeDirect ∧ directDeps.contains n
     graph := graph.filterMap (fun n i => if filter n then
       (i.filter (fun m => filterDirect m || filter m)) else
         -- include direct dep but without any further deps
