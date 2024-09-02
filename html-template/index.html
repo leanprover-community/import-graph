@@ -182,7 +182,8 @@ var render_gexf = (gexf) => {
 
   // unpack the node labels into data
   for (let [node, node_data] of graph.nodeEntries()) {
-    let path = node.split('.');
+    // In line with the `--exclude-meta` option
+    let path = (node == '«Mathlib.Tactics»') ? [node] : node.split('.');
     node_data.proj = path;
     if (graph.getNodeAttribute(node, 'in_module')) {
       node_data.path = path.slice(1);
