@@ -24,7 +24,7 @@ def graph : Cmd := `[Cli|
     "include-deps";        "Include used files from other libraries (not including Lean itself and `std`)"
     "include-std";         "Include used files from the Lean standard library (implies `--include-deps`)"
     "include-lean";        "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
-    "mark-module";         "Visually highlight the current module (implies `--include-direct-deps`)"
+    "mark-module";         "Visually highlight the current module (used in combination with some `--include-XXX`)."
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \
