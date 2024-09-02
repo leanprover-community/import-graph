@@ -140,10 +140,10 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
      | "dot" => writeFile fp (outFiles.find! "dot")
      | "gexf" => IO.FS.writeFile fp (outFiles.find! "gexf")
      | "html" =>
+        let gexfFile := (outFiles.find! "gexf")
         -- use `html-template/index.html` and insert any dependencies to make it
         -- a stand-alone HTML file.
-        let gexFile := (outFiles.find! "gexf")
-        -- The directory where the import-graph soure is located
+        -- note: changes in `index.html` might need to be reflected here!
         let exeDir := (FilePath.parent (← IO.appPath) |>.get!) / ".." / ".." / ".."
         let mut html ← IO.FS.readFile <| ← IO.FS.realPath ( exeDir / "html-template" / "index.html")
         for dep in (#[
@@ -151,12 +151,13 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
             "vendor" / "graphology.min.js",
             "vendor" / "graphology-library.min.js" ] : Array FilePath) do
           let depContent ← IO.FS.readFile <| ← IO.FS.realPath (exeDir / "html-template" / dep)
-          html := html.replace s!"<script src=\"{dep}\"></script>"
-            s!"<script>{depContent}</script>"
-        html := html.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)"
-          s!"render_gexf(\"{gexFile.replace "\n" ""|>.replace "\"" "\\\""}\")"
-          |>.replace "<h1>Import Graph</h1>"
-          s!"<h1>Import Graph for {to}</h1>"
+          html := html.replace s!"<script src=\"{dep}\"></script>" s!"<script>{depContent}</script>"
+        -- inline the graph data
+        -- note: changes in `index.html` might need to be reflected here!
+        let escapedFile := gexfFile.replace "\n" "" |>.replace "\"" "\\\""
+        html := html
+          |>.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)" s!"render_gexf(\"{escapedFile}\")"
+          |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {to}</h1>"
         IO.FS.writeFile fp html
      | some ext => try
         _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles.find! "dot")
