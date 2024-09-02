@@ -85,7 +85,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let includeStd := args.hasFlag "include-std" || includeLean
     let includeDeps := args.hasFlag "include-deps" || includeStd
 
-    -- `directDeps` are excempt from being filtered out.
+    -- `directDeps` are exempt from being filtered out.
     let directDeps := if args.hasFlag "mark-module" then
         graph.fold (fun acc n deps => if toModule.isPrefixOf n then
           -- append all dependencies of `n` which are not in the module
