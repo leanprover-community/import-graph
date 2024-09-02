@@ -109,7 +109,7 @@
   <div class="key-wrapper">
     <ul id="key"></ul>
     <div class="status" id="statusWrapper">
-      <p class="placeholder">Hover over a node to show only the files it imports. Hover over a directory name to highlight only the files in that directory</p>
+      <p class="placeholder">Hover over a node to show only the files importing it. Hover over a directory name to highlight only the files in that directory</p>
       <div class="message" id="statusMessage"></div>
     </div>
   </div>
@@ -466,8 +466,8 @@ var render_gexf = (gexf) => {
         descendants.add(node2);
         // ndecls_trans += graph.getNodeAttribute(node2, 'decl_count');
       });
-      graphologyLibrary.traversal.bfsFromNode(rev_graph, node, function(node, attr, depth) {
-        ancestors.add(node);
+      graphologyLibrary.traversal.bfsFromNode(rev_graph, node, function(node2, attr, depth) {
+        ancestors.add(node2);
       });
       state.hoveredDescendants = descendants;
       state.hoveredAncestors = ancestors;
