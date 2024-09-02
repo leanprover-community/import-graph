@@ -14,26 +14,22 @@ namespace ImportGraph
 
 open Elab Meta in
 /-- Filter Lean internal declarations -/
-def isBlackListed {m} [Monad m] [MonadEnv m] (declName : Name) : m Bool := do
-  if declName == ``sorryAx then return true
-  if declName matches .str _ "inj" then return true
-  if declName matches .str _ "noConfusionType" then return true
-  let env ← getEnv
-  pure <| declName.isInternalDetail
-   || isAuxRecursor env declName
-   || isNoConfusion env declName
-  <||> isRec declName <||> isMatcher declName
+def isBlackListed (env : Environment) (declName : Name) : Bool :=
+  declName == ``sorryAx
+  || declName matches .str _ "inj"
+  || declName matches .str _ "noConfusionType"
+  || declName.isInternalDetail
+  || isAuxRecursor env declName
+  || isNoConfusion env declName
+  || isRecCore env declName
+  || isMatcherCore env declName
 
-/-- Get all declarations in the specified file. -/
-def getDeclsInFile (module : Name) : CoreM NameSet := do
-  let env ← getEnv
-  match env.moduleIdxForModule? module with
-    | none => return {}
-    | some modIdx =>
-      let decls := env.const2ModIdx
-      let declsIn ← decls.foldM (fun acc n idx => do
-        if idx == modIdx && (! (← isBlackListed n)) then return acc.insert n else return acc) ({} : NameSet)
-      return declsIn
+/-- Get number of non-blacklisted declarations per file. -/
+def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
+  env.const2ModIdx.fold (fun acc n idx =>
+    let mod := env.allImportedModuleNames.get! idx
+    if isBlackListed env n then acc else acc.insert mod ((acc.findD mod 0) + 1)
+    ) {}
 
 /-- Gexf template for a node in th graph. -/
 def Gexf.nodeTemplate (n module : Name) (size : Nat) := s!"<node id=\"{n}\" label=\"{n}\"><attvalues><attvalue for=\"0\" value=\"{size}\" /><attvalue for=\"1\" value=\"{module.isPrefixOf n}\" /></attvalues></node>\n          "
@@ -49,14 +45,11 @@ Metadata can be stored in forms of attributes, currently we record the following
 * `in_module` (Bool): whether the file belongs to the main module
   (used to strip the first part of the name when displaying).
 -/
-def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) : CoreM String := do
-  let sizes : NameMap Nat ← graph.foldM (fun acc n _ => do
-    pure <| acc.insert n (← getDeclsInFile n).size ) {}
-    -- graph.fold (fun acc _ i => i.foldl (fun acc₂ j => acc₂.insert j ((acc₂.findD j 0) + 1)) acc) {}
-
+def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) (env : Environment) : String :=
+  let sizes : NameMap Nat := getNumberOfDeclsPerFile env
   let nodes : String := graph.fold (fun acc n _ => acc ++ nodeTemplate n module (sizes.findD n 0)) ""
   let edges : String := graph.fold (fun acc n i => acc ++ (i.foldl (fun b j => b ++ edgeTemplate j n) "")) ""
-  return s!"<?xml version='1.0' encoding='utf-8'?>
+  s!"<?xml version='1.0' encoding='utf-8'?>
     <gexf xmlns=\"http://www.gexf.net/1.2draft\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd\" version=\"1.2\">
       <meta>
         <creator>Lean ImportGraph</creator>

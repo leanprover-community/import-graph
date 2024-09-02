@@ -77,12 +77,12 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
 
   let outFiles ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let p := ImportGraph.getModule to
-    let ctx := { options := {}, fileName := "<input>", fileMap := default }
-    let state := { env }
     let mut graph := env.importGraph
     let unused ←
       match args.flag? "to"  with
       | some _ =>
+        let ctx := { options := {}, fileName := "<input>", fileMap := default }
+        let state := { env }
         let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules to) ctx state)
         pure <| graph.fold (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
       | none => pure NameSet.empty
@@ -121,8 +121,8 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       let graph₂ := match args.flag? "to" with
         | none => graph.filter (fun n _ => n != to)
         | some _ => graph
-      let (out, _) ← CoreM.toIO (Graph.toGexf graph₂ p) ctx state
-      outFiles := outFiles.insert "gexf" out
+      let gexFile := Graph.toGexf graph₂ p env
+      outFiles := outFiles.insert "gexf" gexFile
     return outFiles
 
   catch err =>
