@@ -184,7 +184,8 @@ var render_gexf = (gexf) => {
   for (let [node, node_data] of graph.nodeEntries()) {
     // In line with the `--exclude-meta` option
     let path = (node == '«Mathlib.Tactics»') ? [node] : node.split('.');
-    node_data.proj = path;
+    node_data.proj = path[0];
+    node_data.full_path = path;
     if (graph.getNodeAttribute(node, 'in_module')) {
       node_data.path = path.slice(1);
       if (path.length <= 1) {
@@ -486,7 +487,7 @@ var render_gexf = (gexf) => {
   renderer.on("enterNode", ({ node }) => { setHoveredNode(node);  });
   renderer.on("leaveNode", () => { setHoveredNode(default_hover ? state.defaultNode : undefined); });
   renderer.on("clickNode", ({ node }) => {
-    let path = graph.getNodeAttribute(node, 'path');
+    let path = graph.getNodeAttribute(node, 'full_path');
     window.open(docs_url + path.join('/') + ".html");
   });
 
