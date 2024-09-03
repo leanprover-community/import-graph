@@ -86,7 +86,9 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let includeLean := args.hasFlag "include-lean"
     let includeStd := args.hasFlag "include-std" || includeLean
     let includeDeps := args.hasFlag "include-deps" || includeStd
-    -- `includeDirect` does not imply `includeDeps`, e.g. `import Lean`.
+    -- Note: `includeDirect` does not imply `includeDeps`!
+    -- e.g. if the module contains `import Lean`, the node `Lean` will be included with
+    -- `--include-direct`, but not included with `--include-deps`.
     let includeDirect := args.hasFlag "include-direct"
 
     -- `directDeps` contains files which are not in the module
