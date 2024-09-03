@@ -17,8 +17,10 @@ open ImportGraph
 /--
 Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
 * Nodes in the `unused` set will be shaded light gray.
-* Nodes which start with the `markedModule` and edges into them will be highlighted in green.
-* Nodes in `directDeps` are marked with a green border and green text.
+* If `markedModule` is provided:
+  * Nodes which start with the `markedModule` will be highlighted in green and drawn closer together.
+  * Edges from `directDeps` into the module are highlighted in green
+  * Nodes in `directDeps` are marked with a green border and green text.
 -/
 def asDotGraph
     (graph : NameMap (Array Name))
