@@ -87,22 +87,32 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     -- `includeDirect` does not imply `includeDeps`, e.g. `import Lean`.
     let includeDirect := args.hasFlag "include-direct"
 
-    -- If the flag is set, `directDeps` contains files which are not in the module
+    -- `directDeps` contains files which are not in the module
     -- but directly imported by a file in the module
-    let directDeps := graph.fold (fun acc n deps => if toModule.isPrefixOf n then
-        deps.filter (!toModule.isPrefixOf ·) |>.foldl NameSet.insert acc
-      else acc) NameSet.empty
+    let directDeps : NameSet := graph.fold (init := .empty) (fun acc n deps =>
+      if toModule.isPrefixOf n then
+        deps.filter (!toModule.isPrefixOf ·) |>.foldl (init := acc) NameSet.insert
+      else
+        acc)
 
     let filter (n : Name) : Bool :=
       toModule.isPrefixOf n ||
       bif isPrefixOf `Std n then includeStd else
       bif isPrefixOf `Lean n || isPrefixOf `Init n then includeLean else
       includeDeps
-    let filterDirect (n : Name) : Bool := includeDirect ∧ directDeps.contains n
-    graph := graph.filterMap (fun n i => if filter n then
-      (i.filter (fun m => filterDirect m || filter m)) else
-        -- include direct dep but without any further deps
-        if filterDirect n then some #[] else none)
+    let filterDirect (n : Name) : Bool :=
+      includeDirect ∧ directDeps.contains n
+
+    graph := graph.filterMap (fun n i =>
+      if filter n then
+        -- include node regularly
+        (i.filter (fun m => filterDirect m || filter m))
+      else if filterDirect n then
+        -- include node as direct dependency; drop any further deps.
+        some #[]
+      else
+        -- not included
+        none)
     if args.hasFlag "exclude-meta" then
       -- Mathlib-specific exclusion of tactics
       let filterMathlibMeta : Name → Bool := fun n => (
