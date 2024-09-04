@@ -19,7 +19,7 @@ lake exe graph
 
 A typical command is
 
-```
+```bash
 lake exe graph --to MyModule my_graph.pdf
 ```
 where `MyModule` follows the same module naming you would use to `import` it in lean. See `lake exe graph --help` for more options.
@@ -28,7 +28,7 @@ where `MyModule` follows the same module naming you would use to `import` it in 
 
 To create a Json file, you can use `.xdot_json` as output type:
 
-```
+```bash
 lake exe graph my_graph.xdot_json
 ```
 
@@ -46,7 +46,7 @@ require importGraph from git "https://github.com/leanprover-community/import-gra
 
 or, if you have a `lakefile.toml`, it would be
 
-```
+```toml
 [[require]]
 name = "importGraph"
 git = "[https://github.com/leanprover-community/batteries](https://github.com/leanprover-community/import-graph)"
