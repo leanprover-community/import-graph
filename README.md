@@ -30,7 +30,7 @@ where `MyModule` follows the same module naming you would use to `import` it in 
 
 ### Json
 
-To create a Json file, you can use `.xdot_json` or `.json` as output type:
+To create a Json file, you can use `.xdot_json` as output type:
 
 ```
 lake exe graph my_graph.xdot_json
