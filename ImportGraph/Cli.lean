@@ -64,8 +64,8 @@ open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   -- file extensions that should be created
-  let extensions : HashSet String := match args.variableArgsAs! String with
-    | #[] => HashSet.empty.insert "dot"
+  let extensions : Std.HashSet String := match args.variableArgsAs! String with
+    | #[] => Std.HashSet.empty.insert "dot"
     | outputs => outputs.foldl (fun acc (o : String) =>
       match FilePath.extension o with
        | none => acc.insert "dot"
@@ -145,7 +145,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let markedModule : Option Name := if args.hasFlag "mark-module" then p else none
 
     -- Create all output files that are requested
-    let mut outFiles : HashMap String String := {}
+    let mut outFiles : Std.HashMap String String := {}
     if extensions.contains "dot" then
       let dotFile := asDotGraph graph (unused := unused) (markedModule := markedModule) (directDeps := directDeps)
       outFiles := outFiles.insert "dot" dotFile
@@ -165,15 +165,15 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     throw err
 
   match args.variableArgsAs! String with
-  | #[] => writeFile "import_graph.dot" (outFiles.find! "dot")
+  | #[] => writeFile "import_graph.dot" (outFiles["dot"]!)
   | outputs => for o in outputs do
      let fp : FilePath := o
      match fp.extension with
      | none
-     | "dot" => writeFile fp (outFiles.find! "dot")
-     | "gexf" => IO.FS.writeFile fp (outFiles.find! "gexf")
+     | "dot" => writeFile fp (outFiles["dot"]!)
+     | "gexf" => IO.FS.writeFile fp (outFiles["gexf"]!)
      | "html" =>
-        let gexfFile := (outFiles.find! "gexf")
+        let gexfFile := (outFiles["gexf"]!)
         -- use `html-template/index.html` and insert any dependencies to make it
         -- a stand-alone HTML file.
         -- note: changes in `index.html` might need to be reflected here!
@@ -193,7 +193,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
           |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {to}</h1>"
         IO.FS.writeFile fp html
      | some ext => try
-        _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles.find! "dot")
+        _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles["dot"]!)
       catch ex =>
         IO.eprintln s!"Error occurred while writing out {fp}."
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
