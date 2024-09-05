@@ -154,8 +154,8 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
       let graph₂ := match args.flag? "to" with
         | none => graph.filter (fun n _ => n != to)
         | some _ => graph
-      let gexFile := Graph.toGexf graph₂ p env
-      outFiles := outFiles.insert "gexf" gexFile
+      let gexfFile := Graph.toGexf graph₂ p env
+      outFiles := outFiles.insert "gexf" gexfFile
     return outFiles
 
   catch err =>
