@@ -81,7 +81,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   let from? := match args.flag? "from" with
   | some fr => some <| fr.as! ModuleName
   | none => none
-  searchPathRef.set compile_time_search_path%
+  initSearchPath (← findSysroot)
 
   let outFiles ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
     let p := ImportGraph.getModule to
