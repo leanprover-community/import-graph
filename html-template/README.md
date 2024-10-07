@@ -20,7 +20,7 @@ Therefore any modifications to these lines need to be reflected in `ImportGraph/
 
 # Credits
 
-This tool has been adapted from it's [Lean 3 version](https://github.com/eric-wieser/mathlib-import-graph) written by Eric Wieser, which was published under the [MIT License](./LICENSE_source)
+This tool has been adapted from its [Lean 3 version](https://github.com/eric-wieser/mathlib-import-graph) written by Eric Wieser, which was published under the [MIT License](./LICENSE_source)
 included here.
 
 Adaptation by Jon Eugster.
