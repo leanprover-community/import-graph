@@ -64,7 +64,7 @@ see [Lake docs](https://github.com/leanprover/lean4/tree/master/src/lake#support
 You can import this in any lean projects by the following line to your `lakefile.lean`:
 
 ```lean
-require "leanprover-community" / "importGraph" @ "main"
+require "leanprover-community" / "importGraph" @ git "main"
 ```
 
 or, if you have a `lakefile.toml`, it would be
