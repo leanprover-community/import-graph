@@ -56,14 +56,15 @@ There are a few commands implemented, which help you analysing the imports of a 
 
 ## Installation
 
-The installation works exactly like for any [Lake package](https://reservoir.lean-lang.org/).
+The installation works exactly like for any [Lake package](https://reservoir.lean-lang.org/),
+see [Lake docs](https://github.com/leanprover/lean4/tree/master/src/lake#supported-sources).
 
 *This only relevant if your project does not already require `importGraph` through another lake package (e.g. mathlib). If it does, do not follow these instructions; instead just use the tool with `lake exe graph`!*
 
 You can import this in any lean projects by the following line to your `lakefile.lean`:
 
 ```lean
-require importGraph from git "https://github.com/leanprover-community/import-graph" @ "main"
+require "leanprover-community" / "importGraph" @ "main"
 ```
 
 or, if you have a `lakefile.toml`, it would be
@@ -71,7 +72,7 @@ or, if you have a `lakefile.toml`, it would be
 ```toml
 [[require]]
 name = "importGraph"
-git = "[https://github.com/leanprover-community/batteries](https://github.com/leanprover-community/import-graph)"
+source = "leanprover-community"
 rev = "main"
 ```
 
