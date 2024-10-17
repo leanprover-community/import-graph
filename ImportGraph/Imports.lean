@@ -131,7 +131,7 @@ partial
 def transitiveFilteredUpstream (node : Name) (graph : NameMap (Array Name))
     (filter : Name → Bool) (replacement : Option Name := none):
     List Name :=
-  (graph.find! node).toList.bind fun source =>
+  (graph.find! node).toList.flatMap fun source =>
     ( if filter source then
         -- Add the transitive edges going through the filtered node `source`.
         -- If there is a replacement node, add an additional edge `repl → node`.
@@ -156,12 +156,12 @@ def filterGraph (graph : NameMap (Array Name)) (filter : Name → Bool)
     (replacement : Option Name := none) : NameMap (Array Name) :=
   -- Create a list of all files imported by any of the filtered files
   -- and remove all imports starting with `Mathlib` to avoid loops.
-  let replImports := graph.toList.bind
+  let replImports := graph.toList.flatMap
     (fun ⟨n, i⟩ => if filter n then i.toList else [])
     |>.eraseDups |>.filter (¬ Name.isPrefixOf `Mathlib ·) |>.toArray
   let graph := graph.filterMap (fun node edges => if filter node then none else some <|
     -- If the node `node` is not filtered, modify the `edges` going into `node`.
-    edges.toList.bind (fun source =>
+    edges.toList.flatMap (fun source =>
       if filter source then
         transitiveFilteredUpstream source graph filter (replacement := replacement)
       else [source]) |>.eraseDups.toArray)
