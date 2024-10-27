@@ -9,7 +9,8 @@ testRunner = "ImportGraphTest"
 [[require]]
 name = "Cli"
 scope = "leanprover"
-rev = "main"
+git = "https://github.com/kim-em/lean4-cli.git"
+rev = "nightly"
 
 [[require]]
 name = "batteries"
