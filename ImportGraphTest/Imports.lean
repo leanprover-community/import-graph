@@ -24,6 +24,36 @@ ImportGraph.RequiredModules
 
 open Elab Command
 
+
+/--
+Reports unused transitive imports amongst the specified modules.
+-/
+elab "#unused_transitive_imports" names:ident* : command => do
+  let imports := (names.map Syntax.getId).toList
+  let unused ← Elab.Command.liftCoreM (unusedTransitiveImports imports)
+  for (n, u) in unused do
+    if !u.isEmpty then
+    logInfo <| s!"Transitively unused imports of {n}:\n{"\n".intercalate (u.map (fun i => s!"  {i}"))}"
+
+-- This test case can be removed after nightly-2024-10-24, because these imports have been cleaned up.
+/--
+info: Transitively unused imports of Init.Control.StateRef:
+  Init.System.IO
+---
+info: Transitively unused imports of Init.System.IO:
+  Init.Control.Reader
+-/
+#guard_msgs in
+#unused_transitive_imports Init.Control.StateRef Init.System.IO Init.Control.Reader Init.Control.Basic
+
+-- This is a spurious unused transitive import, because it relies on notation from `Init.Core`.
+/--
+info: Transitively unused imports of Init.Control.Basic:
+  Init.Core
+-/
+#guard_msgs in
+#unused_transitive_imports Init.Control.Basic Init.Core
+
 elab "#transitivelyRequiredModules_test" : command => do
   let env ← getEnv
   let unused ← liftCoreM <| env.transitivelyRequiredModules `ImportGraph.RequiredModules

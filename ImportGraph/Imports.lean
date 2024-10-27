@@ -173,6 +173,21 @@ def filterGraph (graph : NameMap (Array Name)) (filter : Name → Bool)
 end Lean.NameMap
 
 /--
+Returns a `List (Name × List Name)` with a key for each module `n` in `amongst`,
+whose corresponding value is the list of modules `m` in `amongst` which are transitively imported by `n`,
+but no declaration in `n` makes use of a declaration in `m`.
+
+The current implementation is too slow to run on the entirety of Mathlib,
+although it should be fine for any sequential chain of imports in Mathlib.
+-/
+def unusedTransitiveImports (amongst : List Name) : CoreM (List (Name × List Name)) := do
+  let env ← getEnv
+  let transitiveImports := env.importGraph.transitiveClosure
+  amongst.mapM fun n => do return (n,
+    let unused := (transitiveImports.find? n).getD {} \ (← env.transitivelyRequiredModules n)
+    amongst.filter (fun m => unused.contains m))
+
+/--
 Return the redundant imports (i.e. those transitively implied by another import)
 of a specified module (or the current module if `none` is specified).
 -/
