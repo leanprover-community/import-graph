@@ -126,22 +126,25 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
   for m in modules do
     let mut r : NameSet := {}
     for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
+      -- This is messy: Mathlib is big enough that writing a recursive function causes a stack overflow.
+      -- So we use an explicit stack instead. We visit each constant twice:
+      -- once to record the constants transitively used by it,
+      -- and again to record the modules which defined those constants.
       let mut stack : Array (ConstantInfo × Option NameSet) := #[⟨← getConstInfo n, none⟩]
       while !stack.isEmpty do
         let (ci, used?) := stack.back
+        stack := stack.pop
         match used? with
         | none =>
-          stack := stack.pop
           if !c2m.contains ci.name then
             let used := ci.getUsedConstantsAsSet
-            stack := stack.pop.push ⟨ci, some used⟩
+            stack := stack.push ⟨ci, some used⟩
             for u in used do
               if !c2m.contains u then
                 stack := stack.push ⟨← getConstInfo u, none⟩
         | some used =>
           let transitivelyUsed : NameSet := used.fold (init := used) (fun s u => s.union ((c2m.find? u).getD {}))
           c2m := c2m.insert ci.name transitivelyUsed
-          stack := stack.pop
       r := r.union ((c2m.find? n).getD {})
     result := result.insert m r
   return result
