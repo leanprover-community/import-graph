@@ -126,20 +126,25 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
   for m in modules do
     let mut r : NameSet := {}
     for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
-      c2m ← process c2m n
+      let mut stack : Array (ConstantInfo × Option NameSet) := #[⟨← getConstInfo n, none⟩]
+      while !stack.isEmpty do
+        let (ci, used?) := stack.back
+        match used? with
+        | none =>
+          stack := stack.pop
+          if !c2m.contains ci.name then
+            let used := ci.getUsedConstantsAsSet
+            stack := stack.pop.push ⟨ci, some used⟩
+            for u in used do
+              if !c2m.contains u then
+                stack := stack.push ⟨← getConstInfo u, none⟩
+        | some used =>
+          let transitivelyUsed : NameSet := used.fold (init := used) (fun s u => s.union ((c2m.find? u).getD {}))
+          c2m := c2m.insert ci.name transitivelyUsed
+          stack := stack.pop
       r := r.union ((c2m.find? n).getD {})
     result := result.insert m r
   return result
-where process (constantsToModules : NameMap NameSet) (const : Name) : CoreM (NameMap NameSet) := do
-  if constantsToModules.contains const then
-    return constantsToModules
-  let mut c2m := constantsToModules
-  let ci ← getConstInfo const
-  let mut r : NameSet := {}
-  for n in ci.getUsedConstantsAsSet do
-    c2m ← process c2m n
-    r := r.union ((c2m.find? n).getD {})
-  return c2m.insert const r
 
 /--
 Return the names of the modules in which constants used in the current file were defined.
