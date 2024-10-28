@@ -1,11 +1,11 @@
 {"version": "1.1.0",
  "packagesDir": ".lake/packages",
  "packages":
- [{"url": "https://github.com/kim-em/lean4-cli.git",
+ [{"url": "https://github.com/leanprover/lean4-cli",
    "type": "git",
    "subDir": null,
    "scope": "leanprover",
-   "rev": "c073a1cf84e32d191dfa5e1477d215f3cd6d2bde",
+   "rev": "039d23aebf2ccb980bc86e93179e7e340f99b4f0",
    "name": "Cli",
    "manifestFile": "lake-manifest.json",
    "inputRev": "nightly",
