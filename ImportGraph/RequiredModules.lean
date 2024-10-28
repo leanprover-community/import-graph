@@ -116,6 +116,32 @@ def Environment.transitivelyRequiredModules (env : Environment) (module : Name) 
   (NameSet.ofList constants).transitivelyRequiredModules env
 
 /--
+Computes all the modules transitively required by the specified modules.
+Should be equivalent to calling `transitivelyRequiredModules` on each module, but shares more of the work.
+-/
+partial def Environment.transitivelyRequiredModules' (env : Environment) (modules : List Name) :
+    CoreM (NameMap NameSet) := do
+  let mut c2m : NameMap NameSet := {}
+  let mut result : NameMap NameSet := {}
+  for m in modules do
+    let mut r : NameSet := {}
+    for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
+      c2m ← process c2m n
+      r := r.union ((c2m.find? n).getD {})
+    result := result.insert m r
+  return result
+where process (constantsToModules : NameMap NameSet) (const : Name) : CoreM (NameMap NameSet) := do
+  if constantsToModules.contains const then
+    return constantsToModules
+  let mut c2m := constantsToModules
+  let ci ← getConstInfo const
+  let mut r : NameSet := {}
+  for n in ci.getUsedConstantsAsSet do
+    c2m ← process c2m n
+    r := r.union ((c2m.find? n).getD {})
+  return c2m.insert const r
+
+/--
 Return the names of the modules in which constants used in the current file were defined.
 
 Note that this will *not* account for tactics and syntax used in the file,
