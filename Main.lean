@@ -16,15 +16,15 @@ def graph : Cmd := `[Cli|
    If you are working in a downstream project, use `lake exe graph --to MyProject`."
 
   FLAGS:
-    "show-transitive";    "Show transitively redundant edges."
-    to : ModuleName;      "Only show the upstream imports of the specified module."
-    "from" : ModuleName;  "Only show the downstream dependencies of the specified module."
-    "exclude-meta";       "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
-    "include-direct";     "Include directly imported files from other libraries"
-    "include-deps";       "Include used files from other libraries (not including Lean itself and `std`)"
-    "include-std";        "Include used files from the Lean standard library (implies `--include-deps`)"
-    "include-lean";       "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
-    "mark-module";        "Visually highlight the current module (used in combination with some `--include-XXX`)."
+    "show-transitive";         "Show transitively redundant edges."
+    "to" : Array ModuleName;   "Only show the upstream imports of the specified module."
+    "from" : Array ModuleName; "Only show the downstream dependencies of the specified module."
+    "exclude-meta";            "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
+    "include-direct";          "Include directly imported files from other libraries"
+    "include-deps";            "Include used files from other libraries (not including Lean itself and `std`)"
+    "include-std";             "Include used files from the Lean standard library (implies `--include-deps`)"
+    "include-lean";            "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
+    "mark-package";            "Visually highlight the current package (used in combination with some `--include-XXX`)."
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \
