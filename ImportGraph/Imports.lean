@@ -177,10 +177,10 @@ Returns a `List (Name × List Name)` with a key for each module `n` in `amongst`
 whose corresponding value is the list of modules `m` in `amongst` which are transitively imported by `n`,
 but no declaration in `n` makes use of a declaration in `m`.
 -/
-def unusedTransitiveImports (amongst : List Name) : CoreM (List (Name × List Name)) := do
+def unusedTransitiveImports (amongst : List Name) (verbose : Bool := false) : CoreM (List (Name × List Name)) := do
   let env ← getEnv
   let transitiveImports := env.importGraph.transitiveClosure
-  let transitivelyRequired ← env.transitivelyRequiredModules' amongst
+  let transitivelyRequired ← env.transitivelyRequiredModules' amongst verbose
   amongst.mapM fun n => do return (n,
     let unused := (transitiveImports.find? n).getD {} \ (transitivelyRequired.find? n |>.getD {})
     amongst.filter (fun m => unused.contains m))
