@@ -121,10 +121,11 @@ Should be equivalent to calling `transitivelyRequiredModules` on each module, bu
 -/
 partial def Environment.transitivelyRequiredModules' (env : Environment) (modules : List Name) :
     CoreM (NameMap NameSet) := do
-  let mut c2m : NameMap NameSet := {}
+  let N := env.header.moduleNames.size
+  let mut c2m : NameMap (BitVec N) := {}
   let mut result : NameMap NameSet := {}
   for m in modules do
-    let mut r : NameSet := {}
+    let mut r : BitVec N := 0
     for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
       -- This is messy: Mathlib is big enough that writing a recursive function causes a stack overflow.
       -- So we use an explicit stack instead. We visit each constant twice:
@@ -143,11 +144,16 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
               if !c2m.contains u then
                 stack := stack.push ⟨← getConstInfo u, none⟩
         | some used =>
-          let transitivelyUsed : NameSet := used.fold (init := used) (fun s u => s.union ((c2m.find? u).getD {}))
+          let transitivelyUsed : BitVec N := used.fold (init := toBitVec used) (fun s u => s ||| ((c2m.find? u).getD 0))
           c2m := c2m.insert ci.name transitivelyUsed
-      r := r.union ((c2m.find? n).getD {})
-    result := result.insert m r
+      r := r ||| ((c2m.find? n).getD 0)
+    result := result.insert m (toNameSet r)
   return result
+where
+  toBitVec {N : Nat} (s : NameSet) : BitVec N :=
+    s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ ((env.header.moduleNames.getIdx? n).getD 0))
+  toNameSet {N : Nat} (b : BitVec N) : NameSet :=
+    env.header.moduleNames.zipWithIndex.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
 
 /--
 Return the names of the modules in which constants used in the current file were defined.
