@@ -24,6 +24,11 @@ lake exe graph --to MyModule my_graph.pdf
 ```
 where `MyModule` follows the same module naming you would use to `import` it in lean. See `lake exe graph --help` for more options.
 
+You can specify multiple sources and targets e.g. as
+```bash
+lake exe graph --from MyModule1,MyModule2 --to MyModule3,MyModule4 my_graph.pdf
+```
+
 ### Troubleshoot
 
 * make sure to `lake build` your project (or the specified `--to` module) before using `lake exe graph`!
