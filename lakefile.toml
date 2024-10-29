@@ -28,5 +28,12 @@ root = "Main"
 # Remove this line if you do not need such functionality.
 supportInterpreter = true
 
+# `lake exe unused_transitive_imports` prints unused transitive imports from amongst a given list of modules.
+[[lean_exe]]
+name = "unused_transitive_imports"
+root = "ImportGraph.UnusedTransitiveImports"
+supportInterpreter = true
+
 [[lean_lib]]
 name = "ImportGraphTest"
+

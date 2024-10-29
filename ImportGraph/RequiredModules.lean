@@ -123,31 +123,40 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
     CoreM (NameMap NameSet) := do
   let N := env.header.moduleNames.size
   let mut c2m : NameMap (BitVec N) := {}
+  let mut pushed : NameSet := {}
   let mut result : NameMap NameSet := {}
   for m in modules do
     if verbose then
       IO.println s!"Processing module {m}"
     let mut r : BitVec N := 0
     for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
+      if ! n.isInternal then
       -- This is messy: Mathlib is big enough that writing a recursive function causes a stack overflow.
       -- So we use an explicit stack instead. We visit each constant twice:
       -- once to record the constants transitively used by it,
       -- and again to record the modules which defined those constants.
-      let mut stack : Array (ConstantInfo × Option NameSet) := #[⟨← getConstInfo n, none⟩]
+      let mut stack : List (Name × Option NameSet) := [⟨n, none⟩]
+      pushed := pushed.insert n
       while !stack.isEmpty do
-        let (ci, used?) := stack.back
-        stack := stack.pop
-        match used? with
-        | none =>
-          if !c2m.contains ci.name then
-            let used := ci.getUsedConstantsAsSet
-            stack := stack.push ⟨ci, some used⟩
-            for u in used do
-              if !c2m.contains u then
-                stack := stack.push ⟨← getConstInfo u, none⟩
-        | some used =>
-          let transitivelyUsed : BitVec N := used.fold (init := toBitVec used) (fun s u => s ||| ((c2m.find? u).getD 0))
-          c2m := c2m.insert ci.name transitivelyUsed
+        match stack with
+        | [] => panic! "Stack is empty"
+        | (c, used?) :: tail =>
+          stack := tail
+          match used? with
+          | none =>
+            if !c2m.contains c then
+              let used := (← getConstInfo c).getUsedConstantsAsSet
+              stack := ⟨c, some used⟩ :: stack
+              for u in used do
+                if !pushed.contains u then
+                  stack := ⟨u, none⟩ :: stack
+                  pushed := pushed.insert u
+          | some used =>
+            let usedModules : NameSet :=
+              used.fold (init := {}) (fun s u => if let some m := env.getModuleFor? u then s.insert m else s)
+            let transitivelyUsed : BitVec N :=
+              used.fold (init := toBitVec usedModules) (fun s u => s ||| ((c2m.find? u).getD 0))
+            c2m := c2m.insert c transitivelyUsed
       r := r ||| ((c2m.find? n).getD 0)
     result := result.insert m (toNameSet r)
   return result
