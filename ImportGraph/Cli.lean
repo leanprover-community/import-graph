@@ -28,22 +28,24 @@ def asDotGraph
     (unused : NameSet := {})
     (header := "import_graph")
     (markedPackage : Option Name := none)
-    (directDeps : NameSet := {}) :
+    (directDeps : NameSet := {})
+    (from_ to : NameSet := {}):
     String := Id.run do
 
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
+    let shape := if from_.contains n then "invhouse" else if to.contains n then "house" else "ellipse"
     if markedPackage.isSome ∧ directDeps.contains n then
       -- note: `fillcolor` defaults to `color` if not specified
       let fill := if unused.contains n then "#e0e0e0" else "white"
-      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2, shape={shape}];"
     else if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\", shape={shape}];"
     else if isInModule markedPackage n then
       -- mark node
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\"];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\", shape={shape}];"
     else
-      lines := lines.push s!"  \"{n}\";"
+      lines := lines.push s!"  \"{n}\" [shape={shape}];"
     -- Then add edges
     for i in is do
       if isInModule markedPackage n then
@@ -148,6 +150,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let mut outFiles : Std.HashMap String String := {}
     if extensions.contains "dot" then
       let dotFile := asDotGraph graph (unused := unused) (markedPackage := markedPackage) (directDeps := directDeps)
+        (to := NameSet.ofArray to) (from_ := NameSet.ofArray (from?.getD #[]))
       outFiles := outFiles.insert "dot" dotFile
     if extensions.contains "gexf" then
       -- filter out the top node as it makes the graph less pretty
