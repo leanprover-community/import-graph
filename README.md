@@ -54,6 +54,12 @@ There are a few commands implemented, which help you analysing the imports of a 
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 
+## Other executables
+
+`lake exe unused_transitive_imports m1 m2 ...`
+
+For each specified module `m`, prints those `n` from the argument list which are imported, but transitively unused by `m`.
+
 ## Installation
 
 The installation works exactly like for any [Lake package](https://reservoir.lean-lang.org/),
