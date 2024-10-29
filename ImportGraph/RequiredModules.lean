@@ -119,12 +119,14 @@ def Environment.transitivelyRequiredModules (env : Environment) (module : Name) 
 Computes all the modules transitively required by the specified modules.
 Should be equivalent to calling `transitivelyRequiredModules` on each module, but shares more of the work.
 -/
-partial def Environment.transitivelyRequiredModules' (env : Environment) (modules : List Name) :
+partial def Environment.transitivelyRequiredModules' (env : Environment) (modules : List Name) (verbose : Bool := false) :
     CoreM (NameMap NameSet) := do
   let N := env.header.moduleNames.size
   let mut c2m : NameMap (BitVec N) := {}
   let mut result : NameMap NameSet := {}
   for m in modules do
+    if verbose then
+      IO.println s!"Processing module {m}"
     let mut r : BitVec N := 0
     for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
       -- This is messy: Mathlib is big enough that writing a recursive function causes a stack overflow.
