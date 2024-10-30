@@ -60,9 +60,7 @@ def Lean.Environment.importSizes (env : Environment) (verbose : Bool := false) :
 
   pure (importMap, localSizes, importSizes)
 
-def Lean.Environment.hoardFactor (env : Environment) (verbose : Bool := false) : CoreM Float := do
-  -- TODO: improve the standard library so the next line can be `env.constants.keys`
-  let decls := (env.constants.map₁.toArray.append env.constants.map₂.toArray).map (·.fst)
+def Lean.Environment.hoardFactor (env : Environment) (decls : Array Name) (verbose : Bool := false) : CoreM Float := do
   if verbose then
     println!"Preprocessing approximately {decls.size} declarations."
   let ⟨N, c2m⟩ ← env.transitivelyRequiredModulesForDecls' decls verbose
@@ -76,8 +74,9 @@ def Lean.Environment.hoardFactor (env : Environment) (verbose : Bool := false) :
 
   if verbose then
     println!"Entering main loop."
-  for (decl, requiredModules) in c2m do
+  for decl in decls do
     if ← decl.isBlackListed then continue
+    let requiredModules := c2m.find! decl
 
     iteration := iteration + 1
     if verbose && iteration % 1000 == 0 then
@@ -106,7 +105,14 @@ def hoardFactorCLI (args : Cli.Parsed) : IO UInt32 := do
 
   let factor ← Core.withImportModules targets do
     let env ← getEnv
-    env.hoardFactor (verbose := args.hasFlag "verbose")
+    let mut decls : Array Name := #[]
+    if args.hasFlag "all" then
+      -- TODO: improve the standard library so the next line can be `env.constants.keys`
+      decls := (env.constants.map₁.toArray.append env.constants.map₂.toArray).map (·.fst)
+    else for m in targets do
+      let names := env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames
+      decls := decls.append names
+    env.hoardFactor decls (verbose := args.hasFlag "verbose")
 
   println!"Hoard factor: {factor}"
   return 0
@@ -119,6 +125,8 @@ def hoard_factor : Cmd := `[Cli|
   "Compute a measure of unused declarations per module."
 
   FLAGS:
+    "all";                "Compute the factor for all declarations made or imported in the module. \
+The default is to compute the factor for the new declarations in the module itself."
     "verbose";            "Output more information during computations."
 
   ARGS:
