@@ -18,8 +18,8 @@ open ImportGraph
 /--
 Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
 * Nodes in the `unused` set will be shaded light gray.
-* If `markedModule` is provided:
-  * Nodes which start with the `markedModule` will be highlighted in green and drawn closer together.
+* If `markedPackage` is provided:
+  * Nodes which start with the `markedPackage` will be highlighted in green and drawn closer together.
   * Edges from `directDeps` into the module are highlighted in green
   * Nodes in `directDeps` are marked with a green border and green text.
 -/
@@ -27,27 +27,29 @@ def asDotGraph
     (graph : NameMap (Array Name))
     (unused : NameSet := {})
     (header := "import_graph")
-    (markedModule : Option Name := none)
-    (directDeps : NameSet := {}) :
+    (markedPackage : Option Name := none)
+    (directDeps : NameSet := {})
+    (from_ to : NameSet := {}):
     String := Id.run do
 
   let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
   for (n, is) in graph do
-    if markedModule.isSome ∧ directDeps.contains n then
+    let shape := if from_.contains n then "invhouse" else if to.contains n then "house" else "ellipse"
+    if markedPackage.isSome ∧ directDeps.contains n then
       -- note: `fillcolor` defaults to `color` if not specified
       let fill := if unused.contains n then "#e0e0e0" else "white"
-      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2, shape={shape}];"
     else if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\"];"
-    else if isInModule markedModule n then
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\", shape={shape}];"
+    else if isInModule markedPackage n then
       -- mark node
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\"];"
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\", shape={shape}];"
     else
-      lines := lines.push s!"  \"{n}\";"
+      lines := lines.push s!"  \"{n}\" [shape={shape}];"
     -- Then add edges
     for i in is do
-      if isInModule markedModule n then
-        if isInModule markedModule i then
+      if isInModule markedPackage n then
+        if isInModule markedPackage i then
           -- draw the main project close together
           lines := lines.push s!"  \"{i}\" -> \"{n}\" [weight=100];"
         else
@@ -76,37 +78,37 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
        | some _ => acc.insert "dot" ) {}
 
   let to ← match args.flag? "to" with
-  | some to => pure <| to.as! ModuleName
-  | none => getCurrentModule
-  let from? := match args.flag? "from" with
-  | some fr => some <| fr.as! ModuleName
+  | some to => pure <| to.as! (Array ModuleName)
+  | none => pure #[← getCurrentModule]
+  let from? : Option (Array Name) := match args.flag? "from" with
+  | some fr => some <| fr.as! (Array ModuleName)
   | none => none
   initSearchPath (← findSysroot)
 
-  let outFiles ← try unsafe withImportModules #[{module := to}] {} (trustLevel := 1024) fun env => do
-    let p := ImportGraph.getModule to
+  let outFiles ← try unsafe withImportModules (to.map ({module := ·})) {} (trustLevel := 1024) fun env => do
+    let toModule := ImportGraph.getModule to[0]!
     let mut graph := env.importGraph
     let unused ←
       match args.flag? "to"  with
       | some _ =>
         let ctx := { options := {}, fileName := "<input>", fileMap := default }
         let state := { env }
-        let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules to) ctx state)
+        let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules' to.toList) ctx state)
+        let used := used.fold (init := NameSet.empty) (fun s _ t => s ∪ t)
         pure <| graph.fold (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
       | none => pure NameSet.empty
     if let Option.some f := from? then
-      graph := graph.downstreamOf (NameSet.empty.insert f)
-    let toModule := ImportGraph.getModule to
+      graph := graph.downstreamOf (NameSet.ofArray f)
     let includeLean := args.hasFlag "include-lean"
     let includeStd := args.hasFlag "include-std" || includeLean
     let includeDeps := args.hasFlag "include-deps" || includeStd
     -- Note: `includeDirect` does not imply `includeDeps`!
-    -- e.g. if the module contains `import Lean`, the node `Lean` will be included with
+    -- e.g. if the package contains `import Lean`, the node `Lean` will be included with
     -- `--include-direct`, but not included with `--include-deps`.
     let includeDirect := args.hasFlag "include-direct"
 
-    -- `directDeps` contains files which are not in the module
-    -- but directly imported by a file in the module
+    -- `directDeps` contains files which are not in the package
+    -- but directly imported by a file in the package
     let directDeps : NameSet := graph.fold (init := .empty) (fun acc n deps =>
       if toModule.isPrefixOf n then
         deps.filter (!toModule.isPrefixOf ·) |>.foldl (init := acc) NameSet.insert
@@ -142,26 +144,27 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if !args.hasFlag "show-transitive" then
       graph := graph.transitiveReduction
 
-    let markedModule : Option Name := if args.hasFlag "mark-module" then p else none
+    let markedPackage : Option Name := if args.hasFlag "mark-package" then toModule else none
 
     -- Create all output files that are requested
     let mut outFiles : Std.HashMap String String := {}
     if extensions.contains "dot" then
-      let dotFile := asDotGraph graph (unused := unused) (markedModule := markedModule) (directDeps := directDeps)
+      let dotFile := asDotGraph graph (unused := unused) (markedPackage := markedPackage) (directDeps := directDeps)
+        (to := NameSet.ofArray to) (from_ := NameSet.ofArray (from?.getD #[]))
       outFiles := outFiles.insert "dot" dotFile
     if extensions.contains "gexf" then
       -- filter out the top node as it makes the graph less pretty
       let graph₂ := match args.flag? "to" with
-        | none => graph.filter (fun n _ => n != to)
+        | none => graph.filter (fun n _ => !to.contains n)
         | some _ => graph
-      let gexfFile := Graph.toGexf graph₂ p env
+      let gexfFile := Graph.toGexf graph₂ toModule env
       outFiles := outFiles.insert "gexf" gexfFile
     return outFiles
 
   catch err =>
     -- TODO: try to build `to` first, so this doesn't happen
-    throw <| IO.userError <| s!"{err}\nIf the error above says `unknown package`, " ++
-      s!"try if `lake build {to}` fixes the issue"
+    throw <| IO.userError <| s!"{err}\nIf the error above says `object file ... does not exist`, " ++
+      s!"try if `lake build {" ".intercalate (to.toList.map Name.toString)}` fixes the issue"
     throw err
 
   match args.variableArgsAs! String with

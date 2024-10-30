@@ -1,5 +1,5 @@
 digraph "import_graph" {
-  "ImportGraphTest.Unused" [style=filled, fillcolor="#e0e0e0"];
-  "ImportGraphTest.Used" [style=filled, fillcolor="#e0e0e0"];
+  "ImportGraphTest.Unused" [style=filled, fillcolor="#e0e0e0", shape=ellipse];
+  "ImportGraphTest.Used" [style=filled, fillcolor="#e0e0e0", shape=house];
   "ImportGraphTest.Unused" -> "ImportGraphTest.Used";
 }
