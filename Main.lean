@@ -17,8 +17,8 @@ def graph : Cmd := `[Cli|
 
   FLAGS:
     "show-transitive";         "Show transitively redundant edges."
-    "to" : Array ModuleName;   "Only show the upstream imports of the specified module."
-    "from" : Array ModuleName; "Only show the downstream dependencies of the specified module."
+    "to" : Array ModuleName;   "Only show the upstream imports of the specified modules."
+    "from" : Array ModuleName; "Only show the downstream dependencies of the specified modules."
     "exclude-meta";            "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
     "include-direct";          "Include directly imported files from other libraries"
     "include-deps";            "Include used files from other libraries (not including Lean itself and `std`)"
