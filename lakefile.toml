@@ -34,6 +34,12 @@ name = "unused_transitive_imports"
 root = "ImportGraph.UnusedTransitiveImports"
 supportInterpreter = true
 
+# `lake exe hoard_factor` computes a measure of unused declarations for each module.
+[[lean_exe]]
+name = "hoard_factor"
+root = "ImportGraph.HoardFactor"
+supportInterpreter = true
+
 [[lean_lib]]
 name = "ImportGraphTest"
 
