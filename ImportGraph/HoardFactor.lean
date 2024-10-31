@@ -36,12 +36,13 @@ def Lean.Name.isBlackListed {m} [Monad m] [MonadEnv m] (declName : Name) : m Boo
   <||> isRec declName -- <||> isMatcher declName
 
 /-- Compute the local size and transitive size of each module's declarations. -/
-def Lean.Environment.importSizes (env : Environment) (verbose : Bool := false) :
-    CoreM (NameMap NameSet × NameMap Nat × NameMap Nat) := do
+def Lean.Environment.importSizes (env : Environment) (importMap : NameMap NameSet)
+    (verbose : Bool := false) :
+    CoreM (NameMap Nat × NameMap Nat) := do
   let modules := (env.header.moduleNames.zip env.header.moduleData)
   let mut importSizes : NameMap Nat := .empty
   let mut localSizes : NameMap Nat := .empty
-  let importMap := env.importGraph.transitiveClosure
+
   let mut iteration := 0
 
   for (name, module) in modules do
@@ -58,15 +59,48 @@ def Lean.Environment.importSizes (env : Environment) (verbose : Bool := false) :
     if verbose && iteration % 100 == 0 then
       println!"Processed imports for {name}"
 
-  pure (importMap, localSizes, importSizes)
+  pure (localSizes, importSizes)
 
-def Lean.Environment.hoardFactor (env : Environment) (decls : Array Name) (verbose : Bool := false) : CoreM Float := do
+def Lean.Environment.hoardFactor (env : Environment) (decls : Array Name)
+    (excludeLean : Bool := true) (excludeMeta : Bool := false) (verbose : Bool := false) : CoreM Float := do
+  if verbose then
+    println!"Constructing the import graph."
+  let mut decls := decls
+  let mut graph := env.importGraph
+  if excludeLean || excludeMeta then
+    let filterLean : Name → Bool := fun n => excludeLean && (
+      Name.isPrefixOf `Lean n ∨
+      Name.isPrefixOf `Init n ∨
+      Name.isPrefixOf `Std n)
+    let filterMeta : Name → Bool := fun n => excludeMeta && (
+      Name.isPrefixOf `Batteries.CodeAction n ∨
+      Name.isPrefixOf `Batteries.Tactic n ∨
+      Name.isPrefixOf `Mathlib.Tactic n ∨
+      Name.isPrefixOf `Mathlib.Lean n ∨
+      Name.isPrefixOf `Mathlib.Mathport n ∨
+      Name.isPrefixOf `Mathlib.Util n)
+    graph := graph.filterMap fun n i =>
+      if filterLean n || filterMeta n then
+        -- not included
+        none
+      else
+        -- include node regularly
+        i.filter fun m => !(filterLean m || filterMeta m)
+    if verbose then
+      println!"Found {graph.size} modules."
+    decls := decls.filter fun n => match env.getModuleFor? n with
+      | some mod => !(filterLean mod || filterMeta mod)
+      | none => true
+  if verbose then
+    println!"Found {decls.size} declarations and {graph.size} modules."
+  let transitiveImports := graph.transitiveClosure
+  let (localSizes, importSizes) ← env.importSizes transitiveImports verbose
+
   if verbose then
     println!"Preprocessing approximately {decls.size} declarations."
   let ⟨N, c2m⟩ ← env.transitivelyRequiredModulesForDecls' decls verbose
   if verbose then
     println!"Declarations preprocessed. Preprocessing modules."
-  let (transitiveImports, localSizes, importSizes) ← env.importSizes verbose
 
   let mut sum : Nat := 0
   let mut tot : Nat := 0
@@ -79,12 +113,12 @@ def Lean.Environment.hoardFactor (env : Environment) (decls : Array Name) (verbo
     let requiredModules := c2m.find! decl
 
     iteration := iteration + 1
-    if verbose && iteration % 1000 == 0 then
+    if verbose && iteration % 100 == 0 then
       println!"{decl}: {sum.toFloat / tot.toFloat}"
     match env.getModuleFor? decl with
     | none => panic!"Could not determine module for {decl}"
     | some module => do
-      tot := tot + importSizes.find! module
+      tot := tot + importSizes.findD module 0
       let transImports := transitiveImports.findD module ∅
       for (n, i) in env.header.moduleNames.zipWithIndex do
         if !requiredModules.getLsbD i
@@ -112,7 +146,7 @@ def hoardFactorCLI (args : Cli.Parsed) : IO UInt32 := do
     else for m in targets do
       let names := env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames
       decls := decls.append names
-    env.hoardFactor decls (verbose := args.hasFlag "verbose")
+    env.hoardFactor decls (excludeLean := !args.hasFlag "include-lean") (excludeMeta := args.hasFlag "exclude-meta") (verbose := args.hasFlag "verbose")
 
   println!"Hoard factor: {factor}"
   return 0
@@ -127,6 +161,8 @@ def hoard_factor : Cmd := `[Cli|
   FLAGS:
     "all";                "Compute the factor for all declarations made or imported in the module. \
 The default is to compute the factor for the new declarations in the module itself."
+    "include-lean";       "Include the core Lean packages: Init, Lean, Std."
+    "exclude-meta";       "Exclude tactic-specific modules during the computations."
     "verbose";            "Output more information during computations."
 
   ARGS:
