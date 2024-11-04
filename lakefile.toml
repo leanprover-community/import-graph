@@ -9,7 +9,7 @@ testRunner = "ImportGraphTest"
 [[require]]
 name = "Cli"
 scope = "leanprover"
-rev = "nightly"
+rev = "main"
 
 [[require]]
 name = "batteries"
