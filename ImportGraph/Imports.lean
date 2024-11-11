@@ -185,6 +185,12 @@ def unusedTransitiveImports (amongst : List Name) (verbose : Bool := false) : Co
     let unused := (transitiveImports.find? n).getD {} \ (transitivelyRequired.find? n |>.getD {})
     amongst.filter (fun m => unused.contains m))
 
+def Core.withImportModules (modules : Array Name) {α} (f : CoreM α) : IO α := do
+  searchPathRef.set compile_time_search_path%
+  unsafe Lean.withImportModules (modules.map (fun m => {module := m})) {} (trustLevel := 1024)
+    fun env => Prod.fst <$> Core.CoreM.toIO
+        (ctx := { fileName := "<CoreM>", fileMap := default }) (s := { env := env }) do f
+
 /--
 Return the redundant imports (i.e. those transitively implied by another import)
 of a specified module (or the current module if `none` is specified).

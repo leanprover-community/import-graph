@@ -2,12 +2,6 @@ import ImportGraph.Imports
 
 open Lean
 
-def Core.withImportModules (modules : Array Name) {α} (f : CoreM α) : IO α := do
-  searchPathRef.set compile_time_search_path%
-  unsafe Lean.withImportModules (modules.map (fun m => {module := m})) {} (trustLevel := 1024)
-    fun env => Prod.fst <$> Core.CoreM.toIO
-        (ctx := { fileName := "<CoreM>", fileMap := default }) (s := { env := env }) do f
-
 /--
 `lake exe unused_transitive_imports m1 m2 ...`
 
