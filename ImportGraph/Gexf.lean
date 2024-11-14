@@ -5,7 +5,6 @@ Authors: Jon Eugster
 -/
 
 import Lean
-import Batteries.Lean.NameMap
 import Batteries.Tactic.OpenPrivate
 
 open Lean

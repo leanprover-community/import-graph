@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 import Lean
-import Batteries.Lean.NameMap
 import ImportGraph.RequiredModules
 
 /-!
