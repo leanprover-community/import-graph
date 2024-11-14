@@ -85,6 +85,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | none => none
   initSearchPath (← findSysroot)
 
+  Lean.enableInitializersExecution
   let outFiles ← try unsafe withImportModules (to.map ({module := ·})) {} (trustLevel := 1024) fun env => do
     let toModule := ImportGraph.getModule to[0]!
     let mut graph := env.importGraph
