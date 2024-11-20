@@ -129,7 +129,7 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
     if verbose then
       IO.println s!"Processing module {m}"
     let mut r : BitVec N := 0
-    for n in env.header.moduleData[(env.header.moduleNames.getIdx? m).getD 0]!.constNames do
+    for n in env.header.moduleData[((env.header.moduleNames.indexOf? m).map Fin.val).getD 0]!.constNames do
       if ! n.isInternal then
       -- This is messy: Mathlib is big enough that writing a recursive function causes a stack overflow.
       -- So we use an explicit stack instead. We visit each constant twice:
@@ -162,7 +162,7 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
   return result
 where
   toBitVec {N : Nat} (s : NameSet) : BitVec N :=
-    s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ ((env.header.moduleNames.getIdx? n).getD 0))
+    s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ (((env.header.moduleNames.indexOf? n).map Fin.val).getD 0))
   toNameSet {N : Nat} (b : BitVec N) : NameSet :=
     env.header.moduleNames.zipWithIndex.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
 
