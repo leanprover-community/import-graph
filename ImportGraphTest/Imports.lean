@@ -38,6 +38,7 @@ elab "#unused_transitive_imports" names:ident* : command => do
 
 /--
 info: Transitively unused imports of Init.System.IO:
+  Init.Control.StateRef
   Init.Control.Reader
 -/
 #guard_msgs in
