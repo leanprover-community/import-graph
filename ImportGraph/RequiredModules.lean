@@ -7,28 +7,7 @@ import Lean.CoreM
 import Lean.Data.NameMap
 import Lean.Environment
 import Lean.Util.FoldConsts
-
-namespace Lean.NameSet
-
-instance : Singleton Name NameSet where
-  singleton := fun n => (∅ : NameSet).insert n
-
-instance : Union NameSet where
-  union := fun s t => s.fold (fun t n => t.insert n) t
-
-instance : Inter NameSet where
-  inter := fun s t => s.fold (fun r n => if t.contains n then r.insert n else r) {}
-
-instance : SDiff NameSet where
-  sdiff := fun s t => t.fold (fun s n => s.erase n) s
-
-def ofList (l : List Name) : NameSet :=
-  l.foldl (fun s n => s.insert n) {}
-
-def ofArray (a : Array Name) : NameSet :=
-  a.foldl (fun s n => s.insert n) {}
-
-end Lean.NameSet
+import Batteries.Data.NameSet
 
 namespace Lean
 
