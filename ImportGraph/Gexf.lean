@@ -4,7 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jon Eugster
 -/
 
-import Lean
+import Lean.Data.Name
+import Lean.AuxRecursor
+import Lean.MonadEnv
+import Lean.Meta.Match.MatcherInfo
 
 open Lean
 
