@@ -164,7 +164,7 @@ where
   toBitVec {N : Nat} (s : NameSet) : BitVec N :=
     s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ (((env.header.moduleNames.indexOf? n).map Fin.val).getD 0))
   toNameSet {N : Nat} (b : BitVec N) : NameSet :=
-    env.header.moduleNames.zipWithIndex.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
+    env.header.moduleNames.zipIdx.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
 
 /--
 Return the names of the modules in which constants used in the current file were defined.
