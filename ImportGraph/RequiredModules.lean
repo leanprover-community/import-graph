@@ -4,29 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 import Lean
-
-
-namespace Lean.NameSet
-
-instance : Singleton Name NameSet where
-  singleton := fun n => (∅ : NameSet).insert n
-
-instance : Union NameSet where
-  union := fun s t => s.fold (fun t n => t.insert n) t
-
-instance : Inter NameSet where
-  inter := fun s t => s.fold (fun r n => if t.contains n then r.insert n else r) {}
-
-instance : SDiff NameSet where
-  sdiff := fun s t => t.fold (fun s n => s.erase n) s
-
-def ofList (l : List Name) : NameSet :=
-  l.foldl (fun s n => s.insert n) {}
-
-def ofArray (a : Array Name) : NameSet :=
-  a.foldl (fun s n => s.insert n) {}
-
-end Lean.NameSet
+import Batteries.Data.NameSet
 
 namespace Lean
 
@@ -164,7 +142,7 @@ where
   toBitVec {N : Nat} (s : NameSet) : BitVec N :=
     s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ (((env.header.moduleNames.indexOf? n).map Fin.val).getD 0))
   toNameSet {N : Nat} (b : BitVec N) : NameSet :=
-    env.header.moduleNames.zipWithIndex.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
+    env.header.moduleNames.zipIdx.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
 
 /--
 Return the names of the modules in which constants used in the current file were defined.
