@@ -9,4 +9,3 @@ vscode:
 tasks:
   - init: |
       elan self update
-      lake exe cache get
