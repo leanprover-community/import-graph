@@ -192,9 +192,11 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         -- inline the graph data
         -- note: changes in `index.html` might need to be reflected here!
         let escapedFile := gexfFile.replace "\n" "" |>.replace "\"" "\\\""
+        let toFormatted : String := ", ".intercalate <| (to.map toString).toList
         html := html
           |>.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)" s!"render_gexf(\"{escapedFile}\")"
-          |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {to}</h1>"
+          |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {toFormatted}</h1>"
+          |>.replace "<title>import graph</title>" s!"<title>import graph for {toFormatted}</title>"
         IO.FS.writeFile fp html
      | some ext => try
         _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles["dot"]!)
