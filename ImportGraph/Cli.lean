@@ -67,7 +67,7 @@ open IO.FS IO.Process Name in
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   -- file extensions that should be created
   let extensions : Std.HashSet String := match args.variableArgsAs! String with
-    | #[] => Std.HashSet.empty.insert "dot"
+    | #[] => {"dot"}
     | outputs => outputs.foldl (fun acc (o : String) =>
       match FilePath.extension o with
        | none => acc.insert "dot"
