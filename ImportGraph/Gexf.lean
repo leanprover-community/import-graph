@@ -4,8 +4,10 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jon Eugster
 -/
 
-import Lean
-import Batteries.Tactic.OpenPrivate
+import Lean.Data.Name
+import Lean.AuxRecursor
+import Lean.MonadEnv
+import Lean.Meta.Match.MatcherInfo
 
 open Lean
 
@@ -26,7 +28,7 @@ def isBlackListed (env : Environment) (declName : Name) : Bool :=
 /-- Get number of non-blacklisted declarations per file. -/
 def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
   env.const2ModIdx.fold (fun acc n (idx : ModuleIdx) =>
-    let mod := env.allImportedModuleNames.get! idx
+    let mod := env.allImportedModuleNames[idx]!
     if isBlackListed env n then acc else acc.insert mod ((acc.findD mod 0) + 1)
     ) {}
 

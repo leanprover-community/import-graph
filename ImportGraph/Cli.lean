@@ -67,7 +67,7 @@ open IO.FS IO.Process Name in
 def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   -- file extensions that should be created
   let extensions : Std.HashSet String := match args.variableArgsAs! String with
-    | #[] => Std.HashSet.empty.insert "dot"
+    | #[] => {"dot"}
     | outputs => outputs.foldl (fun acc (o : String) =>
       match FilePath.extension o with
        | none => acc.insert "dot"
@@ -85,6 +85,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
   | none => none
   initSearchPath (← findSysroot)
 
+  unsafe Lean.enableInitializersExecution
   let outFiles ← try unsafe withImportModules (to.map ({module := ·})) {} (trustLevel := 1024) fun env => do
     let toModule := ImportGraph.getModule to[0]!
     let mut graph := env.importGraph
@@ -191,9 +192,11 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         -- inline the graph data
         -- note: changes in `index.html` might need to be reflected here!
         let escapedFile := gexfFile.replace "\n" "" |>.replace "\"" "\\\""
+        let toFormatted : String := ", ".intercalate <| (to.map toString).toList
         html := html
           |>.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)" s!"render_gexf(\"{escapedFile}\")"
-          |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {to}</h1>"
+          |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {toFormatted}</h1>"
+          |>.replace "<title>import graph</title>" s!"<title>import graph for {toFormatted}</title>"
         IO.FS.writeFile fp html
      | some ext => try
         _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles["dot"]!)

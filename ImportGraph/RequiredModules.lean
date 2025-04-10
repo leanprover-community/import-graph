@@ -3,7 +3,10 @@ Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
-import Lean
+import Lean.CoreM
+import Lean.Data.NameMap
+import Lean.Environment
+import Lean.Util.FoldConsts
 import Batteries.Data.NameSet
 
 namespace Lean
@@ -17,6 +20,8 @@ def Environment.getModuleFor? (env : Environment) (declName : Name) : Option Nam
     else
       none
   | some idx => env.header.moduleNames[idx.toNat]!
+
+open Lean
 
 /--
 Return the names of the modules in which constants used in the specified declaration were defined.
