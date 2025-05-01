@@ -269,8 +269,7 @@ since the `Environment` does not keep track of source URIs. -/
 @[server_rpc_method]
 def getModuleUri (modName : Name) : RequestM (RequestTask Lsp.DocumentUri) :=
   RequestM.asTask do
-    let rc ← readThe RequestContext
-    let some uri ← documentUriFromModule rc.srcSearchPath modName
+    let some uri ← documentUriFromModule? modName
       | throw $ RequestError.invalidParams s!"couldn't find URI for module '{modName}'"
     return uri
 
