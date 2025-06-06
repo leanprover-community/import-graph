@@ -1,8 +1,9 @@
 /-
 Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kim Morrison
+Authors: Kim Morrison, Paul Lezeau
 -/
+import Batteries.Data.List.Basic
 import Lean.Elab.Command
 import Lean.Util.SearchPath
 import Lean.Server.GoTo
@@ -330,3 +331,26 @@ elab "#find_home" bang:"!"? n:ident : command => do
         Server.RpcEncodable.rpcEncode p)
       (toString modName)
   logInfoAt stx[0] m!"{homes}"
+
+
+/-- `#import_diff foo` computes the new transitive imports that are added to a given file when
+module `foo` is added to the set of imports of the file. -/
+elab "#import_diff" n:ident* : command => do
+  let name_arr : Array Name := n.map (fun stx ↦ stx.getId)
+  -- First, make sure the files exist. Note that we don't need the output of `findOLean`
+  for name in name_arr do let _ ← Lean.findOLean name
+  let env ← MonadEnv.getEnv
+  -- Next, check for redundancies:
+  let current_all_imports := env.allImportedModuleNames
+  let redundancies := name_arr.filter fun name ↦ current_all_imports.contains name
+  unless redundancies.isEmpty do
+    Lean.logInfo s!"Redundant additional imports:\n{redundancies}"
+  -- Now compute the import diffs.
+  let current_imports := env.imports
+  let reduced_imports := env.imports.filter fun imp ↦ name_arr.contains imp.module
+  let extended_imports := current_imports ++ (name_arr.map fun n ↦ { module := n })
+  let reduced_all_imports := (← Lean.importModules reduced_imports {}).allImportedModuleNames
+  let extended_all_imports := (← Lean.importModules extended_imports {}).allImportedModuleNames
+  let import_diff := extended_all_imports.toList.diff reduced_all_imports.toList
+  let out := "\n".intercalate (import_diff.map Name.toString)
+  Lean.logInfo <| s!"Found {import_diff.length} additional imports:\n" ++ out
