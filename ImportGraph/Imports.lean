@@ -333,13 +333,15 @@ elab "#find_home" bang:"!"? n:ident : command => do
   logInfoAt stx[0] m!"{homes}"
 
 
-/-- `#import_diff foo` computes the new transitive imports that are added to a given file when
-module `foo` is added to the set of imports of the file. -/
+/-- `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
+modules `foo, bar, ...` are added to the set of imports of the file. More precisely, it computes the
+import diff between when `foo, bar, ...` are added to the imports and when `foo, bar, ...` are removed
+from the imports. -/
 elab "#import_diff" n:ident* : command => do
   let name_arr : Array Name := n.map (fun stx ↦ stx.getId)
   -- First, make sure the files exist. Note that we don't need the output of `findOLean`
   for name in name_arr do let _ ← Lean.findOLean name
-  let env ← MonadEnv.getEnv
+  let env ← getEnv
   -- Next, check for redundancies:
   let current_all_imports := env.allImportedModuleNames
   let redundancies := name_arr.filter fun name ↦ current_all_imports.contains name
