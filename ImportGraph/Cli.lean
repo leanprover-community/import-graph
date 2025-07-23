@@ -95,8 +95,8 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         let ctx := { options := {}, fileName := "<input>", fileMap := default }
         let state := { env }
         let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules' to.toList) ctx state)
-        let used := used.fold (init := NameSet.empty) (fun s _ t => s ∪ t)
-        pure <| graph.fold (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
+        let used := used.foldl (init := NameSet.empty) (fun s _ t => s ∪ t)
+        pure <| graph.foldl (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
       | none => pure NameSet.empty
     if let Option.some f := from? then
       graph := graph.downstreamOf (NameSet.ofArray f)
@@ -110,7 +110,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
 
     -- `directDeps` contains files which are not in the package
     -- but directly imported by a file in the package
-    let directDeps : NameSet := graph.fold (init := .empty) (fun acc n deps =>
+    let directDeps : NameSet := graph.foldl (init := .empty) (fun acc n deps =>
       if toModule.isPrefixOf n then
         deps.filter (!toModule.isPrefixOf ·) |>.foldl (init := acc) NameSet.insert
       else

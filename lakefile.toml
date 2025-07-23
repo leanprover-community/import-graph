@@ -14,7 +14,7 @@ rev = "main"
 [[require]]
 name = "batteries"
 scope = "leanprover-community"
-rev = "v4.22.0-rc3"
+rev = "nightly-testing"
 
 [[lean_lib]]
 name = "ImportGraph"

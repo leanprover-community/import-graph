@@ -77,7 +77,7 @@ namespace Lean.NameMap
 Compute the transitive closure of an import graph.
 -/
 partial def transitiveClosure (m : NameMap (Array Name)) : NameMap NameSet :=
-  m.fold (fun r n i => process r n i) {}
+  m.foldl (fun r n i => process r n i) {}
 where
   process (r : NameMap NameSet) (n : Name) (i : Array Name) : NameMap NameSet :=
     if r.contains n then
@@ -85,8 +85,8 @@ where
     else
       let r' := i.foldr (fun i r => process r i ((m.find? i).getD #[])) r
       let t := i.foldr
-        (fun j s => ((r'.find? j).getD {}).fold NameSet.insert s)
-        (RBTree.ofList i.toList)
+        (fun j s => ((r'.find? j).getD {}).foldl NameSet.insert s)
+        (NameSet.ofArray i)
       r'.insert n t
 
 /--
@@ -96,14 +96,14 @@ Typical usage is `transitiveReduction (← importGraph)`.
 -/
 def transitiveReduction (m : NameMap (Array Name)) : NameMap (Array Name) :=
   let c := transitiveClosure m
-  m.fold (fun r n a =>
+  m.foldl (fun r n a =>
     r.insert n (a.foldr (fun i b => b.filter (fun j => ! ((c.find? i).getD {}).contains j)) a)) {}
 
 /-- Restrict an import graph to only the downstream dependencies of some set of modules. -/
 def downstreamOf (m : NameMap (Array Name)) (targets : NameSet) : NameMap (Array Name) :=
   let tc := transitiveClosure m
   let P (n : Name) := targets.contains n || ((tc.find? n).getD {}).any fun j => targets.contains j
-  m.fold (init := {}) fun r n i =>
+  m.foldl (init := {}) fun r n i =>
     if P n then
       r.insert n (i.filter P)
     else
@@ -113,7 +113,7 @@ def downstreamOf (m : NameMap (Array Name)) (targets : NameSet) : NameMap (Array
 def upstreamOf (m : NameMap (Array Name)) (targets : NameSet) : NameMap (Array Name) :=
   let tc := transitiveClosure m
   let P (n : Name) := targets.contains n || targets.any fun t => ((tc.find? t).getD {}).contains n
-  m.fold (init := {}) fun r n i =>
+  m.foldl (init := {}) fun r n i =>
     if P n then
       r.insert n (i.filter P)
     else
@@ -133,7 +133,7 @@ partial
 def transitiveFilteredUpstream (node : Name) (graph : NameMap (Array Name))
     (filter : Name → Bool) (replacement : Option Name := none):
     List Name :=
-  (graph.find! node).toList.flatMap fun source =>
+  (graph.get! node).toList.flatMap fun source =>
     ( if filter source then
         -- Add the transitive edges going through the filtered node `source`.
         -- If there is a replacement node, add an additional edge `repl → node`.

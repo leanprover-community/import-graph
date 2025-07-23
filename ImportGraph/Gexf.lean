@@ -29,7 +29,7 @@ def isBlackListed (env : Environment) (declName : Name) : Bool :=
 def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
   env.const2ModIdx.fold (fun acc n (idx : ModuleIdx) =>
     let mod := env.allImportedModuleNames[idx]!
-    if isBlackListed env n then acc else acc.insert mod ((acc.findD mod 0) + 1)
+    if isBlackListed env n then acc else acc.insert mod ((acc.getD mod 0) + 1)
     ) {}
 
 /-- Gexf template for a node in th graph. -/
@@ -48,8 +48,8 @@ Metadata can be stored in forms of attributes, currently we record the following
 -/
 def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) (env : Environment) : String :=
   let sizes : NameMap Nat := getNumberOfDeclsPerFile env
-  let nodes : String := graph.fold (fun acc n _ => acc ++ nodeTemplate n module (sizes.findD n 0)) ""
-  let edges : String := graph.fold (fun acc n i => acc ++ (i.foldl (fun b j => b ++ edgeTemplate j n) "")) ""
+  let nodes : String := graph.foldl (fun acc n _ => acc ++ nodeTemplate n module (sizes.getD n 0)) ""
+  let edges : String := graph.foldl (fun acc n i => acc ++ (i.foldl (fun b j => b ++ edgeTemplate j n) "")) ""
   s!"<?xml version='1.0' encoding='utf-8'?>
     <gexf xmlns=\"http://www.gexf.net/1.2draft\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd\" version=\"1.2\">
       <meta>
