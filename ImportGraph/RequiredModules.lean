@@ -7,7 +7,6 @@ import Lean.CoreM
 import Lean.Data.NameMap
 import Lean.Environment
 import Lean.Util.FoldConsts
-import Batteries.Data.NameSet
 
 namespace Lean
 

@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 import Cli.Basic
-import Batteries.Lean.IO.Process
 import ImportGraph.CurrentModule
 import ImportGraph.Imports
 import ImportGraph.Lean.Name
@@ -199,7 +198,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
           |>.replace "<title>import graph</title>" s!"<title>import graph for {toFormatted}</title>"
         IO.FS.writeFile fp html
      | some ext => try
-        _ ← runCmdWithInput "dot" #["-T" ++ ext, "-o", o] (outFiles["dot"]!)
+        _ ← IO.Process.output { cmd := "dot", args := #["-T" ++ ext, "-o", o] } outFiles["dot"]!
       catch ex =>
         IO.eprintln s!"Error occurred while writing out {fp}."
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
