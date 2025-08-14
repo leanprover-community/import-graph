@@ -7,7 +7,6 @@ import Lean.CoreM
 import Lean.Data.NameMap
 import Lean.Environment
 import Lean.Util.FoldConsts
-import Batteries.Data.NameSet
 
 namespace Lean
 
@@ -49,7 +48,7 @@ def NameSet.transitivelyUsedConstants (s : NameSet) : CoreM NameSet := do
   let mut usedConstants : NameSet := {}
   let mut toProcess : NameSet := s
   while !toProcess.isEmpty do
-    let current := toProcess.min.get!
+    let current := toProcess.min!
     toProcess := toProcess.erase current
     usedConstants := usedConstants.insert current
     for m in (← getConstInfo current).getUsedConstantsAsSet do
@@ -136,16 +135,16 @@ partial def Environment.transitivelyRequiredModules' (env : Environment) (module
                   pushed := pushed.insert u
           | some used =>
             let usedModules : NameSet :=
-              used.fold (init := {}) (fun s u => if let some m := env.getModuleFor? u then s.insert m else s)
+              used.foldl (init := {}) (fun s u => if let some m := env.getModuleFor? u then s.insert m else s)
             let transitivelyUsed : BitVec N :=
-              used.fold (init := toBitVec usedModules) (fun s u => s ||| ((c2m.find? u).getD 0))
+              used.foldl (init := toBitVec usedModules) (fun s u => s ||| ((c2m.find? u).getD 0))
             c2m := c2m.insert c transitivelyUsed
       r := r ||| ((c2m.find? n).getD 0)
     result := result.insert m (toNameSet r)
   return result
 where
   toBitVec {N : Nat} (s : NameSet) : BitVec N :=
-    s.fold (init := 0) (fun b n => b ||| BitVec.twoPow _ ((env.header.moduleNames.idxOf? n).getD 0))
+    s.foldl (init := 0) (fun b n => b ||| BitVec.twoPow _ ((env.header.moduleNames.idxOf? n).getD 0))
   toNameSet {N : Nat} (b : BitVec N) : NameSet :=
     env.header.moduleNames.zipIdx.foldl (init := {}) (fun s (n, i) => if b.getLsbD i then s.insert n else s)
 
