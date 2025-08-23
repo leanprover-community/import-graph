@@ -336,7 +336,10 @@ elab "#find_home" bang:"!"? n:ident : command => do
 /-- `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
 modules `foo, bar, ...` are added to the set of imports of the file. More precisely, it computes the
 import diff between when `foo, bar, ...` are added to the imports and when `foo, bar, ...` are removed
-from the imports. -/
+from the imports.
+
+Note: the command also works when some of the modules passed as arguments are already present in the file's
+imports. -/
 elab "#import_diff" n:ident* : command => do
   let name_arr : Array Name := n.map (fun stx ↦ stx.getId)
   let sp ← searchPathRef.get
