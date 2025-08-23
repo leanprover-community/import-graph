@@ -339,17 +339,21 @@ import diff between when `foo, bar, ...` are added to the imports and when `foo,
 from the imports. -/
 elab "#import_diff" n:ident* : command => do
   let name_arr : Array Name := n.map (fun stx ↦ stx.getId)
-  -- First, make sure the files exist. Note that we don't need the output of `findOLean`
-  for name in name_arr do let _ ← Lean.findOLean name
+  let sp ← searchPathRef.get
+  -- First, make sure the files exist.
+  for name in name_arr do
+    if (← sp.findWithExt "olean" name).isSome then continue
+    throwError m!"File {name} cannot be found."
   let env ← getEnv
   -- Next, check for redundancies:
   let current_all_imports := env.allImportedModuleNames
   let redundancies := name_arr.filter fun name ↦ current_all_imports.contains name
   unless redundancies.isEmpty do
-    Lean.logInfo s!"Redundant additional imports:\n{redundancies}"
+    Lean.logInfo <| m!"The following are already imported (possibly transitively):" ++
+      m!"{", ".intercalate <| redundancies.toList.map ToString.toString}"
   -- Now compute the import diffs.
   let current_imports := env.imports
-  let reduced_imports := env.imports.filter fun imp ↦ name_arr.contains imp.module
+  let reduced_imports := env.imports.filter fun imp ↦ !name_arr.contains imp.module
   let extended_imports := current_imports ++ (name_arr.map fun n ↦ { module := n })
   let reduced_all_imports := (← Lean.importModules reduced_imports {}).allImportedModuleNames
   let extended_all_imports := (← Lean.importModules extended_imports {}).allImportedModuleNames
