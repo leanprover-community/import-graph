@@ -352,8 +352,8 @@ elab "#import_diff" n:ident* : command => do
   let current_all_imports := env.allImportedModuleNames
   let redundancies := name_arr.filter current_all_imports.contains
   unless redundancies.isEmpty do
-    Lean.logInfo <| m!"The following are already imported (possibly transitively):" ++
-      m!"{", ".intercalate <| redundancies.toList.map ToString.toString}"
+    Lean.logInfo <| m!"The following are already imported (possibly transitively): {
+    ", ".intercalate <| redundancies.toList.map Name.toString}"
   -- Now compute the import diffs.
   let current_imports := env.imports
   let reduced_imports := env.imports.filter (!name_arr.contains ·.module)

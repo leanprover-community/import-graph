@@ -3,7 +3,7 @@ import ImportGraphTest.Used
 
 
 /--
-info: The following are already imported (possibly transitively):ImportGraphTest.Used
+info: The following are already imported (possibly transitively): ImportGraphTest.Used
 ---
 info: Found 2 additional imports:
 ImportGraphTest.Unused
