@@ -341,7 +341,7 @@ from the imports.
 Note: the command also works when some of the modules passed as arguments are already present in the file's
 imports. -/
 elab "#import_diff" n:ident* : command => do
-  let name_arr : Array Name := n.map (fun stx ↦ stx.getId)
+  let name_arr : Array Name := n.map (·.getId)
   let sp ← searchPathRef.get
   -- First, make sure the files exist.
   for name in name_arr do
@@ -350,16 +350,16 @@ elab "#import_diff" n:ident* : command => do
   let env ← getEnv
   -- Next, check for redundancies:
   let current_all_imports := env.allImportedModuleNames
-  let redundancies := name_arr.filter fun name ↦ current_all_imports.contains name
+  let redundancies := name_arr.filter current_all_imports.contains
   unless redundancies.isEmpty do
     Lean.logInfo <| m!"The following are already imported (possibly transitively):" ++
       m!"{", ".intercalate <| redundancies.toList.map ToString.toString}"
   -- Now compute the import diffs.
   let current_imports := env.imports
-  let reduced_imports := env.imports.filter fun imp ↦ !name_arr.contains imp.module
-  let extended_imports := current_imports ++ (name_arr.map fun n ↦ { module := n })
+  let reduced_imports := env.imports.filter (!name_arr.contains \..module)
+  let extended_imports := current_imports ++ (name_arr.map ({ module := \. }))
   let reduced_all_imports := (← Lean.importModules reduced_imports {}).allImportedModuleNames
   let extended_all_imports := (← Lean.importModules extended_imports {}).allImportedModuleNames
   let import_diff := extended_all_imports.toList.diff reduced_all_imports.toList
   let out := "\n".intercalate (import_diff.map Name.toString)
-  Lean.logInfo <| s!"Found {import_diff.length} additional imports:\n" ++ out
+  Lean.logInfo s!"Found {import_diff.length} additional imports:\n{out}"
