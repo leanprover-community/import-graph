@@ -1,4 +1,6 @@
-import ImportGraphTest.Imports
+import ImportGraphTest.AnotherFileWithTransitiveImports
 import ImportGraphTest.Dot
+import ImportGraphTest.FileWithTransitiveImports
+import ImportGraphTest.Imports
 import ImportGraphTest.Unused
 import ImportGraphTest.Used
