@@ -3,7 +3,6 @@ Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison, Paul Lezeau
 -/
-import Batteries.Data.List.Basic
 import Lean.Elab.Command
 import Lean.Util.SearchPath
 import Lean.Server.GoTo
@@ -360,6 +359,6 @@ elab "#import_diff" n:ident* : command => do
   let extended_imports := current_imports ++ (name_arr.map ({ module := · }))
   let reduced_all_imports := (← Lean.importModules reduced_imports {}).allImportedModuleNames
   let extended_all_imports := (← Lean.importModules extended_imports {}).allImportedModuleNames
-  let import_diff := extended_all_imports.toList.diff reduced_all_imports.toList
-  let out := "\n".intercalate (import_diff.map Name.toString)
-  Lean.logInfo s!"Found {import_diff.length} additional imports:\n{out}"
+  let import_diff := extended_all_imports.filter (· ∉ reduced_all_imports)
+  let out := "\n".intercalate (import_diff.toList.map Name.toString)
+  Lean.logInfo s!"Found {import_diff.size} additional imports:\n{out}"
