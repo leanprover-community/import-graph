@@ -1,9 +1,13 @@
 name: Build
 run-name: Build the project
 on:
-  - push
-  - pull_request
-  - workflow_dispatch
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
