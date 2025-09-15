@@ -1,12 +1,14 @@
 name: Build
 run-name: Build the project
-on: [push]
+on:
+  - push
+  - pull_request
+  - workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: leanprover/lean-action@v1
         with:
           check-reservoir-eligibility: true

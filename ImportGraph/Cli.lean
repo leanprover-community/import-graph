@@ -155,7 +155,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     if extensions.contains "gexf" then
       -- filter out the top node as it makes the graph less pretty
       let graph₂ := match args.flag? "to" with
-        | none => graph.filter (fun n _ => !to.contains n)
+        | none => graph.filter (fun n _ => ! if to.contains `Mathlib then #[`Mathlib, `Mathlib.Tactic].contains n else to.contains n)
         | some _ => graph
       let gexfFile := Graph.toGexf graph₂ toModule env
       outFiles := outFiles.insert "gexf" gexfFile
