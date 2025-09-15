@@ -1,7 +1,11 @@
 import ImportGraph.Imports
 import ImportGraphTest.Unused
+import ImportGraphTest.FileWithTransitiveImports
 
 /--
+info: The following are already imported (possibly transitively):
+ImportGraphTest.FileWithTransitiveImports
+---
 info: Found 2 additional imports:
 ImportGraphTest.FileWithTransitiveImports
 ImportGraphTest.Used
@@ -10,6 +14,10 @@ ImportGraphTest.Used
 #import_diff ImportGraphTest.FileWithTransitiveImports
 
 /--
+info: The following are already imported (possibly transitively):
+ImportGraphTest.FileWithTransitiveImports
+ImportGraphTest.Used
+---
 info: Found 2 additional imports:
 ImportGraphTest.FileWithTransitiveImports
 ImportGraphTest.Used
