@@ -3,7 +3,7 @@ description = "Tools to analyse and visualise the import structure of Lean packa
 license = "Apache-2.0"
 licenseFiles = ["LICENSE"]
 
-defaultTargets = ["ImportGraph", "ImportGraphTest", "graph"]
+defaultTargets = ["ImportGraph", "graph"]
 testRunner = "ImportGraphTest"
 
 [[require]]
