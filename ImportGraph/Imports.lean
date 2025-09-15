@@ -351,8 +351,8 @@ elab "#import_diff" n:ident* : command => do
   let current_all_imports := env.allImportedModuleNames
   let redundancies := name_arr.filter current_all_imports.contains
   unless redundancies.isEmpty do
-    Lean.logInfo <| m!"The following are already imported (possibly transitively): {
-    ", ".intercalate <| redundancies.toList.map Name.toString}"
+    let out := "\n".intercalate <| redundancies.map Name.toString |>.qsort (· < ·) |>.toList
+    Lean.logInfo <| m!"The following are already imported (possibly transitively):\n{out}"
   -- Now compute the import diffs.
   let current_imports := env.imports
   let reduced_imports := env.imports.filter (!name_arr.contains ·.module)
@@ -360,5 +360,5 @@ elab "#import_diff" n:ident* : command => do
   let reduced_all_imports := (← Lean.importModules reduced_imports {}).allImportedModuleNames
   let extended_all_imports := (← Lean.importModules extended_imports {}).allImportedModuleNames
   let import_diff := extended_all_imports.filter (· ∉ reduced_all_imports)
-  let out := "\n".intercalate (import_diff.toList.map Name.toString)
+  let out := "\n".intercalate <| import_diff.map Name.toString |>.qsort (· < ·) |>.toList
   Lean.logInfo s!"Found {import_diff.size} additional imports:\n{out}"
