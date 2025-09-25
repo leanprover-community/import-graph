@@ -6,6 +6,9 @@ licenseFiles = ["LICENSE"]
 defaultTargets = ["ImportGraph", "graph"]
 testRunner = "ImportGraphTest"
 
+[leanOptions]
+experimental.module = true
+
 [[require]]
 name = "Cli"
 scope = "leanprover"

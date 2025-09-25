@@ -3,11 +3,14 @@ Copyright (c) 2024 Jon Eugster. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jon Eugster
 -/
+module
 
-import Lean.Data.Name
-import Lean.AuxRecursor
-import Lean.MonadEnv
-import Lean.Meta.Match.MatcherInfo
+public import Lean.Data.Name
+public import Lean.AuxRecursor
+public import Lean.MonadEnv
+public import Lean.Meta.Match.MatcherInfo
+
+@[expose] public section
 
 open Lean
 

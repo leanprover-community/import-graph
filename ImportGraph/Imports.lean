@@ -3,11 +3,15 @@ Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison, Paul Lezeau
 -/
-import Lean.Elab.Command
-import Lean.Util.SearchPath
-import Lean.Server.GoTo
-import Lean.Widget.UserWidget
-import ImportGraph.RequiredModules
+module
+
+public import Lean.Elab.Command
+public import Lean.Server.GoTo
+public import Lean.Widget.UserWidget
+public import ImportGraph.RequiredModules
+meta import Lean.Elab.Command
+
+public section
 
 /-!
 # Tools for analyzing imports.
@@ -76,7 +80,7 @@ namespace Lean.NameMap
 /--
 Compute the transitive closure of an import graph.
 -/
-partial def transitiveClosure (m : NameMap (Array Name)) : NameMap NameSet :=
+public partial def transitiveClosure (m : NameMap (Array Name)) : NameMap NameSet :=
   m.foldl (fun r n i => process r n i) {}
 where
   process (r : NameMap NameSet) (n : Name) (i : Array Name) : NameMap NameSet :=

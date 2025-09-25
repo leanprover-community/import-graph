@@ -3,10 +3,14 @@ Copyright (c) 2023 Jon Eugster. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Jon Eugster
 -/
-import Lean.Data.Name
-import Lean.CoreM
-import Lean.Meta.Match.MatcherInfo
-import Std.Data.HashMap
+module
+
+public import Lean.Data.Name
+public import Lean.CoreM
+public import Lean.Meta.Match.MatcherInfo
+public import Std.Data.HashMap
+
+public section
 
 /-!
 TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
