@@ -12,7 +12,7 @@ experimental.module = true
 [[require]]
 name = "Cli"
 scope = "leanprover"
-rev = "main"
+rev = "modulize"
 
 [[lean_lib]]
 name = "ImportGraph"
@@ -34,4 +34,3 @@ supportInterpreter = true
 
 [[lean_lib]]
 name = "ImportGraphTest"
-
