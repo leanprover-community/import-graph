@@ -94,14 +94,14 @@ def getModuleUri (modName : Name) : RequestM (RequestTask Lsp.DocumentUri) :=
       | throw $ RequestError.invalidParams s!"couldn't find URI for module '{modName}'"
     return uri
 
-structure GoToModuleLinkProps where
+public structure GoToModuleLinkProps where
   modName : Name
   deriving Server.RpcEncodable
 
 /-- When clicked, this widget component jumps to the source of the module `modName`,
 assuming a source URI can be found for the module. -/
 @[widget_module]
-def GoToModuleLink : Widget.Module where
+public def GoToModuleLink : Widget.Module where
   javascript := "
     import * as React from 'react'
     import { EditorContext, useRpcSession } from '@leanprover/infoview'
