@@ -8,7 +8,7 @@
    "rev": "f75f4926aff7ba19949e16c19094d7298806b1a6",
    "name": "Cli",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "main",
+   "inputRev": "v4.25.0-rc1",
    "inherited": false,
    "configFile": "lakefile.toml"}],
  "name": "importGraph",
