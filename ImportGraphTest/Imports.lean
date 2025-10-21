@@ -1,6 +1,6 @@
-import ImportGraph.Imports
 import ImportGraph.RequiredModules
 import ImportGraphTest.Used
+import ImportGraph.Meta
 
 open Lean
 
