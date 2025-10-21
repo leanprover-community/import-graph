@@ -3,11 +3,15 @@ Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
-import Cli.Basic
-import ImportGraph.CurrentModule
-import ImportGraph.Imports
-import ImportGraph.Lean.Name
-import ImportGraph.Gexf
+module
+
+public import Cli.Basic
+public import ImportGraph.CurrentModule
+public import ImportGraph.Imports
+public import ImportGraph.Lean.Name
+public import ImportGraph.Gexf
+
+@[expose] public section
 
 open Cli
 

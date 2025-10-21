@@ -1,5 +1,8 @@
-import ImportGraph.Cli
-import ImportGraph.Imports
-import ImportGraph.CurrentModule
-import ImportGraph.Lean.Name
-import ImportGraph.RequiredModules
+module
+
+public import ImportGraph.Cli
+public import ImportGraph.Imports
+public import ImportGraph.Meta
+public import ImportGraph.CurrentModule
+public import ImportGraph.Lean.Name
+public import ImportGraph.RequiredModules

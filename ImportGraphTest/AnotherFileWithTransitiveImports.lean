@@ -1,4 +1,4 @@
-import ImportGraph.Imports
+import ImportGraph.Meta
 import ImportGraphTest.Unused
 import ImportGraphTest.FileWithTransitiveImports
 

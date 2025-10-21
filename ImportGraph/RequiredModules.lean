@@ -3,10 +3,16 @@ Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
-import Lean.CoreM
-import Lean.Data.NameMap
-import Lean.Environment
-import Lean.Util.FoldConsts
+module
+
+public import Lean.CoreM
+public import Lean.Data.NameMap
+public import Lean.Environment
+public import Lean.Util.FoldConsts
+meta import Lean.MonadEnv
+meta import Lean.CoreM
+
+public section
 
 namespace Lean
 
