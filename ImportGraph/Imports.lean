@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison, Paul Lezeau
 -/
 import Lean.Elab.Command
-import Lean.Util.SearchPath
 import Lean.Server.GoTo
 import Lean.Widget.UserWidget
 import ImportGraph.RequiredModules
