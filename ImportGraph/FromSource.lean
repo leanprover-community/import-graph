@@ -13,24 +13,6 @@ public import Lean.Elab.ParseImportsFast
 This module provides functions for analyzing imports by parsing source files directly,
 as an alternative to the Environment-based functions in `ImportGraph.Imports`.
 
-## When to Use Source-Parsing vs Environment-Based Functions
-
-**Use source-parsing functions (this module) when:**
-- You need to analyze imports without building the project
-- You're working with files that may not be compiled yet
-- You need fast, lightweight import analysis
-- You're building linters or analysis tools that run on source
-
-**Use Environment-based functions (`ImportGraph.Imports`) when:**
-- You need accurate information about what declarations are actually used
-- You're working in a compiled context with an available Environment
-- You need to understand transitive dependencies through declaration usage
-
-**Key Limitations of Source-Parsing:**
-- Only sees syntactic imports, not semantic dependencies
-- Cannot account for tactics, macros, or other metaprogramming
-- Assumes standard Lean project structure (module names → file paths)
-
 ## Functions
 
 - `findImportsFromSource`: Parse direct imports from a single file
