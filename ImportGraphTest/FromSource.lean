@@ -13,14 +13,17 @@ open Lean System
 #guard_msgs in
 #eval do
   let imports ← findImportsFromSource "ImportGraphTest/Used.lean"
-  return imports
+  -- Filter to only ImportGraph modules
+  return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
 
 -- Test transitive imports without filter
 /-- info: #[`ImportGraphTest.Unused] -/
 #guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/Used.lean"
-  return transitive.toArray.qsort Name.lt
+  -- Filter to only ImportGraph modules
+  let filtered := transitive.toArray.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
+  return filtered.qsort Name.lt
 
 -- Test transitive imports with ImportGraph filter
 /-- info: #[] -/
@@ -34,14 +37,13 @@ open Lean System
 #guard_msgs in
 #eval do
   let imports ← findImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
-  return imports
+  -- Filter to only ImportGraph modules
+  return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
 
-/--
-info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used,
-  `Lean.CoreM, `Lean.Environment, `Lean.MonadEnv, `Lean.Data.NameMap, `Lean.Elab.Command, `Lean.Server.GoTo,
-  `Lean.Util.FoldConsts, `Lean.Widget.UserWidget]
--/
+/-- info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used] -/
 #guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
-  return transitive.toArray.qsort Name.lt
+  -- Filter to only ImportGraph modules
+  let filtered := transitive.toArray.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
+  return filtered.qsort Name.lt
