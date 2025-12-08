@@ -9,25 +9,39 @@ Tests for `findImportsFromSource` and `findTransitiveImportsFromSource`.
 open Lean System
 
 -- Test basic import parsing
+/-- info: #[`ImportGraphTest.Unused] -/
+#guard_msgs in
 #eval do
   let imports ← findImportsFromSource "ImportGraphTest/Used.lean"
-  IO.println s!"Direct imports of Used.lean: {imports}"
+  return imports
 
 -- Test transitive imports without filter
+/-- info: #[`ImportGraphTest.Unused] -/
+#guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/Used.lean"
-  IO.println s!"Transitive imports of Used.lean (no filter): {transitive.toArray.qsort Name.lt}"
+  return transitive.toArray.qsort Name.lt
 
 -- Test transitive imports with ImportGraph filter
+/-- info: #[] -/
+#guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/Used.lean" (some `ImportGraph)
-  IO.println s!"Transitive ImportGraph imports of Used.lean: {transitive.toArray.qsort Name.lt}"
+  return transitive.toArray.qsort Name.lt
 
 -- Test on a file with transitive imports
+/-- info: #[`ImportGraph.Meta, `ImportGraphTest.Used] -/
+#guard_msgs in
 #eval do
   let imports ← findImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
-  IO.println s!"Direct imports of FileWithTransitiveImports.lean: {imports}"
+  return imports
 
+/--
+info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used,
+  `Lean.CoreM, `Lean.Environment, `Lean.MonadEnv, `Lean.Data.NameMap, `Lean.Elab.Command, `Lean.Server.GoTo,
+  `Lean.Util.FoldConsts, `Lean.Widget.UserWidget]
+-/
+#guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
-  IO.println s!"Transitive imports of FileWithTransitiveImports.lean: {transitive.toArray.qsort Name.lt}"
+  return transitive.toArray.qsort Name.lt
