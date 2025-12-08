@@ -59,6 +59,28 @@ There are a few commands implemented, which help you analysing the imports of a 
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 
+## Source-File-Based Import Analysis
+
+The `ImportGraph.FromSource` module provides functions for analyzing imports by parsing source files directly, without requiring a built environment. This is useful for scripts, linters, and tools that need to analyze imports quickly or on files that haven't been compiled yet.
+
+### Functions
+
+Add `import ImportGraph.FromSource` to your Lean script to access:
+
+* `findImportsFromSource (path : System.FilePath) : IO (Array Name)`: Parse direct imports from a single file.
+* `findTransitiveImportsFromSource (startPath : System.FilePath) (rootFilter : Option Name := none) : IO NameSet`: Compute the transitive closure of imports from source files.
+
+### Example
+
+```lean
+import ImportGraph.FromSource
+
+-- Get all transitive Mathlib imports from a file
+#eval do
+  let imports ← findTransitiveImportsFromSource "Mathlib/Algebra/Ring/Basic.lean" (some `Mathlib)
+  IO.println s!"Transitive Mathlib imports: {imports.toArray.qsort Name.lt}"
+```
+
 ## Other executables
 
 `lake exe unused_transitive_imports m1 m2 ...`
