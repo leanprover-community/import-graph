@@ -70,17 +70,6 @@ Add `import ImportGraph.FromSource` to your Lean script to access:
 * `findImportsFromSource (path : System.FilePath) : IO (Array Name)`: Parse direct imports from a single file.
 * `findTransitiveImportsFromSource (startPath : System.FilePath) (rootFilter : Option Name := none) : IO NameSet`: Compute the transitive closure of imports from source files.
 
-### When to Use
-
-**Use source-parsing functions** when:
-- You need to analyze imports without building the project
-- You're building linters or analysis tools that run on source
-- You need fast, lightweight import analysis
-
-**Use Environment-based functions** (like `#redundant_imports`) when:
-- You need accurate information about which declarations are actually used
-- You're working in a compiled context with an available Environment
-
 ### Example
 
 ```lean
