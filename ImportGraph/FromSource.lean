@@ -44,20 +44,6 @@ Compute the transitive closure of imports starting from a source file.
 Returns a `NameSet` of all modules that are transitively imported by the given file,
 by recursively parsing source files.
 
-**Parameters:**
-- `startPath`: The file path to start from
-- `rootFilter`: Optional filter to only follow imports with this root namespace
-  (e.g., `some \`Mathlib` to only follow Mathlib imports)
-
-**Assumptions:**
-- Module names map to file paths via standard Lean conventions:
-  `Foo.Bar.Baz` → `Foo/Bar/Baz.lean`
-- All imported files are accessible at their expected paths
-
-**Performance:**
-- Only parses each file once (uses visited set)
-- Breadth-first traversal for cache efficiency
-
 **Example:**
 ```lean
 -- Get all transitive Mathlib imports
