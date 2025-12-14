@@ -64,10 +64,10 @@ def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) (env : Environme
           <attribute id=\"1\" title=\"in_module\" type=\"boolean\" />
         </attributes>
         <nodes>
-          {nodes.trim}
+          {nodes.trimAscii}
         </nodes>
         <edges>
-          {edges.trim}
+          {edges.trimAscii}
         </edges>
       </graph>
     </gexf>
