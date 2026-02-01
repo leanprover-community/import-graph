@@ -3,3 +3,5 @@
 /lake-packages/*
 .lake/
 graph.pdf
+
+**/.DS_Store
