@@ -374,28 +374,17 @@ var render_gexf = (gexf) => {
         if (state.hoveredNode === node) {
           res.highlighted = true;
         }
-        if (reverse.checked) {
-          if (state.hoveredAncestors.has(node)) {
-            res.zIndex = 2;
-          }
-          else if (state.hoveredDescendants.has(node)) {
-            res.color = res.dim_color;
-          }
-          else {
-            res.label = undefined;
-            res.color = res.very_dim_color;
-          }
-        } else {
-          if (state.hoveredDescendants.has(node)) {
-            res.zIndex = 2;
-          }
-          else if (state.hoveredAncestors.has(node)) {
-            res.color = res.dim_color;
-          }
-          else {
-            res.label = undefined;
-            res.color = res.very_dim_color;
-          }
+        var nodesToHighlight = reverse.checked ? state.hoveredAncestors : state.hoveredDescendants
+        var nodesToDim = reverse.checked ? state.hoveredDescendants : state.hoveredAncestors
+        if (nodesToHighlight.has(node)) {
+          res.zIndex = 2;
+        }
+        else if (nodesToDim.has(node)) {
+          res.color = res.dim_color;
+        }
+        else {
+          res.label = undefined;
+          res.color = res.very_dim_color;
         }
       }
       else if (state.hoveredPath) {
@@ -419,26 +408,15 @@ var render_gexf = (gexf) => {
       var res = { ...data };
 
       if (state.hoveredNode) {
-        if (reverse.checked) {
-          if (state.hoveredAncestors.has(graph.target(edge))) {
-            res.size = 1.5;
-          }
-          else if (state.hoveredNode == graph.source(edge)) {
-            res.color = graph.getNodeAttributes(state.hoveredNode).dark_color;
-          }
-          else {
-            res.hidden = true;
-          }
-        } else {
-          if (state.hoveredDescendants.has(graph.source(edge))) {
-            res.size = 1.5;
-          }
-          else if (state.hoveredNode == graph.target(edge)) {
-            res.color = graph.getNodeAttributes(state.hoveredNode).dark_color;
-          }
-          else {
-            res.hidden = true;
-          }
+        var nodesToHighlight = reverse.checked ? state.hoveredAncestors : state.hoveredDescendants
+        if (nodesToHighlight.has(reverse.checked ? graph.target(edge) : graph.source(edge))) {
+          res.size = 1.5;
+        }
+        else if (state.hoveredNode == (reverse.checked ? graph.source(edge) : graph.target(edge))) {
+          res.color = graph.getNodeAttributes(state.hoveredNode).dark_color;
+        }
+        else {
+          res.hidden = true;
         }
       }
       else if (state.hoveredPath) {
