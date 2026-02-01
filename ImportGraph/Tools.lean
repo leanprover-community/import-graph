@@ -20,5 +20,7 @@ Provides the commands
   in the current file.
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl` suggests files higher up the import hierarchy to which `decl` could be moved.
-* `#import_diff` (missing)
+* `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
+  modules `foo, bar, ...` are added to the set of imports of the file.
+
 -/
