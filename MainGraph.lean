@@ -1,4 +1,6 @@
-import ImportGraph.Cli
+module
+
+public meta import ImportGraph.Cli
 
 /-!
 # `lake exe graph`
@@ -9,7 +11,7 @@ This is a replacement for Lean 3's `leanproject import-graph` tool.
 open Cli
 
 /-- Setting up command line options and help text for `lake exe graph`. -/
-def graph : Cmd := `[Cli|
+meta def graph : Cmd := `[Cli|
   graph VIA importGraphCLI; ["0.0.3"]
   "Generate representations of a Lean import graph. \
    By default generates the import graph up to `Mathlib`. \
@@ -37,5 +39,5 @@ def graph : Cmd := `[Cli|
 
 
 /-- `lake exe graph` -/
-def main (args : List String) : IO UInt32 :=
+public meta def main (args : List String) : IO UInt32 :=
   graph.validate args

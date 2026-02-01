@@ -1,4 +1,7 @@
-import ImportGraph.Imports
+module
+
+public meta import ImportGraph.Lean.WithImportModules
+public meta import ImportGraph.Imports.Unused
 
 open Lean
 
@@ -7,7 +10,7 @@ open Lean
 
 For each specified module `m`, prints those `n` from the argument list which are imported, but transitively unused by `m`.
 -/
-def main (args : List String) : IO UInt32 := do
+public meta def main (args : List String) : IO UInt32 := do
   let (flags, args) := args.partition (fun s => s.startsWith "-")
   let mut modules := args.map (fun s => s.toName)
   Core.withImportModules modules.toArray do
