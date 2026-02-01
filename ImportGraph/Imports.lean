@@ -9,10 +9,11 @@ public import Lean.Elab.Command
 public import Lean.Server.GoTo
 public import Lean.Widget.UserWidget
 public import ImportGraph.RequiredModules
+import ImportGraph.Util.FindSorry
 
 public section
 
-open Lean
+open Lean ImportGraph
 
 namespace Lean.Environment
 

@@ -40,7 +40,10 @@ open Lean System
   -- Filter to only ImportGraph modules
   return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
 
-/-- info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used] -/
+/--
+info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used,
+  `ImportGraph.Lean.Environment, `ImportGraph.Util.FindSorry]
+-/
 #guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
