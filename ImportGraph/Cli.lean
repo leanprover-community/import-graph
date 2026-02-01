@@ -26,7 +26,7 @@ Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" gra
   * Nodes which start with the `markedPackage` will be highlighted in green and drawn closer together.
   * Edges from `directDeps` into the module are highlighted in green
   * Nodes in `directDeps` are marked with a green border and green text.
-  * Nodes in `withSorry` are highlighted in gold/orange.
+  * Nodes in `withSorry` are highlighted in gold.
 -/
 def asDotGraph
     (graph : NameMap (Array Name))
