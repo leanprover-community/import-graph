@@ -12,10 +12,6 @@ import ImportGraph.Imports.RequiredModules
 
 open Lean
 
-namespace Lean.Environment
-
-end Lean.Environment
-
 /--
 Returns a `List (Name × List Name)` with a key for each module `n` in `amongst`,
 whose corresponding value is the list of modules `m` in `amongst` which are transitively imported by `n`,

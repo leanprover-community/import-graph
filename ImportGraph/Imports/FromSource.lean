@@ -19,8 +19,6 @@ as an alternative to the Environment-based functions in `ImportGraph.Imports`.
 - `findTransitiveImportsFromSource`: Compute transitive closure of imports from source files
 -/
 
-public section
-
 open Lean System
 
 /--
@@ -34,7 +32,7 @@ This is a thin wrapper around `Lean.parseImports'` that:
 Note: This only sees syntactic imports in the source file.
 It does not account for what declarations are actually used.
 -/
-def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
+public def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
   return (← Lean.parseImports' (← IO.FS.readFile path) path.toString).imports
     |>.map (·.module) |>.erase `Init
 
@@ -53,7 +51,7 @@ let imports ← findTransitiveImportsFromSource "Mathlib/Algebra/Ring/Basic.lean
 let allImports ← findTransitiveImportsFromSource "MyFile.lean"
 ```
 -/
-def findTransitiveImportsFromSource
+public def findTransitiveImportsFromSource
   (startPath : System.FilePath)
   (rootFilter : Option Name := none)
   : IO NameSet := do
@@ -88,5 +86,3 @@ def findTransitiveImportsFromSource
             queue := queue.push imp
 
   return visited
-
-end

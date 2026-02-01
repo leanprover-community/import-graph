@@ -6,7 +6,7 @@ Authors: Kim Morrison, Paul Lezeau
 module
 
 public import Lean.Data.NameMap.Basic
-import Std.Data.TreeMap.AdditionalOperations
+import Lean.Data.NameMap.AdditionalOperations
 import ImportGraph.Graph.TransitiveClosure
 
 /-!

@@ -6,14 +6,15 @@ Authors: Kim Morrison, Jon Eugster
 module
 
 public import Cli.Basic
-import ImportGraph.Util.CurrentModule
-import ImportGraph.Imports.RequiredModules
-import ImportGraph.Imports.ImportGraph
-import ImportGraph.Graph.Filter
-import ImportGraph.Lean.Name
-import ImportGraph.Export.Gexf
-import ImportGraph.Util.FindSorry
 import ImportGraph.Export.DotFile
+import ImportGraph.Export.Gexf
+import ImportGraph.Graph.Filter
+import ImportGraph.Imports.ImportGraph
+import ImportGraph.Imports.RequiredModules
+import ImportGraph.Lean.Name
+import ImportGraph.Util.CurrentModule
+import ImportGraph.Util.FindSorry
+import Lean.Data.NameMap.AdditionalOperations
 
 open Cli
 
