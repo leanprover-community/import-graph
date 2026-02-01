@@ -1,6 +1,6 @@
 module
 
-public meta import ImportGraph.Imports.FromSource
+public import ImportGraph.Imports.FromSource
 public import Lean
 
 open Lean
