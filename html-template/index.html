@@ -96,6 +96,12 @@
       top: 0;
       padding: .5em;
     }
+    .reverse-checkbox {
+      position: absolute;
+      right: 0;
+      top: 1.5em;
+      padding: .5em;
+    }
   </style>
 </head>
 <body>
@@ -106,6 +112,7 @@
     <p>Built with <a href="https://www.sigmajs.org/">Sigma.js</a>.
     Node sizes indicate the number of declarations in the file.</p>
     <label class="pause-checkbox"><input type="checkbox" id="pause" checked/> Pause graph layout</label>
+    <label class="reverse-checkbox"><input type="checkbox" id="reverse"/>Highlight imports instead</label>
   </div>
   <div class="key-wrapper">
     <ul id="key"></ul>
@@ -167,6 +174,8 @@ var common_prefix = function(a, b) {
 let container = document.getElementById('sigma-example');
 let key = document.getElementById('key');
 let pause = document.getElementById('pause');
+// reverse: highlight upstream/imports instead of downstream/descendants
+let reverse = document.getElementById('reverse');
 
 var render_gexf = (gexf) => {
   let graph = graphologyLibrary.gexf.parse(graphology.Graph, gexf);
@@ -176,6 +185,7 @@ var render_gexf = (gexf) => {
   var state = {
     hoveredNode: undefined,
     hoveredDescendants: undefined,
+    hoveredAncestors: undefined,
     hoveredPath: undefined,
     defaultNode: params.get("highlight"),
   };
@@ -342,6 +352,10 @@ var render_gexf = (gexf) => {
     }
   });
 
+  reverse.addEventListener('change', (event) => {
+    renderer.refresh();
+  });
+
   window.graph = graph;
   if (window.renderer) {
     window.renderer.kill();
@@ -360,10 +374,12 @@ var render_gexf = (gexf) => {
         if (state.hoveredNode === node) {
           res.highlighted = true;
         }
-        if (state.hoveredDescendants.has(node)) {
+        var nodesToHighlight = reverse.checked ? state.hoveredAncestors : state.hoveredDescendants
+        var nodesToDim = reverse.checked ? state.hoveredDescendants : state.hoveredAncestors
+        if (nodesToHighlight.has(node)) {
           res.zIndex = 2;
         }
-        else if (state.hoveredAncestors.has(node)) {
+        else if (nodesToDim.has(node)) {
           res.color = res.dim_color;
         }
         else {
@@ -392,10 +408,11 @@ var render_gexf = (gexf) => {
       var res = { ...data };
 
       if (state.hoveredNode) {
-        if (state.hoveredDescendants.has(graph.source(edge))) {
+        var nodesToHighlight = reverse.checked ? state.hoveredAncestors : state.hoveredDescendants
+        if (nodesToHighlight.has(reverse.checked ? graph.target(edge) : graph.source(edge))) {
           res.size = 1.5;
         }
-        else if (state.hoveredNode == graph.target(edge)) {
+        else if (state.hoveredNode == (reverse.checked ? graph.source(edge) : graph.target(edge))) {
           res.color = graph.getNodeAttributes(state.hoveredNode).dark_color;
         }
         else {
