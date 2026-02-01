@@ -11,20 +11,11 @@ public import Lean.Environment
 public import Lean.Util.FoldConsts
 meta import Lean.MonadEnv
 meta import Lean.CoreM
+import ImportGraph.Lean.Environment
 
 public section
 
 namespace Lean
-
-/-- Return the name of the module in which a declaration was defined. -/
-def Environment.getModuleFor? (env : Environment) (declName : Name) : Option Name :=
-  match env.getModuleIdxFor? declName with
-  | none =>
-    if env.constants.map₂.contains declName then
-      env.header.mainModule
-    else
-      none
-  | some idx => env.header.moduleNames[idx.toNat]!
 
 open Lean
 

@@ -25,6 +25,7 @@ def graph : Cmd := `[Cli|
     "include-std";             "Include used files from the Lean standard library (implies `--include-deps`)"
     "include-lean";            "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
     "mark-package";            "Visually highlight the package containing the first `--to` target (used in combination with some `--include-XXX`)."
+    "mark-sorry";              "Visually highlight modules containing sorries."
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \

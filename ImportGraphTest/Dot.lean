@@ -6,7 +6,7 @@ def readFile (path : System.FilePath) : IO String :=
 def runGraphCommand : IO Unit := do
   let _ ← IO.Process.output {
     cmd := "lake"
-    args := #["exe", "graph", "--to", "ImportGraphTest.Used", "ImportGraphTest/produced.dot"]
+    args := #["exe", "graph", "--to", "ImportGraphTest.ToTarget", "--mark-sorry", "ImportGraphTest/produced.dot"]
   }
 
 def compareOutputs (expected : String) (actual : String) : IO Bool := do

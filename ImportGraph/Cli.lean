@@ -10,6 +10,7 @@ public import ImportGraph.CurrentModule
 public import ImportGraph.Imports
 public import ImportGraph.Lean.Name
 public import ImportGraph.Gexf
+public import ImportGraph.Util.FindSorry
 
 @[expose] public section
 
@@ -25,12 +26,14 @@ Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" gra
   * Nodes which start with the `markedPackage` will be highlighted in green and drawn closer together.
   * Edges from `directDeps` into the module are highlighted in green
   * Nodes in `directDeps` are marked with a green border and green text.
+  * Nodes in `withSorry` are highlighted in gold/orange.
 -/
 def asDotGraph
     (graph : NameMap (Array Name))
     (unused : NameSet := {})
     (header := "import_graph")
     (markedPackage : Option Name := none)
+    (withSorry : NameSet := {})
     (directDeps : NameSet := {})
     (from_ to : NameSet := {}):
     String := Id.run do
@@ -40,8 +43,15 @@ def asDotGraph
     let shape := if from_.contains n then "invhouse" else if to.contains n then "house" else "ellipse"
     if markedPackage.isSome ∧ directDeps.contains n then
       -- note: `fillcolor` defaults to `color` if not specified
-      let fill := if unused.contains n then "#e0e0e0" else "white"
+      let fill := if withSorry.contains n then
+          "#ffd700"
+        else if unused.contains n then
+          "#e0e0e0"
+        else
+          "white"
       lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2, shape={shape}];"
+    else if withSorry.contains n then
+      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#ffd700\", shape={shape}];"
     else if unused.contains n then
       lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\", shape={shape}];"
     else if isInModule markedPackage n then
@@ -93,14 +103,17 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     let toModule := ImportGraph.getModule to[0]!
     let mut graph := env.importGraph
     let unused ←
-      match args.flag? "to"  with
+      match args.flag? "to" with
       | some _ =>
+        let init := NameSet.ofArray to
         let ctx := { options := {}, fileName := "<input>", fileMap := default }
         let state := { env }
         let used ← Prod.fst <$> (CoreM.toIO (env.transitivelyRequiredModules' to.toList) ctx state)
-        let used := used.foldl (init := NameSet.empty) (fun s _ t => s ∪ t)
+        let used := used.foldl (init := init) (fun s _ t => s ∪ t)
         pure <| graph.foldl (fun acc n _ => if used.contains n then acc else acc.insert n) NameSet.empty
       | none => pure NameSet.empty
+    let modulesWithSorry := if args.hasFlag "mark-sorry" then ImportGraph.allModulesWithSorry env else ∅
+
     if let Option.some f := from? then
       graph := graph.downstreamOf (NameSet.ofArray f)
     let includeLean := args.hasFlag "include-lean"
@@ -153,7 +166,9 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
     -- Create all output files that are requested
     let mut outFiles : Std.HashMap String String := {}
     if extensions.contains "dot" then
-      let dotFile := asDotGraph graph (unused := unused) (markedPackage := markedPackage) (directDeps := directDeps)
+      let dotFile := asDotGraph graph (unused := unused) (markedPackage := markedPackage)
+        (directDeps := directDeps)
+        (withSorry := modulesWithSorry)
         (to := NameSet.ofArray to) (from_ := NameSet.ofArray (from?.getD #[]))
       outFiles := outFiles.insert "dot" dotFile
     if extensions.contains "gexf" then
