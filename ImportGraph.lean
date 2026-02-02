@@ -1,6 +1,5 @@
 module
 
-public import ImportGraph.Cli
 public import ImportGraph.Export.DotFile
 public import ImportGraph.Export.Gexf
 public import ImportGraph.Imports.FromSource
