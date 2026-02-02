@@ -11,7 +11,18 @@ public import ImportGraph.Lean.Environment
 public import ImportGraph.Lean.Name
 public import ImportGraph.Lean.WithImportModules
 public import ImportGraph.Util.FindSorry
-public import Lean
+public meta import ImportGraph.Export.DotFile
+public meta import ImportGraph.Export.Gexf
+public meta import ImportGraph.Imports.FromSource
+public meta import ImportGraph.Imports.ImportGraph
+public meta import ImportGraph.Imports.Redundant
+public meta import ImportGraph.Imports.RequiredModules
+public meta import ImportGraph.Imports.Unused
+public meta import ImportGraph.Lean.Environment
+public meta import ImportGraph.Lean.Name
+public meta import ImportGraph.Lean.WithImportModules
+public meta import ImportGraph.Util.FindSorry
+import Lean
 
 open Lean
 

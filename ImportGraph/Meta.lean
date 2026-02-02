@@ -1,7 +1,7 @@
 module
 
 public meta import ImportGraph.Tools
-public import Lean
+import Lean
 
 open Lean
 

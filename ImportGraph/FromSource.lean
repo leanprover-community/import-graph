@@ -1,7 +1,7 @@
 module
 
 public import ImportGraph.Imports.FromSource
-public import Lean
+import Lean
 
 open Lean
 
