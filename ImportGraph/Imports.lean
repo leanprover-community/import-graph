@@ -1,11 +1,7 @@
 module
 
-public import ImportGraph.Imports.FromSource
-public import ImportGraph.Imports.ImportGraph
-public import ImportGraph.Imports.Redundant
-public import ImportGraph.Imports.RequiredModules
-public import ImportGraph.Imports.Unused
-public import Lean
+public import ImportGraph
+public meta import ImportGraph
 
 open Lean
 
