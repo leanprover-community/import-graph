@@ -8,7 +8,14 @@ To test this, place a file `imports.gexf` inside this directory. You can create 
 lake exe graph html-template/imports.gexf
 ```
 
-Then open `index.html` in any browser and you should see the graph.
+Then start a local server with
+
+```
+cd html-template
+python -m http.server 8000
+```
+
+And open http://localhost:8000
 
 ## Development
 

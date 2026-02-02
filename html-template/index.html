@@ -15,11 +15,32 @@
 
   <link rel="stylesheet" href="style.css" />
   <style>
+    @media (prefers-color-scheme: light) {
+      :root {
+        --primary-color: black;
+        --primary-bg-color: white;
+        --link-color: blueviolet;
+      }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary-color: white;
+        --primary-bg-color: #222;
+        --link-color: orange;
+      }
+    }
     html, body {
       height: 100%; width: 100%;
       margin: 0;
       padding: 0;
       position: relative;
+    }
+    body, sigma {
+      color: var(--primary-color);
+      background-color: var(--primary-bg-color);
+    }
+    a {
+      color: var(--link-color);
     }
     .sigma {
       position: absolute;
@@ -50,17 +71,16 @@
     }
     .summary, .key-wrapper {
       text-shadow:
-         0    0   5px white,
-        -1px -1px 0 white,
-         0   -1px 0 white,
-         1px -1px 0 white,
-         1px  0   0 white,
-         1px  1px 0 white,
-         0    1px 0 white,
-        -1px  1px 0 white,
-        -1px  0   0 white;
-      }
-
+        0    0   5px var(--primary-bg-color),
+       -1px -1px 0   var(--primary-bg-color),
+        0   -1px 0   var(--primary-bg-color),
+        1px -1px 0   var(--primary-bg-color),
+        1px  0   0   var(--primary-bg-color),
+        1px  1px 0   var(--primary-bg-color),
+        0    1px 0   var(--primary-bg-color),
+       -1px  1px 0   var(--primary-bg-color),
+       -1px  0   0   var(--primary-bg-color);
+    }
     ul > li {
       white-space: nowrap;
     }
@@ -123,6 +143,8 @@
   </div>
 
 <script type="text/javascript">
+
+const preferDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 var params = new URLSearchParams(window.location.search);
 var docs_url = params.get("docs_url") || "https://leanprover-community.github.io/mathlib4_docs/";
@@ -277,9 +299,15 @@ var render_gexf = (gexf) => {
   // color the nodes
   for (let [node, node_data] of graph.nodeEntries()) {
     graph.setNodeAttribute(node, 'color', get_color(node_data));
-    graph.setNodeAttribute(node, 'dark_color', get_color(node_data, 1, 0.4));
-    graph.setNodeAttribute(node, 'dim_color', get_color(node_data, 0.5, 7/8));
-    graph.setNodeAttribute(node, 'very_dim_color', get_color(node_data, 0.5, 15/16));
+    if (preferDark) {
+      graph.setNodeAttribute(node, 'dark_color', get_color(node_data, 1, 0.6));
+      graph.setNodeAttribute(node, 'dim_color', get_color(node_data, .8, 3/8));
+      graph.setNodeAttribute(node, 'very_dim_color', get_color(node_data, .8, 3/16));
+    } else {
+      graph.setNodeAttribute(node, 'dark_color', get_color(node_data, 1, 0.4));
+      graph.setNodeAttribute(node, 'dim_color', get_color(node_data, 0.5, 7/8));
+      graph.setNodeAttribute(node, 'very_dim_color', get_color(node_data, 0.5, 15/16));
+    }
   }
 
   //size the nodes
@@ -363,9 +391,10 @@ var render_gexf = (gexf) => {
   }
   window.renderer = new Sigma.Sigma(graph, container, {
     defaultEdgeType: "arrow",
-    defaultEdgeColor: "#c0c0c0",
+    defaultEdgeColor: preferDark ? "#707070" : "#c0c0c0",
     minArrowSize: 30,
-    labelRenderedSizeThreshold: 9,
+    // TODO: I couldn't change the color, so this is disabling labels in dark mode
+    labelRenderedSizeThreshold: preferDark ? 1000000000 : 9,
       zIndex: true,
     nodeReducer: (node, data) => {
       var res = { ...data };
@@ -426,10 +455,10 @@ var render_gexf = (gexf) => {
           res.color = get_color({path: [state.hoveredPath]}, 1, 0.4);
         }
         else if (src.path[0] == state.hoveredPath) {
-          res.color = "#808080";
+          res.color = preferDark ? "#b0b0b0" : "#808080";
         }
         else {
-          res.color = "#E0E0E0"
+          res.color = preferDark ? "#303030" : "#E0E0E0"
         }
       }
 
