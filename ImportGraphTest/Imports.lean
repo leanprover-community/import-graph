@@ -1,6 +1,7 @@
-import ImportGraph.RequiredModules
+import ImportGraph.Imports.RequiredModules
 import ImportGraphTest.Used
-import ImportGraph.Meta
+import ImportGraph.Tools
+import ImportGraph.Imports.Unused
 
 open Lean
 
@@ -10,16 +11,16 @@ def importTest : CoreM Unit := do
 
 /--
 info: Found the following transitively redundant imports:
-ImportGraph.RequiredModules
+ImportGraph.Imports.RequiredModules
 -/
 #guard_msgs in
 #redundant_imports
 
-/-- info: import ImportGraph.Imports -/
+/-- info: import ImportGraph.Imports.Redundant -/
 #guard_msgs in
 #min_imports
 
-/-- info: [ImportGraph.Imports] -/
+/-- info: [ImportGraph.Imports.Redundant] -/
 #guard_msgs in
 #find_home importTest
 
@@ -53,7 +54,7 @@ info: Transitively unused imports of ImportGraphTest.Used:
 
 elab "#transitivelyRequiredModules_test" : command => do
   let env ← getEnv
-  let unused ← liftCoreM <| env.transitivelyRequiredModules `ImportGraph.RequiredModules
+  let unused ← liftCoreM <| env.transitivelyRequiredModules `ImportGraph.Imports.RequiredModules
   logInfo s!"{unused.contains `Init.Data.Option.Lemmas}"
 
 /-- info: true -/
@@ -62,19 +63,19 @@ elab "#transitivelyRequiredModules_test" : command => do
 
 elab "#my_test" : command => do
   -- functionality of `#redundant_imports`
-  let expected := #[`ImportGraph.RequiredModules]
+  let expected := #[`ImportGraph.Imports.RequiredModules]
   let ri ← liftCoreM redundantImports
   if (ri.toArray != expected) then
     logError s!"Failed: `redundantImports` returned {ri.toArray} instead of {expected}"
 
   -- functionality of `#find_home`
-  let expected := #[`ImportGraph.Imports]
+  let expected := #[`ImportGraph.Imports.Redundant]
   let mi ← liftCoreM <| Lean.Name.findHome `importTest none
   if (mi.toArray != expected) then
       logError s!"Failed: `findHome` returned {mi.toArray} instead of {expected}"
 
   -- functionality of `#find_home!`
-  let expected := #[`ImportGraph.Imports]
+  let expected := #[`ImportGraph.Imports.Redundant]
   let mi! ← liftCoreM <| Lean.Name.findHome `importTest (← getEnv)
   if (mi!.toArray != expected) then
       logError s!"Failed: `findHome (!)` returned {mi!.toArray} instead of {expected}"
@@ -82,6 +83,6 @@ elab "#my_test" : command => do
   logInfo s!"{mi.toArray}"
   pure ()
 
-/-- info: #[ImportGraph.Imports] -/
+/-- info: #[ImportGraph.Imports.Redundant] -/
 #guard_msgs in
 #my_test

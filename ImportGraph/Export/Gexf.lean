@@ -5,12 +5,9 @@ Authors: Jon Eugster
 -/
 module
 
-public import Lean.Data.Name
-public import Lean.AuxRecursor
-public import Lean.MonadEnv
-public import Lean.Meta.Match.MatcherInfo
-
-@[expose] public section
+public import Lean.Data.NameMap.Basic
+public import Lean.Environment
+import Lean.Meta.Match.MatcherInfo
 
 open Lean
 
@@ -18,7 +15,7 @@ namespace ImportGraph
 
 open Elab Meta in
 /-- Filter Lean internal declarations -/
-def isBlackListed (env : Environment) (declName : Name) : Bool :=
+private def isBlackListed (env : Environment) (declName : Name) : Bool :=
   declName == ``sorryAx
   || declName matches .str _ "inj"
   || declName matches .str _ "noConfusionType"
@@ -29,17 +26,17 @@ def isBlackListed (env : Environment) (declName : Name) : Bool :=
   || isMatcherCore env declName
 
 /-- Get number of non-blacklisted declarations per file. -/
-def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
+private def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat :=
   env.const2ModIdx.fold (fun acc n (idx : ModuleIdx) =>
     let mod := env.allImportedModuleNames[idx]!
     if isBlackListed env n then acc else acc.insert mod ((acc.getD mod 0) + 1)
     ) {}
 
 /-- Gexf template for a node in th graph. -/
-def Gexf.nodeTemplate (n module : Name) (size : Nat) := s!"<node id=\"{n}\" label=\"{n}\"><attvalues><attvalue for=\"0\" value=\"{size}\" /><attvalue for=\"1\" value=\"{module.isPrefixOf n}\" /></attvalues></node>\n          "
+private def Gexf.nodeTemplate (n module : Name) (size : Nat) := s!"<node id=\"{n}\" label=\"{n}\"><attvalues><attvalue for=\"0\" value=\"{size}\" /><attvalue for=\"1\" value=\"{module.isPrefixOf n}\" /></attvalues></node>\n          "
 
 /-- Gexf template for an edge in the graph -/
-def Gexf.edgeTemplate (source target : Name) := s!"<edge source=\"{source}\" target=\"{target}\" id=\"{source}--{target}\" />\n          "
+private def Gexf.edgeTemplate (source target : Name) := s!"<edge source=\"{source}\" target=\"{target}\" id=\"{source}--{target}\" />\n          "
 
 open Gexf in
 /-- Creates a `.gexf` file of the graph, see https://gexf.net/
@@ -49,7 +46,7 @@ Metadata can be stored in forms of attributes, currently we record the following
 * `in_module` (Bool): whether the file belongs to the main module
   (used to strip the first part of the name when displaying).
 -/
-def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) (env : Environment) : String :=
+public def Graph.toGexf (graph : NameMap (Array Name)) (module : Name) (env : Environment) : String :=
   let sizes : NameMap Nat := getNumberOfDeclsPerFile env
   let nodes : String := graph.foldl (fun acc n _ => acc ++ nodeTemplate n module (sizes.getD n 0)) ""
   let edges : String := graph.foldl (fun acc n i => acc ++ (i.foldl (fun b j => b ++ edgeTemplate j n) "")) ""

@@ -51,21 +51,23 @@ creates a stand-alone HTML file visualising the import structure.
 
 ## Commands
 
-There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Imports` to your lean file.
+There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Tools` to your lean file.
 
 * `#redundant_imports`: lists any transitively redundant imports in the current module.
 * `#min_imports`: attempts to construct a minimal set of imports for the declarations
   in the current file.
   (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
 * `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
+* `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
+  modules `foo, bar, ...` are added to the set of imports of the file.
 
 ## Source-File-Based Import Analysis
 
-The `ImportGraph.FromSource` module provides functions for analyzing imports by parsing source files directly, without requiring a built environment. This is useful for scripts, linters, and tools that need to analyze imports quickly or on files that haven't been compiled yet.
+The `ImportGraph.Imports.FromSource` module provides functions for analyzing imports by parsing source files directly, without requiring a built environment. This is useful for scripts, linters, and tools that need to analyze imports quickly or on files that haven't been compiled yet.
 
 ### Functions
 
-Add `import ImportGraph.FromSource` to your Lean script to access:
+Add `import ImportGraph.Imports.FromSource` to your Lean script to access:
 
 * `findImportsFromSource (path : System.FilePath) : IO (Array Name)`: Parse direct imports from a single file.
 * `findTransitiveImportsFromSource (startPath : System.FilePath) (rootFilter : Option Name := none) : IO NameSet`: Compute the transitive closure of imports from source files.
@@ -73,7 +75,7 @@ Add `import ImportGraph.FromSource` to your Lean script to access:
 ### Example
 
 ```lean
-import ImportGraph.FromSource
+import ImportGraph.Imports.FromSource
 
 -- Get all transitive Mathlib imports from a file
 #eval do
