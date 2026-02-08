@@ -2,4 +2,8 @@
 /lakefile.olean
 /lake-packages/*
 .lake/
+html-template/imports.gexf
+
 graph.pdf
+
+**/.DS_Store

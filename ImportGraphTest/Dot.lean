@@ -1,4 +1,4 @@
-import ImportGraph.Cli
+import ImportGraph
 
 def readFile (path : System.FilePath) : IO String :=
   IO.FS.readFile path

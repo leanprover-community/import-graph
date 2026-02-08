@@ -1,4 +1,4 @@
-import ImportGraph.FromSource
+import ImportGraph.Imports.FromSource
 
 /-!
 # Tests for Source-Based Import Analysis
@@ -33,7 +33,7 @@ open Lean System
   return transitive.toArray.qsort Name.lt
 
 -- Test on a file with transitive imports
-/-- info: #[`ImportGraph.Meta, `ImportGraphTest.Used] -/
+/-- info: #[`ImportGraph.Tools.ImportDiff, `ImportGraphTest.Used] -/
 #guard_msgs in
 #eval do
   let imports ← findImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
@@ -41,8 +41,7 @@ open Lean System
   return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
 
 /--
-info: #[`ImportGraph.Imports, `ImportGraph.Meta, `ImportGraph.RequiredModules, `ImportGraphTest.Unused, `ImportGraphTest.Used,
-  `ImportGraph.Lean.Environment, `ImportGraph.Util.FindSorry]
+info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
 -/
 #guard_msgs in
 #eval do

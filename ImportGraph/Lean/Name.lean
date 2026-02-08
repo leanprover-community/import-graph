@@ -5,12 +5,8 @@ Authors: Jon Eugster
 -/
 module
 
-public import Lean.Data.Name
+import Lean.Meta.Match.MatcherInfo
 public import Lean.CoreM
-public import Lean.Meta.Match.MatcherInfo
-public import Std.Data.HashMap
-
-public section
 
 /-!
 TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
@@ -36,7 +32,7 @@ Retrieve all names in the environment satisfying a predicate.
 
 Note: copied from `Mathlib.Lean.Name`
 -/
-def allNames (p : Name → Bool) : CoreM (Array Name) := do
+public def allNames (p : Name → Bool) : CoreM (Array Name) := do
   (← getEnv).constants.foldM (init := #[]) fun names n _ => do
     if p n && !(← isBlackListed n) then
       return names.push n
@@ -49,7 +45,7 @@ gathered together into a `HashMap` according to the module they are defined in.
 
 Note: copied from `Mathlib.Lean.Name`
 -/
-def allNamesByModule (p : Name → Bool) : CoreM (Std.HashMap Name (Array Name)) := do
+public def allNamesByModule (p : Name → Bool) : CoreM (Std.HashMap Name (Array Name)) := do
   (← getEnv).constants.foldM (init := ∅) fun names n _ => do
     if p n && !(← isBlackListed n) then
       let some m ← findModuleOf? n | return names
@@ -63,7 +59,7 @@ def allNamesByModule (p : Name → Bool) : CoreM (Std.HashMap Name (Array Name))
 /-- Returns the very first part of a name: for `ImportGraph.Lean.NameMap` it
 returns `ImportGraph`.
 -/
-def getModule (name : Name) (s := "") : Name :=
+public def getModule (name : Name) (s := "") : Name :=
   match name with
     | .anonymous => .mkSimple s
     | .num _ _ => panic s!"panic in `getModule`: did not expect numerical name: {name}."

@@ -1,79 +1,25 @@
-/-
-Copyright (c) 2023 Kim Morrison. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kim Morrison
--/
 module
 
 public import Cli.Basic
-public import ImportGraph.CurrentModule
-public import ImportGraph.Imports
-public import ImportGraph.Lean.Name
-public import ImportGraph.Gexf
-public import ImportGraph.Util.FindSorry
+import ImportGraph.Export.DotFile
+import ImportGraph.Export.Gexf
+import ImportGraph.Graph.Filter
+import ImportGraph.Imports.ImportGraph
+import ImportGraph.Imports.RequiredModules
+import ImportGraph.Lean.Name
+import ImportGraph.Util.CurrentModule
+import ImportGraph.Util.FindSorry
+import Lean.Data.NameMap.AdditionalOperations
 
-@[expose] public section
+/-!
+# `lake exe graph`
+
+This is a replacement for Lean 3's `leanproject import-graph` tool.
+-/
 
 open Cli
 
-open Lean
-open ImportGraph
-
-/--
-Write an import graph, represented as a `NameMap (Array Name)` to the ".dot" graph format.
-* Nodes in the `unused` set will be shaded light gray.
-* If `markedPackage` is provided:
-  * Nodes which start with the `markedPackage` will be highlighted in green and drawn closer together.
-  * Edges from `directDeps` into the module are highlighted in green
-  * Nodes in `directDeps` are marked with a green border and green text.
-  * Nodes in `withSorry` are highlighted in gold.
--/
-def asDotGraph
-    (graph : NameMap (Array Name))
-    (unused : NameSet := {})
-    (header := "import_graph")
-    (markedPackage : Option Name := none)
-    (withSorry : NameSet := {})
-    (directDeps : NameSet := {})
-    (from_ to : NameSet := {}):
-    String := Id.run do
-
-  let mut lines := #[s!"digraph \"{header}\" " ++ "{"]
-  for (n, is) in graph do
-    let shape := if from_.contains n then "invhouse" else if to.contains n then "house" else "ellipse"
-    if markedPackage.isSome ∧ directDeps.contains n then
-      -- note: `fillcolor` defaults to `color` if not specified
-      let fill := if withSorry.contains n then
-          "#ffd700"
-        else if unused.contains n then
-          "#e0e0e0"
-        else
-          "white"
-      lines := lines.push s!"  \"{n}\" [style=filled, fontcolor=\"#4b762d\", color=\"#71b144\", fillcolor=\"{fill}\", penwidth=2, shape={shape}];"
-    else if withSorry.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#ffd700\", shape={shape}];"
-    else if unused.contains n then
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#e0e0e0\", shape={shape}];"
-    else if isInModule markedPackage n then
-      -- mark node
-      lines := lines.push s!"  \"{n}\" [style=filled, fillcolor=\"#96ec5b\", shape={shape}];"
-    else
-      lines := lines.push s!"  \"{n}\" [shape={shape}];"
-    -- Then add edges
-    for i in is do
-      if isInModule markedPackage n then
-        if isInModule markedPackage i then
-          -- draw the main project close together
-          lines := lines.push s!"  \"{i}\" -> \"{n}\" [weight=100];"
-        else
-          -- mark edges into the main project
-          lines := lines.push s!"  \"{i}\" -> \"{n}\" [penwidth=2, color=\"#71b144\"];"
-      else
-        lines := lines.push s!"  \"{i}\" -> \"{n}\";"
-  lines := lines.push "}"
-  return "\n".intercalate lines.toList
-
-open Lean Core System
+open Lean Core System ImportGraph
 
 open IO.FS IO.Process Name in
 /-- Implementation of the import graph command line program. -/
@@ -223,3 +169,35 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         IO.eprintln s!"Make sure you have `graphviz` installed and the file is writable."
         throw ex
   return 0
+
+/-- Setting up command line options and help text for `lake exe graph`. -/
+def graph : Cmd := `[Cli|
+  graph VIA importGraphCLI; ["0.0.3"]
+  "Generate representations of a Lean import graph. \
+   By default generates the import graph up to `Mathlib`. \
+   If you are working in a downstream project, use `lake exe graph --to MyProject`."
+
+  FLAGS:
+    "show-transitive";         "Show transitively redundant edges."
+    "to" : Array ModuleName;   "Only show the upstream imports of the specified modules."
+    "from" : Array ModuleName; "Only show the downstream dependencies of the specified modules."
+    "exclude-meta";            "Exclude any files starting with `Mathlib.[Tactic|Lean|Util|Mathport]`."
+    "include-direct";          "Include directly imported files from other libraries"
+    "include-deps";            "Include used files from other libraries (not including Lean itself and `std`)"
+    "include-std";             "Include used files from the Lean standard library (implies `--include-deps`)"
+    "include-lean";            "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
+    "mark-package";            "Visually highlight the package containing the first `--to` target (used in combination with some `--include-XXX`)."
+    "mark-sorry";              "Visually highlight modules containing sorries."
+
+  ARGS:
+    ...outputs : String;  "Filename(s) for the output. \
+      If none are specified, generates `import_graph.dot`. \
+      Automatically chooses the format based on the file extension. \
+      Currently supported formats are `.dot`, `.gexf`, `.html`, \
+      and if you have `graphviz` installed then any supported output format is allowed."
+]
+
+
+/-- `lake exe graph` -/
+public def main (args : List String) : IO UInt32 :=
+  graph.validate args
