@@ -36,7 +36,7 @@ so the results will likely need to be adjusted by hand.
 -/
 elab "#min_imports" : command => do
   let imports := (← getEnv).minimalRequiredModules.qsort (·.toString < ·.toString)
-    |>.toList.map (fun n => "import " ++ n.toString)
+    |>.toList.map (fun n => "public import " ++ n.toString)
   logInfo <| Format.joinSep imports "\n"
 
 -- deprecated since 2024-07-06
