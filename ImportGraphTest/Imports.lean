@@ -16,7 +16,7 @@ ImportGraph.Imports.RequiredModules
 #guard_msgs in
 #redundant_imports
 
-/-- info: import ImportGraph.Imports.Redundant -/
+/-- info: public import ImportGraph.Imports.Redundant -/
 #guard_msgs in
 #min_imports
 
