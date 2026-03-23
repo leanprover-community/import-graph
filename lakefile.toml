@@ -9,7 +9,7 @@ testRunner = "ImportGraphTest"
 [[require]]
 name = "Cli"
 scope = "leanprover"
-rev = "v4.29.0-rc6"
+rev = "v4.29.0-rc7"
 
 [[lean_lib]]
 name = "ImportGraph"
