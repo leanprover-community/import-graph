@@ -10,8 +10,8 @@ def runGraphCommand : IO Unit := do
   }
 
 def compareOutputs (expected : String) (actual : String) : IO Bool := do
-  let expectedLines := expected.splitOn "\n" |>.filter (·.trim.length > 0) |>.map String.trim
-  let actualLines := actual.splitOn "\n" |>.filter (·.trim.length > 0) |>.map String.trim
+  let expectedLines := expected.splitOn "\n" |>.filter (·.trimAscii.toString.length > 0) |>.map (·.trimAscii.toString)
+  let actualLines := actual.splitOn "\n" |>.filter (·.trimAscii.toString.length > 0) |>.map (·.trimAscii.toString)
   pure (expectedLines == actualLines)
 
 /-- info: Test passed: The graph command output matches the expected.dot file. -/
