@@ -1,15 +1,16 @@
-{"version": "1.1.0",
+{"version": "1.2.0",
  "packagesDir": ".lake/packages",
  "packages":
  [{"url": "https://github.com/leanprover/lean4-cli",
    "type": "git",
    "subDir": null,
    "scope": "leanprover",
-   "rev": "7802da01beb530bf051ab657443f9cd9bc3e1a29",
+   "rev": "f7d0ca7c926cdde0562af20394dd25d028b839a5",
    "name": "Cli",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "v4.29.0",
+   "inputRev": "v4.30.0-rc1",
    "inherited": false,
    "configFile": "lakefile.toml"}],
  "name": "importGraph",
- "lakeDir": ".lake"}
+ "lakeDir": ".lake",
+ "fixedToolchain": false}
