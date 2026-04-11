@@ -33,8 +33,11 @@ Note: This only sees syntactic imports in the source file.
 It does not account for what declarations are actually used.
 -/
 public def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
+  -- Note: we use `filter` rather than `erase`, since module-system files may contain
+  -- both an implicit `public import Init` and a `meta import Init`, so `Init` can
+  -- appear more than once in the parsed imports.
   return (← Lean.parseImports' (← IO.FS.readFile path) path.toString).imports
-    |>.map (·.module) |>.erase `Init
+    |>.map (·.module) |>.filter (· != `Init)
 
 /--
 Compute the transitive closure of imports starting from a source file.
