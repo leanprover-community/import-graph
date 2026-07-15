@@ -1,5 +1,11 @@
 import ImportGraph
 
+-- The `lake exe graph ...` command below expects ToTarget.lean to have already
+-- been built, so we need some explicit ordering between this file and
+-- ToTarget.lean. The easiest way to do this is just to import that file from
+-- this one.
+import ImportGraphTest.ToTarget
+
 def readFile (path : System.FilePath) : IO String :=
   IO.FS.readFile path
 
