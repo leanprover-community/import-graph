@@ -227,7 +227,17 @@ elab_rules : command
         m!"{.bulletList (priorDecls.toList.map MessageData.ofConstName)}"
     collapsible "More information" m!"{minImports}{producedConsts}{priorDeclsMsg}"
   let cmdRange := cmd.raw.getRangeWithTrailing?.get!
-  let source := cmdRange.start.extract (← getFileMap).source cmdRange.stop |>.trimAscii
+  let endCmd := cmd.raw.getRange?.get!.stop
+  dbg_trace cmdRange.stop
+  let source := (← getFileMap).source
+  -- Keep the trailing whitespace until the first two newlines:
+  let endPos := Id.run do
+    if endCmd.byteIdx < cmdRange.stop.byteIdx then
+      let s := source.slice! (source.pos! endCmd) (source.pos! cmdRange.stop)
+      if let some s := s.split "\n\n" |>.first? then
+        return s.endExclusive.offset
+    return cmdRange.stop
+  let source := cmdRange.start.extract (← getFileMap).source endPos |>.trimAscii
   -- TODO: copy over prior declarations as well
   let disclaimerComment := "-- NOTE: necessary scopes and namespaces may not have been copied over."
   let copySource ← liftCoreM do
