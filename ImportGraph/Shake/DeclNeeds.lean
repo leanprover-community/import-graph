@@ -29,6 +29,10 @@ Note that, crucially, `DeclNeeds` is agnostic to the source of our import hierar
 module names instead of e.g. `ModuleIdx`s/`ModIdx`s. Hence these functions are compatible with both
 a `WorkspaceModel` approach and an `Environment` approach.
 
+This file culminates in `withElabCommandCapturingNeeds`, which elaborates a command and captures
+the (transitive) `DeclNeeds` of declarations produced in that command, including e.g. the needs
+implied by the command's syntax.
+
 ## Future Work
 
 - Write up more thorough documentation when this settles down.
@@ -708,3 +712,35 @@ def DeclNeeds.calcIRNeeds (declNeeds : DeclNeeds) : StanceM DeclNeeds := do
         trace[ImportGraph.Shake] "`{.ofConstName ``toDecl} {.ofConstName decl}` failed:\
           {indentD ex.toMessageData}"
   return declNeeds
+
+open Lean Elab Command in
+/-- Elaborates the command and captures the `DeclNeeds` of all new declarations. Attaches the needs
+implied by the command's syntax to each new declaration. Note: does **not** capture extra rev mod
+uses influencing the file as a whole. -/
+def withElabCommandCapturingNeeds (cmd : Syntax.Command) :
+    CommandElabM (DeclNeeds × Array Name) := do
+  withFreshShakeRecords do
+    let oldEnv ← getEnv
+    elabCommand cmd
+    let env ← getEnv
+    let newDecls := env.constants.foldStage2 (s := #[]) fun acc decl _ =>
+      if oldEnv.contains decl then acc else acc.push decl
+    let mut declNeeds := {}
+    let mut autoDecls := #[] -- Save auto decls, and ensure we found them
+    -- TODO-TAG: auto decl handling
+    for new in newDecls do
+      if isDeclNeedsAutoDecl env new then
+        autoDecls := autoDecls.push new
+      else
+        declNeeds := calcDeclConstInfoNeeds new env declNeeds
+    for autoDecl in autoDecls do
+      -- TODO: this should recurse into autodecls of autodecls. Not entirely happy with handling
+      unless declNeeds.contains autoDecl do
+        declNeeds := calcDeclConstInfoNeeds autoDecl env declNeeds
+    -- TODO: extra mod uses. Should be at the command level and decls organized by command
+    let extraModUses := getNewExtraModUses env |>.1
+    for new in newDecls do
+      declNeeds := declNeeds.insertExtraModUsesFor new extraModUses
+    declNeeds ← declNeeds.calcSyntaxNeeds env newDecls cmd
+    declNeeds ← liftCoreM <| declNeeds.calcIRNeeds.run'
+    return (declNeeds, newDecls)
