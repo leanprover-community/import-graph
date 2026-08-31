@@ -1,3 +1,3 @@
 module
 
-public import ImportGraph.Test.RealHome
+public import ImportGraphTest.FindHome.RealHome

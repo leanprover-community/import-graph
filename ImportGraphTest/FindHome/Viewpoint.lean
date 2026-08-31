@@ -1,50 +1,68 @@
 module
 
 import ImportGraph.Tools.FindHome
-import ImportGraph.Test.FakeHome
-import ImportGraph.Test.SecondRealHome
+import ImportGraphTest.FindHome.FakeHome
+import ImportGraphTest.FindHome.SecondRealHome
 import Lean.Data.Json
+public meta import Lean.Elab.Command
+public meta import ImportGraph.WorkspaceModel.Summary
 
 /-
-`bar₁` is from `ImportGraph.Test.ComponentHome1`
-`bar₂` is from `ImportGraph.Test.ComponentHome2`
+`bar₁` is from `ImportGraphTest.FindHome.ComponentHome1`
+`bar₂` is from `ImportGraphTest.FindHome.ComponentHome2`
+`foo` is from `ImportGraphTest.FindHome.RealHome`
 
-`ImportGraph.Test.RealHome` imports both
-So does `ImportGraph.Test.SecondRealHome`
-What if we include `foo`
-from `ImportGraph.Test.RealHome`?
+`A.RealHome` imports both, as does `ImportGraphTest.FindHome.SecondRealHome`
 -/
 
+/--
+info: This command can be moved to the following modules above this module:
+• ImportGraphTest.FindHome.RealHome (end)
+• ImportGraphTest.FindHome.SecondRealHome (end)
 
-def y := false
+[click-to-copy] [copy source]
+(Will copy:
+  ⏎
+  -- NOTE: necessary scopes and namespaces may not have been copied over.
+  def x₁₂ := bar₁ && bar₂
+  )
 
-macro "aa" : term => ``(true)
-
--- /Users/thomas/.elan/toolchains/leanprover--lean4---v4.34.0-rc1/src/lean/Lean/Data/Json.lean
-
+▼ More information
+  ▼ Imports needed
+    [click-to-copy] [copy imports]
+    (Will copy:
+      import ImportGraphTest.FindHome.ComponentHome1
+      import ImportGraphTest.FindHome.ComponentHome2)
+    import ImportGraphTest.FindHome.ComponentHome1
+    import ImportGraphTest.FindHome.ComponentHome2
+  ▼ New constants from this command
+    • x₁₂
+-/
+#guard_msgs in
 #find_home for
-def x' := bar₁ && bar₂ && foo
+def x₁₂ := bar₁ && bar₂
 
-/-
-- [x] finish polishing pipeline: "transport" → read imports → full Model; need baseline!; hybrid approach olean + source?
-- [ ] create ranking (packages + libraries) → create message from ranking
-  - [ ] exclude current file or...register declarations as coming from current file? This amounts to a **prevs mask**, or iteration only through prevs in the first place. What allows mutation? abstracting games. Not sure about **depths**. Should they have been recorded?
-- [ ] handle syntax from the current file correctly?
-- [ ] handle case where there are no dependencies from suggested package (upstreaming + current lib)
-- [ ] exclude core (and Cli?) from upstream suggestions (exclude all leanprover/*?)
-- [ ] exclude root files
+-- Importing `foo` eliminated `SecondRealHome`
+/--
+info: This command can be moved to the following module above this module:
+• ImportGraphTest.FindHome.RealHome (7:0)
 
-- include current file and transitively reachable local files; always okay to put these at the end, depending on the order we choose, if they're not present yet? Right?
+[click-to-copy] [copy source]
+(Will copy:
+  ⏎
+  -- NOTE: necessary scopes and namespaces may not have been copied over.
+  def x₁₂foo := bar₁ && bar₂ && foo
+  )
 
-
-
-
-- suggestion to add current file to root module...? Easy to hardcode, harder to do other things
-
-The Human Condition - Hannah Arendt
+▼ More information
+  ▼ Imports needed
+    [click-to-copy] [copy imports]
+    (Will copy:
+      import ImportGraphTest.FindHome.RealHome)
+    import ImportGraphTest.FindHome.RealHome
+  ▼ New constants from this command
+    • x₁₂foo
 -/
-
-
-
-structure IdxOf (a : Array β) where
-  toNat : Nat
+#guard_msgs in
+#find_home for
+def x₁₂foo := bar₁ && bar₂ && foo

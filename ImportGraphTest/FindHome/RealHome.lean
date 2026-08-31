@@ -1,7 +1,7 @@
 module
 
-public import ImportGraph.Test.ComponentHome1
-public import ImportGraph.Test.ComponentHome2
+public import ImportGraphTest.FindHome.ComponentHome1
+public import ImportGraphTest.FindHome.ComponentHome2
 
 public def foo := true
 
