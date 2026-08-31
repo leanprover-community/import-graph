@@ -10,4 +10,5 @@ import ImportGraphTest.ToTarget
 import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
+import ImportGraphTest.Widget.Collapsible
 import ImportGraph.Widget.GoToModule
