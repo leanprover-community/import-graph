@@ -10,13 +10,13 @@ Tests for `findImportsFromSource` and `findTransitiveImportsFromSource`.
 open Lean System ImportGraph
 
 -- Test basic import parsing
-/-- info: [ImportGraphTest.Unused] -/
+/-- info: #[`ImportGraphTest.Unused] -/
 #guard_msgs in
-run_cmd do
+#eval do
   let header ← System.FilePath.parseImports' ("ImportGraphTest" / "Used.lean")
   -- Filter to only ImportGraph modules
-  logInfo <| m!"{header.imports.map Import.module |>.filter
-    fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]}"
+  return header.imports.map Import.module |>.filter
+    fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
 -- Test transitive imports without filter
 /-- info: #[`ImportGraphTest.Unused] -/
