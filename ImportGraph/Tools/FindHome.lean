@@ -228,7 +228,6 @@ elab_rules : command
     collapsible "More information" m!"{minImports}{producedConsts}{priorDeclsMsg}"
   let cmdRange := cmd.raw.getRangeWithTrailing?.get!
   let endCmd := cmd.raw.getRange?.get!.stop
-  dbg_trace cmdRange.stop
   let source := (← getFileMap).source
   -- Keep the trailing whitespace until the first two newlines:
   let endPos := Id.run do
