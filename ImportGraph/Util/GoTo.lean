@@ -7,7 +7,7 @@ module
 
 public meta import Lean.Widget.UserWidget
 
-/-! # Go-To-Module utilies
+/-! # A Go-To-Module widget
 
 This file defines:
 
