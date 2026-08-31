@@ -34,10 +34,12 @@ respects the module system.
 - In the other direction, provide an "agent mode" that emits simplified textual information
 - Provide more visibility into the import hierarchy. This may also be in the remit of related UX
   instead of `#find_home` per se.
+- Take user to top of file instead of end when no declarations are present in the file
 
 ### Functionality
 
 - Handle non-modules
+- Better errors; gracefully ignoring broken modules
 - Provide a simplified meta API for accessing `#find_home`'s composed functionality.
 - Allow finding homes for commands which do not produce declarations
 - Provide better support for moving declarations with same-file dependencies:
@@ -55,7 +57,7 @@ respects the module system.
     <module>")
 -/
 
-meta section
+public meta section
 
 open ImportGraph Shake Widget Lean Elab Command
 
@@ -140,7 +142,9 @@ elab_rules : command
       for (_, need) in declNeeds do
         let some declsFromMod := need.fixedDecls[modName]? | continue
         decls := decls.insertMany declsFromMod.keysArray
-      links := links.push <|← goToModuleOfDecls decls.toArray (fallbackModule := modName)
+      let declsArray := decls.toArray
+      links := links.push <|← goToModuleOfDecls declsArray (fallbackModule := modName)
+        (location := if declsArray.isEmpty then .start else .end)
     return links
 
   -- Find minimal modules (the eponymous "homes")
@@ -249,6 +253,8 @@ elab_rules : command
       {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
       \n\n"}\
     {copySource}\n\n{moreInfo}"
+
+end ImportGraph.Shake
 
 /-!
 ## Non-module `#find_home`

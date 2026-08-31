@@ -1,11 +1,18 @@
 module
 
+public meta import Lean.Elab.Command
+public meta import ImportGraph.WorkspaceModel.Summary
+
 import ImportGraph.Tools.FindHome
 import ImportGraphTest.FindHome.FakeHome
 import ImportGraphTest.FindHome.SecondRealHome
 import Lean.Data.Json
-public meta import Lean.Elab.Command
-public meta import ImportGraph.WorkspaceModel.Summary
+
+-- For loading declaration ranges under `lake build` (usually only present in the server):
+import all ImportGraphTest.FindHome.RealHome
+import all ImportGraphTest.FindHome.SecondRealHome
+
+open FindHome
 
 /-
 `bar₁` is from `ImportGraphTest.FindHome.ComponentHome1`
@@ -17,8 +24,8 @@ public meta import ImportGraph.WorkspaceModel.Summary
 
 /--
 info: This command can be moved to the following modules above this module:
-• ImportGraphTest.FindHome.RealHome (end)
-• ImportGraphTest.FindHome.SecondRealHome (end)
+• ImportGraphTest.FindHome.RealHome (1:0)
+• ImportGraphTest.FindHome.SecondRealHome (1:0)
 
 [click-to-copy] [copy source]
 (Will copy:
@@ -45,7 +52,7 @@ def x₁₂ := bar₁ && bar₂
 -- Importing `foo` eliminated `SecondRealHome`
 /--
 info: This command can be moved to the following module above this module:
-• ImportGraphTest.FindHome.RealHome (7:0)
+• ImportGraphTest.FindHome.RealHome (9:0)
 
 [click-to-copy] [copy source]
 (Will copy:
