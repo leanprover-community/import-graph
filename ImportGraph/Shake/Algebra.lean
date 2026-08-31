@@ -7,6 +7,21 @@ module
 
 public import ImportGraph.Shake.Basic
 
+/-!
+# Algebra of an import hierarchy
+
+This file provides algebraic/compositional relationships between module system dpendencies in an
+import hierarchy.
+
+Notably, we provide transitive closure operators relative to an import hierarchy, which relies on
+the nontrivial composition of module system imports.
+
+## Future work
+
+- Document this more thoroughly.
+- Consider making the `Hierarchy` API more featureful.
+-/
+
 public section
 
 open Lean ImportGraph Shake
@@ -21,8 +36,10 @@ scoped infixl:80 " ≫ " => HPostcomp.hpostcomp
 protected class HTransClosure (α) (β) (γ : outParam (Type u)) where
   protected htransClosure : α → β → γ
 
+/-- `𝓘⟦n⟧` is the transitive closure of `n` with respect to the hierarchy `𝓘`. -/
 scoped notation:max I "⟦" n "⟧" => HTransClosure.htransClosure I n
 
+/-- An import hierarchy, with a `size` and dependencies (`Provides`) for each index. -/
 class Hierarchy (α) where
   size : α → Nat
   getDeps : (a : α) → (i : Nat) → (i < size a) → Provides
@@ -30,6 +47,7 @@ class Hierarchy (α) where
   getDeps? : α → Nat → Option Provides
   getDeps! : α → Nat → Provides
 
+/-- An `Array Provides`. -/
 abbrev ArrayHierarchy := Array Provides
 
 @[inline] instance : Hierarchy ArrayHierarchy where
@@ -43,6 +61,7 @@ instance {H} [Hierarchy H] : GetElem? H Nat Provides (fun (a : H) i => i < Hiera
   getElem? := Hierarchy.getDeps?
   getElem! := Hierarchy.getDeps!
 
+/-- Equips a monad with a `Hierarchy` state. -/
 abbrev HierarchyT (H) [Hierarchy H] := StateT H
 
 /-- Given an abstract `NeedsKind` `[kImp⟩` and a collection of prearrows `j [k⟩ ·` (`Provides`),
@@ -154,7 +173,8 @@ Includes the public visibilities in the corresponding private visibilities, to r
 @[inline] def Needs.isAntilinear (a : Needs) : Bool :=
   (a.pub ∩ a.priv == {}) && (a.metaPub ∩ a.metaPriv == {})
 
-@[inline] def Needs.reflOf (i : Nat) : Needs := { Needs.empty with
+/-- A `Provides` providing to a module the aspects of that module which it provides to itself. -/
+@[inline] def Needs.reflOf (i : Nat) : Provides := { Needs.empty with
   pub := {i}
   priv := {i}
   privOfPriv := {i} }
@@ -207,7 +227,7 @@ def Needs.reduce {H} [Hierarchy H] (a : Needs) (transDeps : H) : Needs := Id.run
 /-- Attempts to insert `a` among the set `as` of minimal elements as a new minimal element
 according to `lt`. Clears elements of `as` that are above `a`, and ignores `a` if we already have
 an element lower than `a`.  -/
-@[inline] private def _root_.Array.incorporateBelow (as : Array (Option α)) (a : α)
+@[inline] private def Array.incorporateBelow (as : Array (Option α)) (a : α)
     (lt : α → α → Bool) : Array (Option α) := Id.run do
   let mut as := as
   for i in 0...as.size do
@@ -224,32 +244,5 @@ an element lower than `a`.  -/
     (map : Std.HashMap κ (Array (Option α))) (k : κ) (a : α) (lt : α → α → Bool) :
     Std.HashMap κ (Array (Option α)) := map.alter k fun arr? =>
       arr?.getD #[] |>.incorporateBelow a lt
-
--- TODO: might want to sort by things like "fewest public imports" instead?
-/-- Finds the modules `i` that provide `needs` according to `transDeps` (including `i`'s public and
-private scopes), and are lowest according to `lt`. `needs` does not need to be
-transitively closed. -/
-def Needs.coveringsBy {H} [Hierarchy H] (transDeps : H) (needs : Needs)
-    (lt : Nat → Nat → Bool) : Array Nat := Id.run do
-  let mut mods := #[]
-  for i in 0...(Hierarchy.size transDeps) do
-    if needs.coveredBy i transDeps then
-      -- TODO: be cleverer about this? Can we skip entire attempts?
-      -- Or maybe totally different data structure? List, perhaps?
-      -- Traversing in one direction or another
-      mods := mods.incorporateBelow i lt
-  return mods.reduceOption
-
-/-- Finds the modules `i` that provide `needs` according to `transDeps` (including `i`'s public and
-private scopes), and are lowest in the hierarchy according to `prevs`. `needs` does not need to be
-transitively closed. -/
-@[inline] def Needs.coverings {H} [Hierarchy H] (transDeps : H) (prevs : Array Bitset)
-    (needs : Needs) : Array Nat :=
-  needs.coveringsBy transDeps fun i j => prevs[i]!.lt prevs[j]!
-
-def sortByDepthThenSize (mods : Array Nat) (depths : Array Nat) (prevs : Array Bitset) :
-    Array Nat :=
-  mods.qsort fun i j =>
-    (compare depths[i]! depths[j]! |>.then <| compare prevs[i]!.size prevs[j]!.size).isLT
 
 end ImportGraph.Shake
