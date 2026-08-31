@@ -411,7 +411,9 @@ We assume `sourceImps` has been created by `ImportGraph.headerToImportRefsWithWh
 
 /-- Create a message that suggests replacing `sourceImps` with `newImps`. Includes errors as a
 comment. Returns `none` if the suggestion is would not modify the source at all (including
-whitespace). -/
+whitespace).
+
+`ref` is passed to `Meta.Hint.mkSuggestionsMessage`. -/
 def mkImportSuggestionMessage (ref : Syntax) (newImps : Array Import)
     (sourceImps : Array (ImportRef × Whitespace)) (formatAs := Import.FormatBehavior.grouped)
     (toCodeActionTitle? : Option (String → String) := some fun _ => "Modify imports")
