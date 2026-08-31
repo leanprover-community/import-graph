@@ -16,9 +16,11 @@ public import ImportGraph.Widget.Copy
 public import ImportGraph.Widget.GoToModule
 
 /-!
-# `#find_home`
+# `#find_home for ...`
 
-This module provides the `#find_home for <cmd>` utility, which suggests places a given command (and its dependencies from the current file) can live in the module system.
+This module provides the `#find_home for <cmd>` utility, which suggests the highest places a given
+command (and its dependencies from the current file) can live in the import hierarchy. `#find_home`
+respects the module system.
 
 ## Future work
 
