@@ -16,8 +16,7 @@ public def getCurrentModule : IO Name := do
 
   match (← Lake.Manifest.load? ⟨"lake-manifest.json"⟩) with
   | none =>
-    -- TODO: should this be caught?
-    pure .anonymous
+    throw <| IO.userError "import-graph: lake-manifest.json not found; run from a Lake package root"
   | some manifest =>
     -- TODO: This assumes that the `package` and the default `lean_lib`
     -- have the same name up to capitalisation.
