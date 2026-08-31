@@ -64,6 +64,9 @@ export default function(props) {
 }
 "#
 
+/-- A position past the end of any file, assuming no file has more than 4294967296 lines. -/
+def pastEndOfFile : Lsp.Position := { line := 1 <<< 32, character := 0 }
+
 /-- Creates a clickable link which takes the user to the provided module.
 
 By default, takes the user to the top of the module. Providing `pos` will bring the user to that
@@ -75,15 +78,14 @@ By default, the module name is used as the link's text. The text can be overridd
 def goToModule (modName : Name) (pos : Lsp.Position := ⟨0,0⟩)
     (overrideText : Option String := none) : CoreM MessageData := do
   let p : GoToModuleProps := { modName, pos, overrideText }
+  let posMsg := if pos.line ≥ pastEndOfFile.line then m!"end" else
+    m!"{pos.line + 1}:{pos.character}"
   return .ofWidget
     (← Widget.WidgetInstance.ofHash GoToModule.javascriptHash <|
       Server.RpcEncodable.rpcEncode p)
     -- Note that `Lsp.Position`s are 0-indexed, hence the `+1`.
     -- (However, Lean uses 0-indexed columns in messages.)
-    m!"{overrideText.getD <| toString modName} ({pos.line + 1}:{pos.character})"
-
-/-- A position past the end of any file, assuming no file has more than 4294967296 lines. -/
-def pastEndOfFile : Lsp.Position := { line := 1 <<< 32, character := 0 }
+    m!"{overrideText.getD <| toString modName} ({posMsg})"
 
 /-- Gets the latest-ending range among all declarations, or `none` if none could be found.
 Assumes all declarations come from the same module. -/
