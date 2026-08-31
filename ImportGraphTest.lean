@@ -9,3 +9,4 @@ import ImportGraphTest.Used
 import ImportGraphTest.ToTarget
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
+import ImportGraph.Widget.GoToModule
