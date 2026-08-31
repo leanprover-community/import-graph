@@ -12,4 +12,4 @@ import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
 import ImportGraphTest.Widget.Collapsible
-import ImportGraph.Widget.GoToModule
+import ImportGraphTest.Widget.GoToModule.Msg

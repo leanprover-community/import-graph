@@ -4,7 +4,10 @@ public meta import ImportGraphTest.Widget.GoToModule.Decls
 public meta import Lean.Elab.Command
 public meta import ImportGraph.Widget.GoToModule
 
-open ImportGraph Widget Lean Elab Command
+-- To load declaration ranges under `lake build` (usually only present in the server):
+import all ImportGraphTest.Widget.GoToModule.Decls
+
+open ImportGraph Widget Lean Elab Command GoToModule
 
 elab "#go_to" : command => liftCoreM do
   let msgs := [
@@ -30,15 +33,15 @@ elab "#go_to" : command => liftCoreM do
 info: ImportGraphTest.Widget.GoToModule.Decls (1:0)
 Some module (4:7)
 end of `bar`:
-ImportGraphTest.Widget.GoToModule.Decls (12:0)
+ImportGraphTest.Widget.GoToModule.Decls (14:0)
 end of `bar` (last declaration):
-ImportGraphTest.Widget.GoToModule.Decls (12:0)
+ImportGraphTest.Widget.GoToModule.Decls (14:0)
 line after `bar`:
-ImportGraphTest.Widget.GoToModule.Decls (11:16)
+ImportGraphTest.Widget.GoToModule.Decls (13:16)
 line before `foo`:
-ImportGraphTest.Widget.GoToModule.Decls (6:0)
+ImportGraphTest.Widget.GoToModule.Decls (8:0)
 start of `foo`:
-ImportGraphTest.Widget.GoToModule.Decls (7:0)
+ImportGraphTest.Widget.GoToModule.Decls (9:0)
 -/
 #guard_msgs in
 #go_to
