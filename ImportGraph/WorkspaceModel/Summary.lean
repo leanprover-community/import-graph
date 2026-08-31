@@ -89,8 +89,11 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
     leanLibDir := pkg.leanLibDir
     deps := pkg.depPkgs.map (·.wsIdx)
     libs := pkg.leanLibs.filterMap fun lib => do
-      -- TODO: include non-default targets with a flag instead of excluding them entirely
-      guard <| pkg.defaultTargets.contains lib.name
+      -- This is a hack to allow us to test the import hierarchy while within `importGraph`.
+      -- This does not add `ImportGraphTest` to the hierarchy outside of `importGraph`.
+      unless pkg.isRoot && lib.name == `ImportGraphTest do
+        -- TODO: include non-default targets with a flag instead of excluding them entirely
+        guard <| pkg.defaultTargets.contains lib.name
       return {
         name := lib.name
         srcDir := lib.srcDir
@@ -140,18 +143,22 @@ in the language server causes a crash.)
 Before calling out to the executable, this function checks a cache file in the `.lake` folder and
 determines whether it's up-to-date. If so, it skips the executable call. If not, and it does call
 out to the executable, then we also write the result to that cache file.
+
+If `readCache := false`, do not read from the cache, but still write to it.
 -/
-def getWorkspaceSummary (wsDir : Option FilePath := none) : IO WorkspaceSummary := do
+def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
+    IO WorkspaceSummary := do
   let lakeDirPath ← lakeDirPath wsDir
   unless ← lakeDirPath.isDir do
     throw (.userError "Could not find `.lake` folder at {lakeFolderPath}")
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
-  if ← cachePath.pathExists then
-    let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
-      (← IO.FS.readFile cachePath)
-    if ← ws.isUpToDate then
-      return ws
+  if readCache then
+    if ← cachePath.pathExists then
+      let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
+        (← IO.FS.readFile cachePath)
+      if ← ws.isUpToDate then
+        return ws
   let out ← IO.Process.run {
     cmd := "lake"
     args := #["exe", WorkspaceSummary.exeName]
