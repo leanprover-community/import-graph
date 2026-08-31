@@ -3,7 +3,7 @@ description = "Tools to analyse and visualise the import structure of Lean packa
 license = "Apache-2.0"
 licenseFiles = ["LICENSE"]
 
-defaultTargets = ["ImportGraph", "graph"]
+defaultTargets = ["ImportGraph", "graph", "import-graph-workspace-summary"]
 testRunner = "ImportGraphTest"
 
 [[require]]
@@ -31,3 +31,11 @@ supportInterpreter = true
 
 [[lean_lib]]
 name = "ImportGraphTest"
+
+# Emits the packages and lean libraries of a lake workspace as json in a manner suitable for 
+# inspecting the import hierarchy of modules via source. (Does not emit module data per se.)
+# Works around the fact that loading the lake workspace in the language server crashes it.
+[[lean_exe]]
+name = "import-graph-workspace-summary"
+root = "ImportGraph.WorkspaceModel.Emit"
+supportInterpreter = true
