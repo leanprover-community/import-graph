@@ -22,11 +22,11 @@ these relationships in the `WorkspaceModel`.
 
 ## Future work
 
-## Functionality
+### Functionality
 
 - We could preserve `shake` annotations, as these are relevant to the hierarchy
 
-## Performance
+### Performance
 
 - We could probably parallelize the import source reading.
 - We could possibly hybridize with reading oleans when available instead of re-parsing imports.
