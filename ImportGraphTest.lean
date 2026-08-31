@@ -6,5 +6,6 @@ import ImportGraphTest.Imports
 import ImportGraphTest.Unused
 import ImportGraphTest.Used
 import ImportGraphTest.ToTarget
+import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
