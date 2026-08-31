@@ -240,6 +240,9 @@ an element lower than `a`.  -/
       return as
   return as.push a
 
+/-- At `k`, attempts to insert `a` among the set `as` of minimal elements as a new minimal element
+according to `lt`. Clears elements of `as` that are above `a`, and ignores `a` if we already have
+an element lower than `a`.  -/
 @[inline] def Std.HashMap.incorporateBelowAt {κ} [BEq κ] [Hashable κ]
     (map : Std.HashMap κ (Array (Option α))) (k : κ) (a : α) (lt : α → α → Bool) :
     Std.HashMap κ (Array (Option α)) := map.alter k fun arr? =>
