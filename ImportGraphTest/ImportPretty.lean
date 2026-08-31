@@ -10,12 +10,12 @@ public meta import ImportGraph.Imports.Pretty
 
 open ImportGraph Lean Elab Command
 
-elab tk:"#pretty_current_imports" : command => do
+elab tk:"#pretty_current_imports " p:("without_public")? : command => do
   let (header, _) ← parseCurrentHeader
   let refs := headerToImportRefsWithWhitespace header
   let some (msg, _) ← liftCoreM <| Import.mkImportSuggestionMessage tk
     -- suggest `meta import Lean.Elab.Command` and `public import ImportGraph.Imports.Pretty`
-    #[{ module := `Lean.Elab.Command, isMeta := true },
+    #[{ module := `Lean.Elab.Command, isMeta := true, isExported := p.isNone },
       { module := `ImportGraph.Imports.Pretty, isExported := true}]
     refs
     | throwError "Could not create message"
@@ -32,3 +32,20 @@ info:
 -/
 #guard_msgs in
 #pretty_current_imports
+
+/--
+info:
+  [apply] public import ImportGraph.Imports.Pretty
+  ⏎
+  meta import Lean.Elab.Command
+  ⏎
+  /-
+  Comments were present when importing `Lean.Elab.Command`, but this module is now imported differently as `meta import Lean.Elab.Command`.
+  Decide if the following original comments still apply:
+  ```
+  public meta import Lean.Elab.Command -- some comment
+  ```
+  -/
+-/
+#guard_msgs in
+#pretty_current_imports without_public
