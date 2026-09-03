@@ -3,6 +3,8 @@ import ImportGraphTest.Dot
 import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FromSource
 import ImportGraphTest.Imports
+import ImportGraphTest.ImportPretty
+import ImportGraphTest.NormImports
 import ImportGraphTest.Unused
 import ImportGraphTest.Used
 import ImportGraphTest.ToTarget
