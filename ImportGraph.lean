@@ -30,6 +30,8 @@ public meta import ImportGraph.Tools.MinImports
 public meta import ImportGraph.Tools.RedundantImports
 public import ImportGraph.Util.CurrentModule
 public import ImportGraph.Util.FindSorry
+public meta import ImportGraph.Widget.GoToModule
+public meta import ImportGraph.Widget.Collapsible
 public import ImportGraph.WorkspaceModel.Base
 public import ImportGraph.WorkspaceModel.Build
 public import ImportGraph.WorkspaceModel.Emit
