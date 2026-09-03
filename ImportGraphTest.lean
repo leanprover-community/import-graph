@@ -8,3 +8,5 @@ import ImportGraphTest.Used
 import ImportGraphTest.ToTarget
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
+import ImportGraphTest.Widget.GoToModule.Msg
+import ImportGraphTest.Widget.Collapsible
