@@ -20,7 +20,7 @@ ImportGraph.Imports.RequiredModules
 #guard_msgs in
 #min_imports
 
-/-- info: [ImportGraph.Imports.Redundant] -/
+/-- info: [ImportGraph.Imports.Redundant (1:0)] -/
 #guard_msgs in
 #find_home importTest
 
