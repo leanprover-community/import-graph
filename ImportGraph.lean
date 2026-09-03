@@ -20,6 +20,7 @@ public import ImportGraph.Lean.WithImportModules
 public import ImportGraph.Shake.Algebra
 public import ImportGraph.Shake.Basic
 public import ImportGraph.Shake.Core
+public import ImportGraph.Shake.DeclNeeds
 public import ImportGraph.Shake.EnvExtension
 public import ImportGraph.Shake.Workspace
 public meta import ImportGraph.Tools
