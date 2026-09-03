@@ -183,13 +183,13 @@ def copyIndirectModUses (src dest : Environment)
     dest := indirectModUseExt.addEntry dest i destAsyncMode destAsyncDecl
   return dest
 
-/-- Copies a new rev mod use from `src` and to `dest`, preserving the one in `dest` if present. -/
+/-- Copies a new rev mod use from `src` to `dest`, preserving the one in `dest` if present. -/
 def copyExtraRevModUse (src dest : Environment)
     (srcAsyncMode := isExtraRevModUseExtAsyncMode)
     (destAsyncMode := isExtraRevModUseExtAsyncMode) (destAsyncDecl := Name.anonymous) :
     Environment :=
-  if (isExtraRevModUseExt.getEntries src (asyncMode := srcAsyncMode)).isEmpty ||
-    (isExtraRevModUseExt.getEntries src destAsyncMode ).isEmpty
+  if !(isExtraRevModUseExt.getEntries dest destAsyncMode).isEmpty ||
+    (isExtraRevModUseExt.getEntries src (asyncMode := srcAsyncMode)).isEmpty
   then dest else isExtraRevModUseExt.addEntry dest () destAsyncMode destAsyncDecl
 
 -- Note: the asyncmodes of all these extensions are `.sync`.
