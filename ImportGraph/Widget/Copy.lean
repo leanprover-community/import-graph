@@ -47,22 +47,22 @@ def Copy : Widget.Module where javascript := r#"
 import * as React from 'react'
 const h = React.createElement
 
-const iconStates = {
+const states = {
   idle:   { iconName: 'copy',  title: 'Copy to clipboard' },
   copied: { iconName: 'check', title: 'Copied!',    linger: 1000 },
-  failed: { iconName: 'error', title: 'Copy failed', linger: 3000,
+  failed: { iconName: 'error', title: 'Copy failed; see console', linger: 3000,
     color: 'var(--vscode-errorForeground)' },
 }
 
 export default function ({ display, copyText, hasIcon }) {
-  const [iconStatus, setIconStatus] = React.useState('idle')
+  const [status, setStatus] = React.useState('idle')
   const timer = React.useRef(null)
 
-  // Show the icon state for 'copied' or 'failed' briefly, then fall back to 'idle'.
+  // Flash the state for 'copied' or 'failed' briefly, then fall back to 'idle'.
   const flash = action => {
-    setIconStatus(action)
+    setStatus(action)
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => setIconStatus('idle'), iconStates[action].linger ?? 1000)
+    timer.current = setTimeout(() => setStatus('idle'), states[action].linger ?? 1000)
   }
 
   const onClick = async () => {
@@ -81,7 +81,7 @@ export default function ({ display, copyText, hasIcon }) {
 
   React.useEffect(() => () => clearTimeout(timer.current), [])
 
-  const { iconName, title, color } = iconStates[iconStatus]
+  const { iconName, title, color } = states[status]
 
   const icon = 'codicon codicon-' + iconName
   const style = color ? { color } : undefined
@@ -90,10 +90,13 @@ export default function ({ display, copyText, hasIcon }) {
   if (display == null)
     return h('a', { onClick, title, style, className: 'link pointer dim ' + icon })
 
-  // Link text, optionally preceded by the codicon (flips copy → check in place).
+  // Show the (x) to grab attention if we failed.
+  const showIcon = hasIcon || status === 'failed'
+
+  // Link text, optionally preceded by the codicon.
   return h('a', { onClick, title, style, className: 'link pointer dim' },
-    hasIcon && h('span', { className: 'font-codicon ' + icon }),
-    hasIcon && ' ',
+    showIcon && h('span', { className: 'font-codicon ' + icon }),
+    showIcon && ' ',
     display)
 }
 "#
