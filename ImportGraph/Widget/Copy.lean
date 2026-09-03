@@ -47,28 +47,51 @@ def Copy : Widget.Module where javascript := r#"
 import * as React from 'react'
 const h = React.createElement
 
+const iconStates = {
+  idle:   { iconName: 'copy',  title: 'Copy to clipboard' },
+  copied: { iconName: 'check', title: 'Copied!',    linger: 1000 },
+  failed: { iconName: 'error', title: 'Copy failed', linger: 3000,
+    color: 'var(--vscode-errorForeground)' },
+}
+
 export default function ({ display, copyText, hasIcon }) {
-  const [copied, setCopied] = React.useState(false)
+  const [iconStatus, setIconStatus] = React.useState('idle')
   const timer = React.useRef(null)
 
-  const onClick = () => {
-    // The click is a user gesture, so the clipboard write is allowed.
-    void navigator.clipboard.writeText(copyText)
-    setCopied(true)
+  // Show the icon state for 'copied' or 'failed' briefly, then fall back to 'idle'.
+  const flash = action => {
+    setIconStatus(action)
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => setCopied(false), 1000)
+    timer.current = setTimeout(() => setIconStatus('idle'), iconStates[action].linger ?? 1000)
   }
+
+  const onClick = async () => {
+    try {
+      // Called synchronously in the click handler, so it still counts as a
+      // user gesture; awaiting afterwards is fine. The catch covers both a
+      // rejected write (permission denied, document not focused) and a
+      // synchronous throw when navigator.clipboard is undefined.
+      await navigator.clipboard.writeText(copyText)
+      flash('copied')
+    } catch (e) {
+      console.warn('Lean widget ImportGraph.Widget.copyToClipboard failed to copy to clipboard:', e)
+      flash('failed')
+    }
+  }
+
   React.useEffect(() => () => clearTimeout(timer.current), [])
 
-  const icon = 'codicon codicon-' + (copied ? 'check' : 'copy')
-  const title = copied ? 'Copied!' : 'Copy to clipboard'
+  const { iconName, title, color } = iconStates[iconStatus]
+
+  const icon = 'codicon codicon-' + iconName
+  const style = color ? { color } : undefined
 
   // Icon-only: the codicon is the button.
   if (display == null)
-    return h('a', { onClick, title, className: 'link pointer dim ' + icon })
+    return h('a', { onClick, title, style, className: 'link pointer dim ' + icon })
 
   // Link text, optionally preceded by the codicon (flips copy → check in place).
-  return h('a', { onClick, title, className: 'link pointer dim' },
+  return h('a', { onClick, title, style, className: 'link pointer dim' },
     hasIcon && h('span', { className: 'font-codicon ' + icon }),
     hasIcon && ' ',
     display)
