@@ -148,7 +148,7 @@ instance : Ord Whitespace where
     (compare ws₁.leading.length ws₂.leading.length).swap -- Longer leading comments come first
       |>.then (compare ws₁.trailing.length ws₂.trailing.length) -- Annotations come last
       |>.then (compare ws₁.leading ws₂.leading) -- Alphabetical for completeness
-      |>.then (compare ws₂.trailing ws₂.trailing)
+      |>.then (compare ws₁.trailing ws₂.trailing)
 
 instance : Ord (Import × Whitespace) where
   compare := fun (i₁, ws₁) (i₂, ws₂) =>
