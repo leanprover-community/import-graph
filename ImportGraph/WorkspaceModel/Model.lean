@@ -211,7 +211,7 @@ unique across packages, so we ask for the package index as well.) -/
 
 @[inline] def libOfModIdx! (modIdx : ModIdx) : Library := m.getLib! <| m.libIdxOfModIdx! modIdx
 @[inline] def pkgOfModIdx! (modIdx : ModIdx) : Package := m.getPkg! <| m.pkgIdxOfModIdx! modIdx
-@[inline] def pkgOfLibIdx! (libIdx : LibIdx) : Package := m.getPkg! <| m.libIdxOfModIdx! libIdx
+@[inline] def pkgOfLibIdx! (libIdx : LibIdx) : Package := m.getPkg! <| m.pkgIdxOfLibIdx! libIdx
 
 @[inline] def libDepth! (modIdx : ModIdx) (libIdx := m.libIdxOfModIdx! modIdx) : Nat :=
   m.getMod! modIdx |>.depthsPerLib[libIdx]!
