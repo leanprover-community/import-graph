@@ -148,10 +148,12 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) : IO WorkspaceSummary 
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
   if ← cachePath.pathExists then
-    let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
-      (← IO.FS.readFile cachePath)
-    if ← ws.isUpToDate then
-      return ws
+    try
+      let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
+        (← IO.FS.readFile cachePath)
+      if ← ws.isUpToDate then
+        return ws
+    catch _ => pure () -- Regenerate if we failed the above for any reason
   let out ← IO.Process.run {
     cmd := "lake"
     args := #["exe", WorkspaceSummary.exeName]
