@@ -1,4 +1,5 @@
 import ImportGraph.Imports.FromSource
+import Lean.Elab.Command
 
 /-!
 # Tests for Source-Based Import Analysis
@@ -6,15 +7,16 @@ import ImportGraph.Imports.FromSource
 Tests for `findImportsFromSource` and `findTransitiveImportsFromSource`.
 -/
 
-open Lean System
+open Lean System ImportGraph
 
 -- Test basic import parsing
 /-- info: #[`ImportGraphTest.Unused] -/
 #guard_msgs in
 #eval do
-  let imports ← findImportsFromSource "ImportGraphTest/Used.lean"
+  let header ← System.FilePath.parseImports' ("ImportGraphTest" / "Used.lean")
   -- Filter to only ImportGraph modules
-  return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
+  return header.imports.map Import.module |>.filter
+    fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
 -- Test transitive imports without filter
 /-- info: #[`ImportGraphTest.Unused] -/
@@ -36,9 +38,10 @@ open Lean System
 /-- info: #[`ImportGraph.Tools.ImportDiff, `ImportGraphTest.Used] -/
 #guard_msgs in
 #eval do
-  let imports ← findImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
+  let header ← System.FilePath.parseImports' ("ImportGraphTest" / "FileWithTransitiveImports.lean")
   -- Filter to only ImportGraph modules
-  return imports.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
+  return header.imports.map Import.module |>.filter
+    fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
 /--
 info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
