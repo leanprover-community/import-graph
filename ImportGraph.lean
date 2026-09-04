@@ -9,9 +9,11 @@ public import ImportGraph.Imports.ImportGraph
 public import ImportGraph.Imports.Redundant
 public import ImportGraph.Imports.RequiredModules
 public import ImportGraph.Imports.Unused
+public import ImportGraph.Lean.EnvExtension
 public import ImportGraph.Lean.Environment
 public import ImportGraph.Lean.Name
 public import ImportGraph.Lean.WithImportModules
+public import ImportGraph.Shake.EnvExtension
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Tools.FindHome
 public meta import ImportGraph.Tools.ImportDiff
