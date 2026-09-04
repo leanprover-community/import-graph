@@ -28,6 +28,5 @@ public meta import ImportGraph.Widget.GoToModule
 public meta import ImportGraph.Widget.Collapsible
 public import ImportGraph.WorkspaceModel.Base
 public import ImportGraph.WorkspaceModel.Build
-public import ImportGraph.WorkspaceModel.Emit
 public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.WorkspaceModel.Summary

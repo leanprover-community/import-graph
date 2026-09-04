@@ -18,6 +18,9 @@ boundary. This avoids a crash that results from loading the lake workspace in th
 
 Note that this does not interact with the workspace summary cache. Managing the cache is the
 responsibility of the spawner (`getWorkspaceSummary`).
+
+Note that this should **not** be imported in `ImportGraph`, as the public `main` function would
+cause issues downstream.
 -/
 
 open Lean ImportGraph Lake
