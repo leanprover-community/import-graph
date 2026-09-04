@@ -144,7 +144,7 @@ out to the executable, then we also write the result to that cache file.
 def getWorkspaceSummary (wsDir : Option FilePath := none) : IO WorkspaceSummary := do
   let lakeDirPath ← lakeDirPath wsDir
   unless ← lakeDirPath.isDir do
-    throw (.userError "Could not find `.lake` folder at {lakeFolderPath}")
+    throw (.userError s!"Could not find `.lake` folder at {lakeDirPath}")
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
   if ← cachePath.pathExists then
