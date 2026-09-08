@@ -249,21 +249,27 @@ an element lower than `a`.  -/
     Std.HashMap κ (Array (Option α)) := map.alter k fun arr? =>
       arr?.getD #[] |>.incorporateBelow? a lt
 
-/-- The minimal elements of `xs` -/
-@[inline] def Array.minimals
-    (xs : Array α) (lt : α → α → Bool) : Array α := Id.run do
+/-- The minimal elements of `xs`, according to `lt`. -/
+@[inline] def Array.minimals (xs : Array α) (lt : α → α → Bool) : Array α := Id.run do
   let mut m : Array (Option α) := #[]
   for x in xs do
     m := m.incorporateBelow? x lt
   return m.reduceOption
 
+/-- The minimal values of `xs` under `val` according to `lt`, organized and compared per `key`
+value. See `minimalsPer` for a version without `val`; `val` is essentially an optimization. -/
+@[inline] def Array.minimalValuesPer {κ} [BEq κ] [Hashable κ]
+    (xs : Array α) (key : α → κ) (val : α → β) (lt : β → β → Bool) :
+    Std.HashMap κ (Array β) := Id.run do
+  let mut m : Std.HashMap κ (Array (Option β)) := ∅
+  for x in xs do
+    m := m.incorporateBelowAt? (key x) (val x) lt
+  return m.map fun _ vals => vals.reduceOption
+
 /-- The minimal elements of `xs` according to `lt`, organized and compared per `key` value. -/
 @[inline] def Array.minimalsPer {κ} [BEq κ] [Hashable κ]
     (xs : Array α) (key : α → κ) (lt : α → α → Bool) :
-    Std.HashMap κ (Array α) := Id.run do
-  let mut m : Std.HashMap κ (Array (Option α)) := ∅
-  for x in xs do
-    m := m.incorporateBelowAt? (key x) x lt
-  return m.map fun _ vals => vals.reduceOption
+    Std.HashMap κ (Array α) :=
+  xs.minimalValuesPer key id lt
 
 end ImportGraph.Shake
