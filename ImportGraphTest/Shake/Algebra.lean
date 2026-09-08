@@ -65,16 +65,16 @@ all       -      -      all    -      -      𝓶all
 #guard_msgs in
 #eval IO.println s!"\n\n{compositionTable}"
 
--- `NeedsKind.andThen` agrees with composition read off the scopes it connects.
-/-- info: 36 cases passed -/
-#guard_msgs in
-#eval check kindPairs describeKinds fun (k₁, k₂) => andThen? k₁ k₂ == comp? k₁ k₂
+-- `NeedsKind.andThen` agrees with composition
+#guard Id.run do
+  let mut okay := true
+  for (k₁, k₂) in NeedsKind.allPairs do
+    let fromConnecting := connecting? k₁.source k₂.target (k₁.isMeta || k₂.isMeta)
+    if h : k₁.target = k₂.source then
+      okay := okay && some (andThen k₁ k₂) == fromConnecting
+  return okay
 
--- `NeedsKind.ofImport` reads back the flags of an import.
-/-- info: 6 cases passed -/
-#guard_msgs in
-#eval check kinds.toArray shortName fun k => NeedsKind.ofImport (importOf k) == k
-
+#guard NeedsKind.all.all fun k => k == .ofImport (toImport .anonymous k)
 -- The `to`/`from` partitions are exactly the kinds `NeedsKind.andThen` may compose on either side.
 /-- info: 6 cases passed -/
 #guard_msgs in
