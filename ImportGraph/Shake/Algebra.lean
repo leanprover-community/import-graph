@@ -6,6 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public import ImportGraph.Shake.Basic
+import Std.Data.HashMap.AdditionalOperations
 
 /-!
 # Algebra of an import hierarchy
@@ -227,7 +228,7 @@ def Needs.reduce {H} [Hierarchy H] (a : Needs) (transDeps : H) : Needs := Id.run
 /-- Attempts to insert `a` among the set `as` of minimal elements as a new minimal element
 according to `lt`. Clears elements of `as` that are above `a`, and ignores `a` if we already have
 an element lower than `a`.  -/
-@[inline] private def Array.incorporateBelow (as : Array (Option α)) (a : α)
+@[inline] def Array.incorporateBelow? (as : Array (Option α)) (a : α)
     (lt : α → α → Bool) : Array (Option α) := Id.run do
   let mut as := as
   for i in 0...as.size do
@@ -243,9 +244,26 @@ an element lower than `a`.  -/
 /-- At `k`, attempts to insert `a` among the set `as` of minimal elements as a new minimal element
 according to `lt`. Clears elements of `as` that are above `a`, and ignores `a` if we already have
 an element lower than `a`.  -/
-@[inline] def Std.HashMap.incorporateBelowAt {κ} [BEq κ] [Hashable κ]
+@[inline] def Std.HashMap.incorporateBelowAt? {κ} [BEq κ] [Hashable κ]
     (map : Std.HashMap κ (Array (Option α))) (k : κ) (a : α) (lt : α → α → Bool) :
     Std.HashMap κ (Array (Option α)) := map.alter k fun arr? =>
-      arr?.getD #[] |>.incorporateBelow a lt
+      arr?.getD #[] |>.incorporateBelow? a lt
+
+/-- The minimal elements of `xs` -/
+@[inline] def Array.minimals
+    (xs : Array α) (lt : α → α → Bool) : Array α := Id.run do
+  let mut m : Array (Option α) := #[]
+  for x in xs do
+    m := m.incorporateBelow? x lt
+  return m.reduceOption
+
+/-- The minimal elements of `xs` according to `lt`, organized and compared per `key` value. -/
+@[inline] def Array.minimalsPer {κ} [BEq κ] [Hashable κ]
+    (xs : Array α) (key : α → κ) (lt : α → α → Bool) :
+    Std.HashMap κ (Array α) := Id.run do
+  let mut m : Std.HashMap κ (Array (Option α)) := ∅
+  for x in xs do
+    m := m.incorporateBelowAt? (key x) x lt
+  return m.map fun _ vals => vals.reduceOption
 
 end ImportGraph.Shake
