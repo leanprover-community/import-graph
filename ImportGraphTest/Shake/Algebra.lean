@@ -5,7 +5,8 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public meta import ImportGraphTest.Shake.Model
+public meta import ImportGraph.Shake.Algebra
+import Lean.Elab.Command
 
 /-!
 # Tests for the `Shake` dependency algebra
@@ -16,59 +17,50 @@ hierarchy/`Needs` pairs on a four-module universe (`Model.randomPairs`). A failu
 encoding of the offending case, which reproduces it.
 -/
 
-open Lean ImportGraph Shake ImportGraphTest.Shake.Model
+open Lean ImportGraph Shake NeedsKind
 
 namespace ImportGraphTest.Shake
 
 /-! ## `NeedsKind` -/
 
-section NeedsKind
+meta section NeedsKind
+
+def shortName : NeedsKind → String
+  | .pub => "pub" | .priv => "priv" | .privOfPriv => "all"
+  | .metaPub => "𝓶pub" | .metaPriv => "𝓶priv" | .metaPrivOfPriv => "𝓶all"
 
 /-- All ordered pairs of `NeedsKind`s. -/
-meta def kindPairs : Array (NeedsKind × NeedsKind) :=
-  (kinds.flatMap fun k₁ => kinds.map fun k₂ => (k₁, k₂)).toArray
+def NeedsKind.allPairs : Array (NeedsKind × NeedsKind) :=
+  NeedsKind.all.flatMap fun k₁ => NeedsKind.all.map ((k₁, ·))
 
-meta def describeKinds (p : NeedsKind × NeedsKind) : String :=
-  s!"{shortName p.1}, {shortName p.2}"
-
--- `NeedsKind.all` is exactly the six kinds, each listed once.
-/-- info: 6 cases passed -/
-#guard_msgs in
-#eval check kinds.toArray shortName fun k => NeedsKind.all.contains k
-
-/-- info: 6 cases passed -/
-#guard_msgs in
-#eval check NeedsKind.all shortName fun k => kinds.contains k
-
-#guard NeedsKind.all.size == 6
-
--- `Needs.get` and `Needs.set` address the six fields bijectively.
-/-- info: 36 cases passed -/
-#guard_msgs in
-#eval check kindPairs describeKinds fun (k₁, k₂) =>
-  (Needs.empty.set k₁ {0}).get k₂ == (if k₁ == k₂ then {0} else ∅)
+/-- info: #["pub", "priv", "𝓶pub", "𝓶priv", "all", "𝓶all"] -/
+#guard_msgs in #eval NeedsKind.all.map shortName
 
 /-! ### Composition -/
+
+def pad (n : Nat) (s : String) : String := s ++ "".pushn ' ' (n - s.length)
 
 /-- The composition table of `NeedsKind.andThen`, with the first factor on the left. -/
 meta def compositionTable : String :=
   let row (cells : List String) := (String.join <| cells.map (pad 7)).trimAsciiEnd.toString
-  let ks := NeedsKind.all.toList
+  -- push meta to the end instead of `all` for a cleaner table
+  let ks := NeedsKind.all.insertionSort (!·.isMeta && ·.isMeta) |>.toList
   "\n".intercalate <|
-    row ("∘" :: ks.map shortName) ::
+    row ("(↓) ≫ (→) " :: ks.map shortName) ::
       ks.map fun k₁ =>
-        row <| shortName k₁ :: ks.map fun k₂ => ((andThen? k₁ k₂).map shortName).getD "·"
+        row <| pad 10 (shortName k₁) :: ks.map fun k₂ =>
+          if h : k₁.target = k₂.source then shortName (andThen k₁ k₂) else "-"
 
 /--
 info:
 
-∘      pub    priv   mpub   mpriv  all    mall
-pub    pub    priv   mpub   mpriv  ·      ·
-priv   ·      ·      ·      ·      priv   mpriv
-mpub   mpub   mpriv  mpub   mpriv  ·      ·
-mpriv  ·      ·      ·      ·      mpriv  mpriv
-all    ·      ·      ·      ·      all    mall
-mall   ·      ·      ·      ·      mall   mall
+(↓) ≫ (→) pub    priv   all    𝓶pub   𝓶priv  𝓶all
+pub       pub    priv   -      𝓶pub   𝓶priv  -
+priv      -      -      priv   -      -      𝓶priv
+all       -      -      all    -      -      𝓶all
+𝓶pub      𝓶pub   𝓶priv  -      𝓶pub   𝓶priv  -
+𝓶priv     -      -      𝓶priv  -      -      𝓶priv
+𝓶all      -      -      𝓶all   -      -      𝓶all
 -/
 #guard_msgs in
 #eval IO.println s!"\n\n{compositionTable}"
