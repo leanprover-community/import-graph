@@ -356,25 +356,44 @@ end Reduction
 
 section Minimals
 
-/-- The `lt`-minimal elements accumulated by `Std.HashMap.incorporateBelowAt`, where `lt` is strict
-inclusion of bit patterns. -/
-meta def minimalsOf (xs : List Nat) : List Nat :=
-  let lt (a b : Nat) := a != b && a &&& b == a
-  let m := xs.foldl (init := (∅ : Std.HashMap Unit (Array (Option Nat)))) fun m x =>
-    m.incorporateBelowAt () x lt
-  (m.getD () #[]).toList.reduceOption.mergeSort (· ≤ ·)
-
-/-- info: [1, 2] -/
+/-- info: #[◻◻◻, ◼◻◻, ◻◼◻, ◼◼◻, ◻◻◼, ◼◻◼, ◻◼◼, ◼◼◼] ↦ #[◻◻◻] -/
 #guard_msgs in
-#eval IO.println <| toString <| minimalsOf [3, 1, 7, 2, 3]
+run_cmd do
+  let data := (0...2^3).toArray.map Bitset.mk
+  if h : data ≠ #[] then
+    let univSize := Array.max (data.map (·.univSize)) (by simp; grind)
+    logInfo s!"{data.map (·.toString univSize)} ↦ \
+      {data.minimals (· ⊆ ·) |>.map (·.toString univSize)}"
 
-/-- info: [3] -/
+/-- info: #[◼◻◻, ◻◼◻, ◼◼◻, ◻◻◼, ◼◻◼, ◻◼◼, ◼◼◼] ↦ #[◼◻◻, ◻◼◻, ◻◻◼] -/
 #guard_msgs in
-#eval IO.println <| toString <| minimalsOf [7, 3, 11]
+run_cmd do
+  let data := (1...2^3).toArray.map Bitset.mk
+  if h : data ≠ #[] then
+    let univSize := Array.max (data.map (·.univSize)) (by simp; grind)
+    logInfo s!"{data.map (·.toString univSize)} ↦ \
+      {data.minimals (· ⊆ ·) |>.map (·.toString univSize)}"
 
-/-- info: [] -/
+/-- info: #[◼◼◻, ◼◻◼, ◻◼◼, ◼◼◼] ↦ #[◼◼◻, ◼◻◼, ◻◼◼] -/
 #guard_msgs in
-#eval IO.println <| toString <| minimalsOf []
+run_cmd do
+  let data := (1...2^3).toArray.map Bitset.mk
+  let data := data.filter (·.size > 1)
+  if h : data ≠ #[] then
+    let univSize := Array.max (data.map (·.univSize)) (by simp; grind)
+    logInfo s!"{data.map (·.toString univSize)} ↦ \
+      {data.minimals (· ⊆ ·) |>.map (·.toString univSize)}"
+
+/-- info: #[◼◼◻, ◼◻◼, ◻◼◼, ◼◼◼, ◼◼◻, ◼◻◼, ◻◼◼, ◼◼◼, ◼◼◻, ◼◻◼, ◻◼◼, ◼◼◼] ↦ #[◼◼◻, ◼◻◼, ◻◼◼] -/
+#guard_msgs in
+run_cmd do
+  let data := (1...2^3).toArray.map Bitset.mk
+  let data := data ++ data ++ data
+  let data := data.filter (·.size > 1)
+  if h : data ≠ #[] then
+    let univSize := Array.max (data.map (·.univSize)) (by simp; grind)
+    logInfo s!"{data.map (·.toString univSize)} ↦ \
+      {data.minimals (· ⊆ ·) |>.map (·.toString univSize)}"
 
 end Minimals
 
