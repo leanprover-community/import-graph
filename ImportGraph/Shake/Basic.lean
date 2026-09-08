@@ -441,4 +441,17 @@ def andThen (k₁ k₂ : NeedsKind) (connectable : k₁.target = k₂.source := 
     (k₁.andThen k₂).andThen k₃ = k₁.andThen (k₂.andThen k₃) := by
   grind only [andThen, k₁.not_isExported_and_isAll]
 
+-- The following is necessary for `if h : k₁.target = k₂.source then ...`.
+deriving instance DecidableEq for Environment.Visibility
+
+/-- The `NeedsKind` that represents a connection from `src` to `tgt`, with `tgt` the importing
+file. E.g., `connecting? .public .private` is the `NeedsKind` that imports a public scope into a
+private scope. -/
+def connecting? (src tgt : Environment.Visibility) (isMeta : Bool := false) : Option NeedsKind :=
+  match src, tgt with
+  | .public,  .public  => some { isExported := true,  isMeta }
+  | .public,  .private => some { isExported := false, isMeta }
+  | .private, .private => some { isExported := false, isMeta, isAll := true }
+  | .private, .public  => none
+
 end ImportGraph.Shake.NeedsKind
