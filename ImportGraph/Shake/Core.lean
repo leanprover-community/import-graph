@@ -102,10 +102,10 @@ namespace NeedsKind
 /- Note that since the private scope cannot be needed in the public scope, we do not consider the
 cases with `isExported := true` and `isAll := true`. -/
 
-def NeedsKind.setIsAll (k : NeedsKind) : NeedsKind :=
+def setIsAll (k : NeedsKind) : NeedsKind :=
   { isMeta := k.isMeta, isExported := false, isAll := true }
 
-def NeedsKind.unsetIsAll (k : NeedsKind) : NeedsKind :=
+def unsetIsAll (k : NeedsKind) : NeedsKind :=
   { isMeta := k.isMeta, isExported := k.isExported, isAll := false }
 
 @[expose] def all : Array NeedsKind := #[pub, priv, metaPub, metaPriv, privOfPriv, metaPrivOfPriv]
@@ -118,6 +118,10 @@ def ofImport : Lean.Import → NeedsKind
   | { isExported := false, isMeta := false, importAll := false, .. } => .priv
   | { isExported := false, isMeta := false, importAll := true,  .. } => .privOfPriv
   | { isExported := false, isMeta := true,  importAll := true,  .. } => .metaPrivOfPriv
+
+/-- An import effecting a `NeedsKind`. -/
+def toImport (module : Name) (k : NeedsKind) : Lean.Import :=
+  { k with importAll := k.isAll, module }
 
 end NeedsKind
 
