@@ -230,8 +230,10 @@ elab_rules : command
       collapsible m!"Prior constants used in this command"
         m!"{.bulletList (priorDecls.toList.map MessageData.ofConstName)}"
     collapsible "More information" m!"{minImports}{producedConsts}{priorDeclsMsg}"
-  let cmdRange := cmd.raw.getRangeWithTrailing?.get!
-  let endCmd := cmd.raw.getRange?.get!.stop
+  let some cmdRange := cmd.raw.getRangeWithTrailing?
+    | throwError "Could not find range with trailing for command:{indentD cmd}"
+  let some { stop := endCmd, .. } := cmd.raw.getRange?
+    | throwError "Could not find range for command:{indentD cmd}"
   let source := (← getFileMap).source
   -- Keep the trailing whitespace until the first two newlines:
   let endPos := Id.run do
