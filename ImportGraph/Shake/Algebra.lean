@@ -100,8 +100,8 @@ Note that this does *not* add the original collection of prearrows to `base`. -/
     (base : Needs := ∅) : Needs := Id.run do
   impTransDeps.addAndThen (NeedsKind.ofImport imp) base
 
-/-- Given an abstract import `[m,p⟩` and a collection of prearrows `j ⟦m',p'⟫ ·` (`Needs`), forms
-the composed prearrows `j ⟦m',p'⟫[m,p⟩ ·` where composition is possible. -/
+/-- Given an abstract import `[k⟩` and a collection of prearrows `j [k⟩ ·` (`Needs`), forms
+the composed prearrows `j [k'⟩[k⟩ ·` where composition is possible. -/
 @[inline] def Lean.Import.andThen (impTransDeps : Needs) (imp : Import) : Needs :=
   imp.addAndThen (base := .empty) impTransDeps
 
@@ -151,6 +151,7 @@ scoped instance {H} [Hierarchy H] : Shake.HPostcomp H Needs Needs where
     Needs :=
   Hierarchy.addAndThen transDeps n (base := base ∪ n)
 
+-- TODO: should this linearize and/or promise a `Provides`?
 /-- `n ∪ (transDeps ≫ n)` -/
 @[inline] def Needs.transitiveClosure {H} [Hierarchy H] (n : Needs) (transDeps : H) : Needs :=
   Hierarchy.addAndThen transDeps n (base := n)
@@ -160,28 +161,40 @@ scoped instance {H} [Hierarchy H] : Shake.HTransClosure H Needs Needs where
 
 /--
 Includes the public visibilities in the corresponding private visibilities, to represent a
-"provides" relationship.
+"provides" relationship. A `k : Needs` is "linear" iff it accounts for `public` ⊆ `private` (and
+likewise for both being `meta`). Accounting for this on the target side means that `k.pub ⊆ k.priv`
+(public imports are available privately) and accounting for it on the source side means that
+`k.privOfPriv ⊆ k.priv` (importing the private scope privately implies importing the public scope
+privately).
 -/
 @[inline] def Needs.linearize (a : Needs) : Needs :=
-  { a with priv := a.priv ∪ a.pub, metaPriv := a.metaPriv ∪ a.metaPub }
+  { a with
+    priv := a.priv ∪ a.pub ∪ a.privOfPriv
+    metaPriv := a.metaPriv ∪ a.metaPub ∪ a.metaPrivOfPriv }
 
+/-- Whether `public` ⊆ `private` for the given `Needs`, on both the meta and non-meta levels. -/
 @[inline] def Needs.isLinear (a : Needs) : Bool :=
-  a.pub.le a.priv && a.metaPub.le a.metaPriv
+  a.pub ∪ a.privOfPriv ⊆ a.priv && a.metaPub ∪ a.metaPrivOfPriv ⊆ a.metaPriv
 
-@[inline] def Needs.antilinearize (a : Needs) : Needs :=
-  { a with priv := a.priv \ a.pub, metaPriv := a.metaPriv \ a.metaPub }
+/-- Removes private needs which can be inferred by accounting for `public` ⊆ `private` on both the
+source and target side. See `Needs.linearize` for details. -/
+@[inline] def Needs.antilinearize (a : Needs) : Needs := { a with
+  priv := a.priv \ (a.pub ∪ a.privOfPriv)
+  metaPriv := a.metaPriv \ (a.metaPub ∪ a.metaPrivOfPriv) }
 
 @[inline] def Needs.isAntilinear (a : Needs) : Bool :=
-  (a.pub ∩ a.priv == {}) && (a.metaPub ∩ a.metaPriv == {})
+  (a.pub ∪ a.privOfPriv) ∩ a.priv == {} && (a.metaPub ∪ a.metaPrivOfPriv) ∩ a.metaPriv == {}
 
-/-- A `Provides` providing to a module the aspects of that module which it provides to itself. -/
+/-- A `Provides` providing to a module the aspects of that module which it provides to itself. Note
+that a module does *not* provide its own non-meta scopes as meta dependencies to itself.
+Linearized. -/
 @[inline] def Needs.reflOf (i : Nat) : Provides := { Needs.empty with
   pub := {i}
   priv := {i}
   privOfPriv := {i} }
 
 /--
-Adds in the reflexive availibilities of a given module, which are just the public and private
+Adds in the reflexive availabilities of a given module, which are just the public and private
 availabilities and not the meta lifted versions. This matches what is available within a given
 module. Equivalent to `a ∪ .reflOf i`.
 
@@ -195,14 +208,17 @@ Note that this operation does *not* necessarily commute with transitive closure.
 @[inline] def Needs.unreflexify (i : Nat) (a : Needs) : Needs :=
   a.map (· \ {i})
 
-/-- Checks if the arrows `j [k⟩ i` are covered by `transDeps`'s entry for `i`. Assumes `transDeps`
-is a `Provides` hierearchy. -/
-@[inline] def Needs.coveredBy {H} [Hierarchy H] (needs : Needs) (i : Nat) (transDeps : H) : Bool :=
+/-- Checks if the `Provides` hierarchy `transDeps` provides arrows `j [k⟩ i` for all
+`(j [k⟩ ·) ∈ needs`. Assumes `transDeps` is well-formed as a `Provides` hierarchy (i.e. linearized
+and reflexified). -/
+@[inline] def Needs.providedToBy {H} [Hierarchy H] (needs : Needs) (i : Nat) (transDeps : H) :
+    Bool :=
   needs.directLe <| transDeps[i]!
 
 /-- Checks if the prearrows `j [k⟩ ·` in `n₁` are included in the arrows provided by the transitive
 closure of `n₂` with respect to the import hierarchy. Linearizes `n₂` first, which ensures `n₁` is
-not penalized for respecting `public` ⊆ `private`. Assumes `transDeps` is reflexified. -/
+not penalized for itself being linearized and respecting `public` ⊆ `private`. Assumes `transDeps`
+is a well-formed `Provides` hierarchy, i.e. linearized and reflexified. -/
 @[inline] def Needs.subsumedBy {H} [Hierarchy H] (n₁ n₂ : Needs) (transDeps : H) : Bool :=
   n₁.directLe transDeps⟦n₂.linearize⟧
 
@@ -212,6 +228,8 @@ Returns an antilinearized `reduced : Needs` such that
 a ≤ transDeps⟦reduced.linearize⟧
 ```
 and `reduced` is minimal (perhaps non-uniquely) among such `Needs`.
+
+The returned `reduced` is antilinearized, and thus suitable for converting to imports.
 
 Does not assume `a` is linearized.
 -/
