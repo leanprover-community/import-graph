@@ -205,7 +205,8 @@ Note that this operation does *not* necessarily commute with transitive closure.
   priv := a.priv ∪ {i}
   privOfPriv := a.privOfPriv ∪ {i} }
 
-@[inline] def Needs.unreflexify (i : Nat) (a : Needs) : Needs :=
+/-- Clears all dependencies at the given index. -/
+@[inline] def Needs.clearAt (i : Nat) (a : Needs) : Needs :=
   a.map (· \ {i})
 
 /-- Checks if the `Provides` hierarchy `transDeps` provides arrows `j [k⟩ i` for all
