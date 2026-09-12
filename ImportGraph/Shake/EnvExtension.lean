@@ -23,8 +23,6 @@ extension state, allowing for capture of what mod uses that action produced.
 
 open Lean
 
-public section
-
 namespace ImportGraph.Shake
 
 local instance : Ord Name := ⟨Name.quickCmp⟩
@@ -36,18 +34,18 @@ open ImportGraph Shake
 /-- Resets the new entries in the `indirectModUse` extension. Note that the state is never altered
 in the course of the file, as it only represents imported entries. Only the entries are gotten/
 reset. -/
-@[inline] def resetNewIndirectModUses (env : Environment)
+@[inline] public def resetNewIndirectModUses (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := indirectModUseExt.toEnvExtension.asyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Environment :=
   indirectModUseExt.setEntries env [] asyncMode asyncDecl
 
-@[inline] def getNewIndirectModUses (env : Environment)
+@[inline] public def getNewIndirectModUses (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := indirectModUseExt.toEnvExtension.asyncMode) :
     List IndirectModUse :=
   indirectModUseExt.getEntries env asyncMode
 
-@[inline] def setNewIndirectModUses (env : Environment) (entries : List IndirectModUse)
+@[inline] public def setNewIndirectModUses (env : Environment) (entries : List IndirectModUse)
     (asyncMode : EnvExtension.AsyncMode := indirectModUseExt.toEnvExtension.asyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Environment :=
@@ -56,7 +54,7 @@ reset. -/
 /-- Gets and resets the new indirect mod uses recorded in the `indirectModUse` extension. Note that
 the state per se is never altered in the course of the file, as it only represents imported
 entries. Only the entries list is gotten/reset. -/
-def getResetNewIndirectModUses (env : Environment)
+public def getResetNewIndirectModUses (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := indirectModUseExt.toEnvExtension.asyncMode)
     (asyncDecl : Name := Name.anonymous) :
     List IndirectModUse × Environment :=
@@ -65,19 +63,19 @@ def getResetNewIndirectModUses (env : Environment)
 
 /-- A wrapper for `extraModUses.toEnvExtension.asyncMode` to allow it to appear as an `optParam` in
 a public-facing type. -/
-@[inline] def extraModUsesAsyncMode := extraModUses.toEnvExtension.asyncMode
+@[inline] public def extraModUsesAsyncMode := extraModUses.toEnvExtension.asyncMode
 
-@[inline] def resetNewExtraModUses (env : Environment) :
+@[inline] public def resetNewExtraModUses (env : Environment) :
     Environment :=
   PersistentEnvExtension.setState extraModUses env ([], {})
 
-@[inline] def getNewExtraModUses (env : Environment)
+@[inline] public def getNewExtraModUses (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := extraModUsesAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     List ExtraModUse × PHashSet ExtraModUse :=
   PersistentEnvExtension.getState extraModUses env asyncMode asyncDecl
 
-@[inline] def setNewExtraModUses (env : Environment)
+@[inline] public def setNewExtraModUses (env : Environment)
     (entries : List ExtraModUse)
     (state : PHashSet ExtraModUse) :
     Environment :=
@@ -85,7 +83,7 @@ a public-facing type. -/
 
 /-- Gets and resets the new extra mod uses in the `extraModUses` extension. Note that the state
 does not include imported entries. -/
-def getResetExtraModUses (env : Environment)
+public def getResetExtraModUses (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := extraModUsesAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     (List ExtraModUse × PHashSet ExtraModUse) × Environment :=
@@ -93,14 +91,14 @@ def getResetExtraModUses (env : Environment)
 
 /-- A wrapper for `isExtraRevModUseExt.toEnvExtension.asyncMode` to allow it to appear as an
 `optParam` in a public-facing type. -/
-@[inline] def isExtraRevModUseExtAsyncMode := isExtraRevModUseExt.toEnvExtension.asyncMode
+@[inline] public def isExtraRevModUseExtAsyncMode := isExtraRevModUseExt.toEnvExtension.asyncMode
 
 /-- Gets the state of the `extraModUses` extension. -/
-@[inline] def getNewExtraRevModUse (env : Environment) : Bool :=
+@[inline] public def getNewExtraRevModUse (env : Environment) : Bool :=
   !(isExtraRevModUseExt.getEntries env |>.isEmpty)
 
 /-- Resets the state of the `extraModUses` extension. -/
-@[inline] def resetNewExtraRevModUse (env : Environment)
+@[inline] public def resetNewExtraRevModUse (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := isExtraRevModUseExtAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Environment :=
@@ -108,7 +106,7 @@ def getResetExtraModUses (env : Environment)
     isExtraRevModUseExt.setEntries env [] asyncMode asyncDecl else env
 
 /-- Resets the state of the `extraModUses` extension. -/
-@[inline] def setNewExtraRevModUse (env : Environment) (isRev : Bool)
+@[inline] public def setNewExtraRevModUse (env : Environment) (isRev : Bool)
     (asyncMode : EnvExtension.AsyncMode := isExtraRevModUseExtAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Environment :=
@@ -116,14 +114,14 @@ def getResetExtraModUses (env : Environment)
     isExtraRevModUseExt.setEntries env (if isRev then [()] else []) asyncMode asyncDecl
 
 /-- Merges the state of the `extraModUses` extension (using "or" semantics). -/
-@[inline] def mergeNewExtraRevModUse (env : Environment) (old : Bool)
+@[inline] public def mergeNewExtraRevModUse (env : Environment) (old : Bool)
     (asyncMode : EnvExtension.AsyncMode := isExtraRevModUseExtAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Environment :=
   if old then setNewExtraRevModUse env old asyncMode asyncDecl else env
 
 /-- Gets and resets the state of the `extraModUses` extension. -/
-def getResetNewExtraRevModUse (env : Environment)
+public def getResetNewExtraRevModUse (env : Environment)
     (asyncMode : EnvExtension.AsyncMode := isExtraRevModUseExtAsyncMode)
     (asyncDecl : Name := Name.anonymous) :
     Bool × Environment :=
@@ -133,7 +131,7 @@ def getResetNewExtraRevModUse (env : Environment)
     (true, isExtraRevModUseExt.setEntries env [] asyncMode asyncDecl)
 
 /-- Erases any new shake records from the current module. -/
-def resetShakeRecords (env : Environment) (asyncMode : EnvExtension.AsyncMode := .sync)
+public def resetShakeRecords (env : Environment) (asyncMode : EnvExtension.AsyncMode := .sync)
     (asyncDecl : Name := Name.anonymous) : Environment :=
   letI env := resetNewIndirectModUses env asyncMode asyncDecl
   letI env := resetNewExtraModUses env
@@ -161,7 +159,7 @@ open EnvExtension
 
 /-- Copies new extra mod uses from `src` and adds them to `dest`. Does not erase extra mod uses
 already in `dest`. The same as `Lean.copyExtraModUses`, but passes async modes. -/
-def copyExtraModUses (src dest : Environment)
+public def copyExtraModUses (src dest : Environment)
     (srcAsyncMode := extraModUsesAsyncMode)
     (destAsyncMode := extraModUsesAsyncMode) (destAsyncDecl := Name.anonymous) :
     Environment := Id.run do
@@ -173,7 +171,7 @@ def copyExtraModUses (src dest : Environment)
 
 /-- Copies new indirect mod uses from `src` and adds them to `dest`. Does not erase extra mod uses
 already in `dest`. -/
-def copyIndirectModUses (src dest : Environment)
+public def copyIndirectModUses (src dest : Environment)
     (srcAsyncMode := indirectModUseExt.toEnvExtension.asyncMode)
     (destAsyncMode := indirectModUseExt.toEnvExtension.asyncMode)
     (destAsyncDecl := Name.anonymous) :
@@ -184,7 +182,7 @@ def copyIndirectModUses (src dest : Environment)
   return dest
 
 /-- Copies a new rev mod use from `src` to `dest`, preserving the one in `dest` if present. -/
-def copyExtraRevModUse (src dest : Environment)
+public def copyExtraRevModUse (src dest : Environment)
     (srcAsyncMode := isExtraRevModUseExtAsyncMode)
     (destAsyncMode := isExtraRevModUseExtAsyncMode) (destAsyncDecl := Name.anonymous) :
     Environment :=
@@ -194,7 +192,7 @@ def copyExtraRevModUse (src dest : Environment)
 
 -- Note: the asyncmodes of all these extensions are `.sync`.
 /-- Copies all new shake records from `src` to `dest`. Does not erase the entries in `dest`. -/
-@[inline] def copyShakeRecords (src dest : Environment)
+@[inline] public def copyShakeRecords (src dest : Environment)
     (srcAsyncMode := AsyncMode.sync)
     (destAsyncMode := AsyncMode.sync)
     (destAsyncDecl := Name.anonymous) : Environment :=
@@ -213,7 +211,8 @@ def copyExtraRevModUse (src dest : Environment)
 
 /-- Resets the shake extension entries (the records from the current module), then restores them
 after running the given action, merging any new records into the new ones. -/
-def withFreshShakeRecords [Monad m] [MonadEnv m] [MonadFinally m] {α} (x : m α) : m α := do
+public def withFreshShakeRecords [Monad m] [MonadEnv m] [MonadFinally m] {α} (x : m α) :
+    m α := do
   let oldEnv ← getEnv
   modifyEnv resetShakeRecords
   try x finally modifyEnv fun newEnv => copyShakeRecords oldEnv newEnv
