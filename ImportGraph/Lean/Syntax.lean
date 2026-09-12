@@ -20,7 +20,8 @@ exists (instead of setting it to `0`). See the docstring of `updateLeading` for 
 def Syntax.updateLeadingPreservingStart : Syntax → Syntax :=
   fun stx => (replaceM updateLeadingAux stx).run' (stx.getPos?.getD 0)
 
-@[inherit_doc Syntax.updateLeadingPreservingStart]
+/-- Like `Lean.TSyntax.updateLeading`, but preserves the starting position of the syntax if it
+exists (instead of setting it to `0`). See the docstring of `updateLeading` for more details. -/
 def TSyntax.updateLeadingPreservingStart {ks} (stx : TSyntax ks) : TSyntax ks :=
   ⟨stx.raw.updateLeadingPreservingStart⟩
 
