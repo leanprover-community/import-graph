@@ -101,7 +101,7 @@ def ImportNeeds.providersByLib (w : WorkspaceModel) (needs : ImportNeeds)
   for h : i in 0...(Hierarchy.size w) do
     if needs.isProvidedBy w[i] && league.elim true (·.has i) then
       let iLibPrevs := (w.getMod! i).prevs
-      minimals := minimals.incorporateBelowAt (w.libIdxOfModIdx! i) (i, iLibPrevs)
+      minimals := minimals.incorporateBelowAt? (w.libIdxOfModIdx! i) (i, iLibPrevs)
         fun (_, iPrevs) (_, jPrevs) => iPrevs.lt jPrevs
   return minimals.map fun libIdx arr => (arr.reduceOption.qsort fun (i,pᵢ) (j,pⱼ) =>
     (compare (w.libDepth! i libIdx) (w.libDepth! j libIdx)) -- passing `libIdx` only for efficiency
