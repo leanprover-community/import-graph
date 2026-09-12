@@ -6,7 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public meta import ImportGraph.Shake.Algebra
-import Lean.Elab.Command
+public meta import Lean.Elab.Command
 
 /-!
 # Tests for the import hierarchy algebra
