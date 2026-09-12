@@ -1,11 +1,12 @@
 /-
-Copyright (c) 2026 Thomas R. Murrills. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Thomas R. Murrills
-
 Copyright (c) 2023 Mario Carneiro. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Mario Carneiro, Sebastian Ullrich
+
+This file was copied from `Lake.CLI.Shake` and modified.
+Modifications copyright (c) 2026 Thomas R. Murrills. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors of modifications: Thomas R. Murrills
 -/
 module
 
