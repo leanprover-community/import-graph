@@ -161,6 +161,22 @@ def lowToHigh (b : Bitset) : LowToHigh := ⟨b⟩
 instance {m} [Monad m] : ForIn m LowToHigh Nat where
   forIn b init f := ForInStep.value <$> b.toBitset.forIn init f
 
+/-- Whether `f` returns `true` for all elements of the `Bitset`. -/
+@[specialize]
+def all (b : Bitset) (f : Nat → Bool) := Id.run do
+  for i in b.highToLow do
+    unless f i do
+      return false
+  return true
+
+/-- Whether `f` returns `true` for any elements of the `Bitset`. -/
+@[specialize]
+def any (b : Bitset) (f : Nat → Bool) := Id.run do
+  for i in b.highToLow do
+    if f i then
+      return true
+  return false
+
 /-- Extract the elements of `a : Array α` occurring at the indices specified in `b : Bitset`.
 Ignores elements of `b` that index outside the array. -/
 def extractArray (a : Array α) (b : Bitset) : Array α := Id.run do
