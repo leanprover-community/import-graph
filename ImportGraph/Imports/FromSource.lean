@@ -19,8 +19,6 @@ as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`
 - `modToRelFilePath`: like `modToFilePath`, but does not insert a leading file separator
 - `findTransitiveImportsFromSource`: Compute a nameset of the transitive closure of imports from
   source files
-
--- TODO: update?
 -/
 
 public section
