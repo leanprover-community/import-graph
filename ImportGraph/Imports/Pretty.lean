@@ -413,6 +413,11 @@ We assume `sourceImps` has been created by `ImportGraph.headerToImportRefsWithWh
 comment. Returns `none` if the suggestion is would not modify the source at all (including
 whitespace).
 
+Note that the resulting widget will show a diff view if the resulting `errs : Import.FormatErrors`
+satisfies `errs.isEmpty` or `includeErrorsAsComment := false`. Otherwise, if a comment is included,
+a try-this widget prefixed by an `[apply]` is shown. (This is because the repeated imports in
+`errs` don't behave well in the diff view.)
+
 `ref` is passed to `Meta.Hint.mkSuggestionsMessage`. -/
 def mkImportSuggestionMessage (ref : Syntax) (newImps : Array Import)
     (sourceImps : Array (ImportRef × Whitespace)) (formatAs := Import.FormatBehavior.grouped)
