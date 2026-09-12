@@ -18,7 +18,7 @@ as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`
 - `parseCurrentHeader`: parse the imports of the current file from the `FileMap`
 - `modToRelFilePath`: like `modToFilePath`, but does not insert a leading file separator
 - `findTransitiveImportsFromSource`: Compute a nameset of the transitive closure of imports from
-  source files
+  source files. Note, however, that this does not respect the module system.
 -/
 
 public section
