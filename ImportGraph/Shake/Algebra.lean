@@ -11,7 +11,7 @@ import Std.Data.HashMap.AdditionalOperations
 /-!
 # Algebra of an import hierarchy
 
-This file provides algebraic/compositional relationships between module system dpendencies in an
+This file provides algebraic/compositional relationships between module system dependencies in an
 import hierarchy.
 
 Notably, we provide transitive closure operators relative to an import hierarchy, which relies on
