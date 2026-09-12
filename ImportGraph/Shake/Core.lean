@@ -160,7 +160,7 @@ instance : EmptyCollection Needs := ⟨.empty⟩
   | .privOfPriv => needs.privOfPriv
   | .metaPrivOfPriv => needs.metaPrivOfPriv
 
-@[inline, expose] def Needs.has (needs : Needs) (k : NeedsKind) (i : ModuleIdx) : Bool :=
+@[inline, expose] def Needs.has (needs : Needs) (k : NeedsKind) (i : Nat) : Bool :=
   needs.get k |>.has i
 
 @[inline, expose] def Needs.set (needs : Needs) (k : NeedsKind) (s : Bitset) : Needs :=
