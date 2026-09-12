@@ -9,21 +9,17 @@ public meta import ImportGraph.Shake.Algebra
 import Lean.Elab.Command
 
 /-!
-# Tests for the `Shake` dependency algebra
-
-Every sweep below is deterministic. The exhaustive ones range over all `Needs` on a one- or
-two-module universe (`Model.needsOfNat`); the sampled ones range over pseudorandom
-hierarchy/`Needs` pairs on a four-module universe (`Model.randomPairs`). A failure prints the
-encoding of the offending case, which reproduces it.
+# Tests for the import hierarchy algebra
 -/
 
 open Lean ImportGraph Shake NeedsKind
 
-namespace ImportGraphTest.Shake
+namespace ImportGraph.Shake
 
-/-! ## `NeedsKind` -/
+-- We use `public meta section` for `#guard`
+public meta section
 
-meta section NeedsKind
+section NeedsKind
 
 def shortName : NeedsKind → String
   | .pub => "pub" | .priv => "priv" | .privOfPriv => "all"
@@ -35,8 +31,6 @@ def NeedsKind.allPairs : Array (NeedsKind × NeedsKind) :=
 
 /-- info: #["pub", "priv", "𝓶pub", "𝓶priv", "all", "𝓶all"] -/
 #guard_msgs in #eval NeedsKind.all.map shortName
-
-/-! ### Composition -/
 
 def pad (n : Nat) (s : String) : String := s ++ "".pushn ' ' (n - s.length)
 
@@ -74,285 +68,335 @@ all       -      -      all    -      -      𝓶all
       okay := okay && some (andThen k₁ k₂) == fromConnecting
   return okay
 
-#guard NeedsKind.all.all fun k => k == .ofImport (toImport .anonymous k)
--- The `to`/`from` partitions are exactly the kinds `NeedsKind.andThen` may compose on either side.
-/-- info: 6 cases passed -/
+-- If this were real, we'd use a monad interface `[MonadRand m]`. Here, we can get by with `RandT`.
+
+variable [RandomGen γ] (g : γ) [Monad m]
+
+abbrev RandT (γ : Type u) [RandomGen γ] := StateT γ
+abbrev RandM (γ : Type u) [RandomGen γ] := RandT γ Id
+
+nonrec abbrev Std.RandT := RandT StdGen
+nonrec abbrev Std.RandM := RandM StdGen
+
+nonrec abbrev Std.RandM.run (gen : StdGen) (x : Std.RandM α) := x.run gen
+nonrec abbrev Std.RandM.run' (gen : StdGen) (x : Std.RandM α) := x.run' gen
+
+nonrec def RandT.repeat (runs : Nat) (x : RandT γ m α) : RandT γ m (Array α) := do
+  let mut a := #[]
+  for _ in 0...runs do
+    a := a.push (← x)
+  return a
+
+nonrec def RandT.all (runs : Nat) (x : RandT γ m Bool) : RandT γ m Bool := do
+  for _ in 0...runs do
+    unless ← x do
+      return false
+  return true
+
+def randNatM (lo hi : Nat) : RandT γ m Nat :=
+  modifyGet fun g => randNat g lo hi
+
+def randBoolM : RandT γ m Bool :=
+  modifyGet randBool
+
+-- We know `NeedsKind.all.size > 0`.
+protected def NeedsKind.randM : RandT γ m NeedsKind :=
+  return NeedsKind.all[← randNatM 0 (NeedsKind.all.size - 1)]!
+
+protected def Bitset.randM (univSize : Nat) : RandT γ m Bitset :=
+  return { toNat := ← randNatM 0 (2 ^ univSize - 1) } -- `hi` is inclusive in `randNat`
+
+protected def Bitset.randNonemptyM (univSize : Nat) : RandT γ m Bitset :=
+  return { toNat := ← randNatM 1 (2 ^ univSize - 1) } -- `hi` is inclusive in `randNat`
+
+def Array.randSubset (arr : Array α) : RandT γ m (Array α) :=
+  return (← Bitset.randM arr.size).extractArray arr
+
+def Array.randNonemptySubset (arr : Array α) : RandT γ m (Array α) :=
+  return (← Bitset.randNonemptyM arr.size).extractArray arr
+
+/-- What random needs we allow. -/
+inductive RandNeedsConfig where
+| publicOnly (usePrivOfPriv := true)
+| metaOnly (usePrivOfPriv := true)
+| any (usePrivOfPriv := true)
+deriving Inhabited, Repr
+
+def RandNeedsConfig.usePrivOfPriv : RandNeedsConfig → Bool
+  | publicOnly usePrivOfPriv => usePrivOfPriv
+  | metaOnly usePrivOfPriv => usePrivOfPriv
+  | any usePrivOfPriv => usePrivOfPriv
+
+def RandNeedsConfig.useMeta : RandNeedsConfig → Bool
+  | publicOnly _ => false
+  | _ => true
+
+def RandNeedsConfig.useNonMeta : RandNeedsConfig → Bool
+  | metaOnly _ => false
+  | _ => true
+
+def RandNeedsConfig.randM : RandT γ m RandNeedsConfig := do
+  let usePrivOfPriv ← randBoolM
+  match ← randNatM 0 2 with
+  | 0 => return .publicOnly usePrivOfPriv
+  | 1 => return .metaOnly usePrivOfPriv
+  | 2 => return .any usePrivOfPriv
+  | _ => panic! "randNat returned value outside of intended range"
+
+protected def Needs.randM (hierarchySize : Nat)
+    (cfg : RandNeedsConfig := .any) :
+    RandT γ m Needs :=
+  return {
+    priv := ← if cfg.useNonMeta then Bitset.randM hierarchySize else pure ∅
+    pub := ← if cfg.useNonMeta then Bitset.randM hierarchySize else pure ∅
+    metaPub := ← if cfg.useMeta then Bitset.randM hierarchySize else pure ∅
+    metaPriv := ← if cfg.useMeta then Bitset.randM hierarchySize else pure ∅
+    privOfPriv :=
+      ← if cfg.useNonMeta && cfg.usePrivOfPriv then Bitset.randM hierarchySize else pure ∅
+    metaPrivOfPriv :=
+      ← if cfg.useMeta && cfg.usePrivOfPriv then Bitset.randM hierarchySize else pure ∅
+  }
+
+-- TODO: should maybe choose randomly how many are in each "layer"?
+/-- A topologically sorted array of needs, i.e. one in which each `Needs` only refers to prior
+ones. If the config is `none`, it's randomized each time. This allows for more module-tomodule
+variation in quality, perhaps more like a real repo. -/
+def Needs.randArrayM (hierarchySize : Nat)
+    (cfg? : Option RandNeedsConfig := none) :
+    RandT γ m (Array Needs) := do
+  let mut ns := Array.emptyWithCapacity hierarchySize
+  for i in 0...hierarchySize do
+    let cfg ← cfg?.getDM RandNeedsConfig.randM
+    let need ← Needs.randM i cfg
+    ns := ns.push need
+  return ns
+
+/-- Assumes that `ns` in topologically sorted, i.e. that the needs refer only to indices existing
+prior in the array. We don't use this more generally because usually there are other things we want
+to do in the loop. -/
+def ArrayHierarchy.ofArrayNeeds (ns : Array Needs) : ArrayHierarchy := Id.run do
+  let mut transDeps := Array.emptyWithCapacity ns.size
+  for h : i in 0...ns.size do
+    let n := ns[i].linearize
+    transDeps := transDeps.push <| transDeps⟦n⟧.reflexify i
+  return transDeps
+
+protected def ArrayHierarchy.randM (hierarchySize : Nat) (cfg? : Option RandNeedsConfig := none) :
+    RandT γ m ArrayHierarchy :=
+  return .ofArrayNeeds (← Needs.randArrayM hierarchySize cfg?)
+
+def ArrayHierarchy.toString (h : ArrayHierarchy) (dividers := true) : String :=
+  "\n".intercalate (h.zipIdx.map fun (n, idx) => n.toString (some (idx + 1)) dividers).toList
+
+def testSeed : StdGen := mkStdGen 373737
+
+-- Note how each row ends with `Needs.reflOf _`, and the `Needs` are linearized.
+/--
+info:
+
+│⠇│
+│⠘│⠇│
+│⠃│⠀│⠇│
+│⠟│⠚│⠛│⠇│
+│⠿│⠷│⠶│⠲│⠇│
+-/
 #guard_msgs in
-#eval check kinds.toArray shortName fun k =>
-  (NeedsKind.to k.target).contains k && (NeedsKind.from k.source).contains k &&
-  !(NeedsKind.to (if k.target == .public then .private else .public)).contains k &&
-  !(NeedsKind.from (if k.source == .public then .private else .public)).contains k
+run_cmd
+  let transDeps : ArrayHierarchy := Std.RandM.run' testSeed <| ArrayHierarchy.randM 5
+  logInfo m!"\n\n{transDeps.toString}"
+
+/-- A `Needs` which exhibits every set of `NeedsKind`s in one of its columns. -/
+def allNeeds : Needs := Id.run do
+  let mut needs := Needs.empty
+  /- The column is both the index at which we modify `needs` and the "column" of the `Needs` as a
+  bitset at that index. -/
+  for col in 0...(2 ^ NeedsKind.all.size) do
+    let colBitset := { toNat := col : Bitset }
+    for kIdx in colBitset.highToLow do
+      needs := needs.union NeedsKind.all[kIdx]! {col}
+  return needs
+
+/--
+info: │⠀│⠁│⠂│⠃│⠈│⠉│⠊│⠋│⠐│⠑│⠒│⠓│⠘│⠙│⠚│⠛│⠄│⠅│⠆│⠇│⠌│⠍│⠎│⠏│⠔│⠕│⠖│⠗│⠜│⠝│⠞│⠟│⠠│⠡│⠢│⠣│⠨│⠩│⠪│⠫│⠰│⠱│⠲│⠳│⠸│⠹│⠺│⠻│⠤│⠥│⠦│⠧│⠬│⠭│⠮│⠯│⠴│⠵│⠶│⠷│⠼│⠽│⠾│⠿│
+-/
+#guard_msgs in
+run_cmd logInfo allNeeds.toString
+
+-- Post-composition is associative: `(n ≫ k₁) ≫ k₂ = n ≫ (k₁ ≫ k₂)`.
+#guard NeedsKind.allPairs.all fun (k₁, k₂) =>
+  if h : k₁.target = k₂.source then
+    (allNeeds ≫ k₁) ≫ k₂ == allNeeds ≫ (k₁.andThen k₂)
+  else true
 
 end NeedsKind
 
-/-! ## Post-composition -/
-
-section Postcomposition
-
--- `Needs.andThen` composes exactly the composable prearrows.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  NeedsKind.all.all fun k => n ≫ k == needsOf ((arrowsOf 2 n).andThen k)
-
--- `Needs.addAndThen` adds to its base rather than replacing it.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  NeedsKind.all.all fun k => n.addAndThen k (base := n) == n ∪ (n ≫ k)
-
--- Post-composing by an `Import` agrees with post-composing by its `NeedsKind`.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  kinds.all fun k => (importOf k).andThen n == n ≫ k
-
--- Post-composition preserves `∅` and distributes over `∪`.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 1 * needsCount 1) fun m =>
-  let n₁ := needsOfNat 1 (m % needsCount 1)
-  let n₂ := needsOfNat 1 (m / needsCount 1)
-  NeedsKind.all.all fun k =>
-    (∅ : Needs) ≫ k == (∅ : Needs) && (n₁ ∪ n₂) ≫ k == (n₁ ≫ k) ∪ (n₂ ≫ k)
-
--- Post-composition is associative: `(n ≫ k₁) ≫ k₂ = n ≫ (k₁ ≫ k₂)`.
-/-- info: 64 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 1) fun m =>
-  let n := needsOfNat 1 m
-  kindPairs.all fun (k₁, k₂) =>
-    match andThen? k₁ k₂ with
-    | some k => (n ≫ k₁) ≫ k₂ == n ≫ k
-    | none => true
-
-end Postcomposition
-
-/-! ## Linearization -/
-
 section Linearization
 
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  n.linearize == needsOf (arrowsOf 2 n).linearize &&
-  n.antilinearize == needsOf (arrowsOf 2 n).antilinearize
+/- Linearity means the upper and lower dots (public and private-of-private) in a given column
+should never appear without the middle dot (private). -/
+/--
+info: │⠀│⠃│⠂│⠃│⠘│⠛│⠚│⠛│⠐│⠓│⠒│⠓│⠘│⠛│⠚│⠛│⠆│⠇│⠆│⠇│⠞│⠟│⠞│⠟│⠖│⠗│⠖│⠗│⠞│⠟│⠞│⠟│⠰│⠳│⠲│⠳│⠸│⠻│⠺│⠻│⠰│⠳│⠲│⠳│⠸│⠻│⠺│⠻│⠶│⠷│⠶│⠷│⠾│⠿│⠾│⠿│⠶│⠷│⠶│⠷│⠾│⠿│⠾│⠿│
+-/
+#guard_msgs in run_cmd logInfo allNeeds.linearize.toString
 
--- Each lands where it says it does, and fixes what is already there.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  n.linearize.isLinear && n.antilinearize.isAntilinear &&
-  (!n.isLinear || n.linearize == n) && (!n.isAntilinear || n.antilinearize == n)
+/- Antilinearity means that the middle dot (private) in a given column should *never* appear when
+either of the other two dots appear in that column. -/
+/--
+info: │⠀│⠁│⠂│⠁│⠈│⠉│⠊│⠉│⠐│⠑│⠒│⠑│⠈│⠉│⠊│⠉│⠄│⠅│⠄│⠅│⠌│⠍│⠌│⠍│⠔│⠕│⠔│⠕│⠌│⠍│⠌│⠍│⠠│⠡│⠢│⠡│⠨│⠩│⠪│⠩│⠠│⠡│⠢│⠡│⠨│⠩│⠪│⠩│⠤│⠥│⠤│⠥│⠬│⠭│⠬│⠭│⠤│⠥│⠤│⠥│⠬│⠭│⠬│⠭│
+-/
+#guard_msgs in run_cmd logInfo allNeeds.antilinearize.toString
 
--- Both are idempotent, and each absorbs the other.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  n.linearize.linearize == n.linearize &&
-  n.antilinearize.antilinearize == n.antilinearize &&
-  n.antilinearize.linearize == n.linearize &&
-  n.linearize.antilinearize == n.antilinearize
+#guard allNeeds.linearize.isLinear
+#guard !allNeeds.linearize.isAntilinear
+#guard allNeeds.antilinearize.isAntilinear
+#guard !allNeeds.antilinearize.isLinear
 
--- `antilinearize n ⊆ n ⊆ linearize n`, and neither moves the public scopes.
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 2) fun m =>
-  let n := needsOfNat 2 m
-  n.antilinearize.directLe n && n.directLe n.linearize &&
-  n.linearize.pub == n.pub && n.linearize.metaPub == n.metaPub &&
-  n.antilinearize.pub == n.pub && n.antilinearize.metaPub == n.metaPub
+-- We expect `linearize` and `antilinearize` to not only be idempotent but to form a flip-flop
+-- semigroup action, as there should always be enough information to recover the other.
+#guard allNeeds.linearize.linearize == allNeeds.linearize
+#guard allNeeds.linearize.antilinearize == allNeeds.antilinearize
+#guard allNeeds.antilinearize.linearize == allNeeds.linearize
+#guard allNeeds.antilinearize.antilinearize == allNeeds.antilinearize
 
--- `linearize` is monotone; `antilinearize` is not (it is only a choice of representative).
-/-- info: 4096 cases passed -/
-#guard_msgs in
-#eval checkRange (needsCount 1 * needsCount 1) fun m =>
-  let n₁ := needsOfNat 1 (m % needsCount 1)
-  let n₂ := needsOfNat 1 (m / needsCount 1)
-  !n₁.directLe n₂ || n₁.linearize.directLe n₂.linearize
-
+-- `antilinearize n ⊆ n ⊆ linearize n`, and both preserve non-private scopes (and respect those
+-- inclusions in their private scopes).
+#guard allNeeds.antilinearize.directLe allNeeds
+#guard allNeeds.directLe allNeeds.linearize
 #guard
-  let n₁ := Needs.single 0 .priv
-  let n₂ := n₁ ∪ Needs.single 0 .pub
-  n₁.directLe n₂ && !n₁.antilinearize.directLe n₂.antilinearize
+  let linearized := allNeeds.linearize
+  let antilinearized := allNeeds.antilinearize
+  NeedsKind.all.all fun k =>
+    if k matches .priv || k matches .metaPriv then
+      antilinearized.get k ⊆ allNeeds.get k && allNeeds.get k ⊆ linearized.get k
+    else
+      antilinearized.get k = allNeeds.get k && allNeeds.get k = linearized.get k
 
 end Linearization
 
-/-! ## Reflexification -/
-
 section Reflexification
 
--- `reflexify` adjoins `reflOf`, which covers the public and private scopes but not the meta ones.
-/-- info: 12288 cases passed -/
-#guard_msgs in
-#eval checkRange (3 * needsCount 2) fun m =>
-  let i := m / needsCount 2
-  let n := needsOfNat 2 (m % needsCount 2)
-  Needs.reflOf i == needsOf (reflArrows i) &&
-  Needs.reflexify i n == n ∪ Needs.reflOf i &&
-  (Needs.reflOf i).isLinear &&
-  Needs.unreflexify i (Needs.reflexify i n) == Needs.unreflexify i n
+-- `reflexify` adds all non-meta scopes to the column of `Needs` at the specified index
+/-- info: │⠀│⠂│⠀│⠇│ -/
+#guard_msgs in run_cmd logInfo (Needs.empty.union .priv {1} |>.reflexify 3 |>.toString)
+
+/-- info: │⠀│⠀│⠀│⠇│ -/
+#guard_msgs in run_cmd logInfo (Needs.reflOf 3 |>.toString)
+
+/-- info: │⠀│⠂│⠀│⠀│ -/
+#guard_msgs in run_cmd
+  logInfo (Needs.empty.union .priv {1} |>.reflexify 3 |>.clearAt 3 |>.toString (some 4))
 
 end Reflexification
 
-/-! ## Transitive closure -/
-
 section TransitiveClosure
 
-/-- Pseudorandom `(hierarchy, needs)` encodings on a four-module universe. -/
-meta def hierarchyCases : Array (Nat × Nat) := randomPairs 20260903 200
+open Elab Command
 
-meta def describeCase (c : Nat × Nat) : String := s!"({c.1}, {c.2})"
+-- Test that the test is running!
+/--
+info:
 
-/-- The `Provides` hierarchy generated by a case, in the model and in `Needs`. -/
-meta def hierarchyOf (c : Nat × Nat) : Array Arrows × ArrayHierarchy :=
-  (providesOfNat 4 c.1, hierarchyOfNat 4 c.1)
-
--- The generated hierarchies are reflexified, linearized, and transitively closed.
-/-- info: 200 cases passed -/
+│⠇│
+│⠘│⠇│
+│⠃│⠀│⠇│
+│⠟│⠚│⠛│⠇│
+│⠿│⠷│⠶│⠲│⠇│
+-/
 #guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  (Array.range 4).all fun i =>
-    let p := transDeps[i]!
-    p.isLinear && (Needs.reflOf i).directLe p && p.transitiveClosure transDeps == p
+run_cmd
+  let testTest : Std.RandT CommandElabM Bool := do
+    let h : ArrayHierarchy ← ArrayHierarchy.randM 5
+    logInfo s!"\n\n{h.toString}"
+    return true
+  unless ← testTest.all 1 |>.run' testSeed do
+    throwError "Somehow, returned false"
 
--- `Hierarchy.andThen` and `Needs.transitiveClosure` agree with the model.
-/-- info: 200 cases passed -/
+-- The generated hierarchies are reflexified, linearized, and transitively closed, and acting on
+-- `Needs` with these hierarchies behaves as expected.
 #guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (provides, transDeps) := hierarchyOf c
-  let n := needsOfNat 4 c.2
-  let a := arrowsOf 4 n
-  Hierarchy.andThen transDeps n == needsOf (a.postcompose provides) &&
-  transDeps⟦n⟧ == needsOf (a.transitiveClosure provides)
-
--- Against a reflexified hierarchy, closing is inflationary and idempotent, and the union with `n`
--- in `Needs.transitiveClosure` is redundant.
-/-- info: 200 cases passed -/
-#guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  let n := needsOfNat 4 c.2
-  n.directLe transDeps⟦n⟧ &&
-  Hierarchy.andThen transDeps n == transDeps⟦n⟧ &&
-  transDeps⟦transDeps⟦n⟧⟧ == transDeps⟦n⟧
-
--- Closing a `Needs` is the union of the closures of its prearrows.
-/-- info: 200 cases passed -/
-#guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  let n := needsOfNat 4 c.2
-  transDeps⟦n⟧ == (arrowsOf 4 n).foldl (init := ∅) fun acc (i, k) => acc ∪ transDeps⟦(i, k)⟧
-
--- `Needs.coveredBy` and `Needs.subsumedBy` agree with the model.
-/-- info: 200 cases passed -/
-#guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (provides, transDeps) := hierarchyOf c
-  let n := needsOfNat 4 c.2
-  let a := arrowsOf 4 n
-  let n' := needsOfNat 4 (c.2 >>> (6 * 4))
-  ((Array.range 4).all fun i => n.coveredBy i transDeps == a.le provides[i]!) &&
-  n.subsumedBy n' transDeps == a.le ((arrowsOf 4 n').linearize.transitiveClosure provides)
+run_cmd
+  let test : Std.RandT CommandElabM Bool := do
+    let size := 30
+    let h ← ArrayHierarchy.randM size
+    unless h.size = size do
+      throwError "Incorrect hierarchy size"
+    for h' : idx in 0...h.size do
+      unless h[idx].isLinear do
+        throwError "Not linear at {idx}:\n{h.toString}"
+      unless Needs.reflOf idx |>.directLe h[idx] do
+        throwError "Not reflexified at {idx}:\n{h.toString}"
+      unless h⟦h[idx]⟧ == h[idx] do
+        throwError "Not transitively closed at {idx}:\n{h.toString}"
+    let needs ← Needs.randM size
+    unless needs.directLe h⟦needs⟧ do
+      throwError "Random needs is not subset of its transitive closure:\n{needs.toString}\n\n\
+        {h.toString}"
+    unless h⟦h⟦needs⟧⟧ == h⟦needs⟧ do
+      throwError "Transitive closure is not idempotent:\n{needs.toString}\n\n\
+        {h.toString}"
+    unless h⟦needs⟧.linearize == h⟦needs.linearize⟧ do
+      throwError "Transitive closure does not commute with linearization:\n{needs.toString}\n\n\
+        {h.toString}"
+    unless h ≫ needs == h⟦needs⟧ do
+      -- TODO: does this mean the definition should change?
+      throwError "Transitive closure is not the same as composition:\n{needs.toString}\n\n\
+        {h.toString}"
+    let aggregateByPrearrows := needs.foldWithKind (init := ∅) fun acc k b => Id.run do
+      let mut acc := acc
+      for i in b.highToLow do
+        acc := acc ∪ h⟦(i, k)⟧
+      return acc
+    unless h⟦needs⟧ == aggregateByPrearrows do
+      throwError "Transitive closure is not the same as transitively closing each prearrow:\n\
+        {needs.toString}\n\n{h.toString}"
+    return true
+  unless ← test.all 100 |>.run' testSeed do
+    throwError "Tests failed."
 
 end TransitiveClosure
 
-/-! ## Reduction -/
-
 section Reduction
-
-/-- Whether `reduced` covers `a`, in the sense of `Needs.reduce`. -/
-meta def covers (a reduced : Needs) (transDeps : ArrayHierarchy) : Bool :=
-  a.subsumedBy reduced transDeps
 
 /-- Whether dropping any single prearrow of `reduced` loses coverage of `a`. Coverage is monotone
 in `reduced`, so this is exactly `⊆`-minimality. -/
-meta def isMinimal (a reduced : Needs) (transDeps : ArrayHierarchy) : Bool :=
-  (arrowsOf 4 reduced).all fun (i, k) => !covers a (reduced.sub k {i}) transDeps
+meta def Needs.isMinimalSubsumerOf (reduced a : Needs) (transDeps : ArrayHierarchy) : Bool :=
+  reduced.allWithKind fun k b => b.all fun i =>
+    !a.subsumedBy (reduced.sub k {i}) transDeps
 
--- The stated invariant: the reduction covers its input, is antilinearized, and stays within it.
-/-- info: 200 cases passed -/
+open Elab Command
+
 #guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  let a := needsOfNat 4 c.2
-  let reduced := a.reduce transDeps
-  covers a reduced transDeps && reduced.isAntilinear && reduced.directLe a.linearize
-
--- The reduction is minimal.
-/-- info: 200 cases passed -/
-#guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  let a := needsOfNat 4 c.2
-  isMinimal a (a.reduce transDeps) transDeps
-
--- Reduction sees its input only up to linearization, and is idempotent.
-/-- info: 200 cases passed -/
-#guard_msgs in
-#eval check hierarchyCases describeCase fun c =>
-  let (_, transDeps) := hierarchyOf c
-  let a := needsOfNat 4 c.2
-  let reduced := a.reduce transDeps
-  a.linearize.reduce transDeps == reduced && reduced.reduce transDeps == reduced
-
-/-! ### Worked examples -/
-
-/-- The reduction of `a` against the hierarchy generated by `imports`, as a set of prearrows. -/
-meta def reduceOf (imports : Imports) (a : Arrows) : IO Unit :=
-  IO.println <| toString <| arrowsOf imports.size <|
-    (needsOf a).reduce (imports.provides.map needsOf)
-
-/-- `1` publicly imports `0`, `2` imports `1`, and `3` imports all of `2`. -/
-meta def chain : Imports :=
-  #[∅, [(0, .pub)], [(1, .priv)], [(2, .privOfPriv)]]
-
--- A direct dependency is kept when nothing else provides it.
-/-- info: {(0 [public⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(0, .pub)]
-
--- `1` carries `0` publicly, so needing both privately reduces to needing `1`.
-/-- info: {(1 [private⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(0, .priv), (1, .priv)]
-
--- `2` imports `1` privately, so `2` does not carry `1`.
-/-- info: {(1 [private⟩ ·), (2 [private⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(1, .priv), (2, .priv)]
-
--- `public ⊆ private` on the target side: a public need subsumes the private one.
-/-- info: {(0 [public⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(0, .pub), (0, .priv)]
-
--- Needing the private scope of `2` is not implied by needing its public scope.
-/-- info: {(2 [all⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(2, .priv), (2, .privOfPriv)]
-
--- The meta phase is not implied by the non-meta one.
-/-- info: {(1 [private⟩ ·), (1 [private meta⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(1, .priv), (1, .metaPriv), (0, .priv)]
-
--- Importing all of `3` also brings along everything `3` imports privately.
-/-- info: {(3 [all⟩ ·)} -/
-#guard_msgs in
-#eval reduceOf chain [(3, .privOfPriv), (2, .priv), (0, .priv)]
+run_cmd
+  let test : Std.RandT CommandElabM Bool := do
+    let size := 30
+    let h ← ArrayHierarchy.randM size
+    let needs ← Needs.randM size
+    let reduced := needs.reduce h
+    unless reduced.isAntilinear do
+      throwError "Reduced needs are not antilinear:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    unless reduced.directLe needs.linearize do
+      throwError "Reduced needs are not included within linearized version of needs:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    unless needs.subsumedBy reduced h do
+      throwError "Reduced needs do not subsume needs:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    let isMinimal := reduced.allWithKind fun k b => b.all fun i =>
+      !needs.subsumedBy (reduced.sub k {i}) h
+    unless isMinimal do
+      throwError "Reduced needs are not minimal:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    unless needs.linearize.reduce h == reduced do
+      throwError "Reduced needs changed with linearization:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    unless reduced.reduce h == reduced do
+      throwError "Reduction is not idempotent:\n\n\
+        reduced: {reduced}\n\nneeds: {needs}\n\n{h}"
+    return true
+  unless ← test.all 100 |>.run' testSeed do
+    throwError "Tests failed."
 
 end Reduction
-
-/-! ## Minimal elements -/
 
 section Minimals
 
@@ -396,5 +440,3 @@ run_cmd do
       {data.minimals (· ⊆ ·) |>.map (·.toString univSize)}"
 
 end Minimals
-
-end ImportGraphTest.Shake
