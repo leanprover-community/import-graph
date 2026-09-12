@@ -68,6 +68,12 @@ all       -      -      all    -      -      𝓶all
       okay := okay && some (andThen k₁ k₂) == fromConnecting
   return okay
 
+-- Test that braille cells are as expected, at least for single dots
+/--
+info: #[public: │⠁│, private: │⠂│, public meta: │⠈│, private meta: │⠐│, all: │⠄│, meta all: │⠠│]
+-/
+#guard_msgs in run_cmd logInfo s!"{NeedsKind.all.map fun k => s!"{k}: {Needs.single 0 k}"}"
+
 -- If this were real, we'd use a monad interface `[MonadRand m]`. Here, we can get by with `RandT`.
 
 variable [RandomGen γ] (g : γ) [Monad m]
