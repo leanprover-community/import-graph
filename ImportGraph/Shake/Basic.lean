@@ -346,6 +346,9 @@ Rephrasing of `f (n.get k)` for readability. -/
 /-- Whether the component bitset at `k : NeedsKind` is empty. -/
 @[inline] def isEmptyAt (k : NeedsKind) (n : Needs) : Bool := n.get k |>.isEmpty
 
+/-- The minimum size of the ambient index set necessary to hold every component `Bitset`. -/
+@[inline] def univSize (n : Needs) : Nat := n.fold (fun size b => max size b.univSize) 0
+
 instance : SDiff Needs where
   sdiff a b := a.map₂ b (· \ ·)
 
