@@ -161,6 +161,16 @@ def lowToHigh (b : Bitset) : LowToHigh := ⟨b⟩
 instance {m} [Monad m] : ForIn m LowToHigh Nat where
   forIn b init f := ForInStep.value <$> b.toBitset.forIn init f
 
+/-- Extract the elements of `a : Array α` occurring at the indices specified in `b : Bitset`.
+Ignores elements of `b` that index outside the array. -/
+def extractArray (a : Array α) (b : Bitset) : Array α := Id.run do
+  let mut new := #[]
+  for i in b.lowToHigh do
+    if h : i < a.size then
+      new := new.push a[i]
+    else break
+  return new
+
 /-! ## Representations -/
 
 deriving instance ToJson, FromJson for Bitset
