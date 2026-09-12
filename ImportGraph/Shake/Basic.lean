@@ -161,6 +161,32 @@ def lowToHigh (b : Bitset) : LowToHigh := ⟨b⟩
 instance {m} [Monad m] : ForIn m LowToHigh Nat where
   forIn b init f := ForInStep.value <$> b.toBitset.forIn init f
 
+/-- Whether `f` returns `true` for all elements of the `Bitset`. -/
+@[specialize]
+def all (b : Bitset) (f : Nat → Bool) := Id.run do
+  for i in b.highToLow do
+    unless f i do
+      return false
+  return true
+
+/-- Whether `f` returns `true` for any elements of the `Bitset`. -/
+@[specialize]
+def any (b : Bitset) (f : Nat → Bool) := Id.run do
+  for i in b.highToLow do
+    if f i then
+      return true
+  return false
+
+/-- Extract the elements of `a : Array α` occurring at the indices specified in `b : Bitset`.
+Ignores elements of `b` that index outside the array. -/
+def extractArray (a : Array α) (b : Bitset) : Array α := Id.run do
+  let mut new := #[]
+  for i in b.lowToHigh do
+    if h : i < a.size then
+      new := new.push a[i]
+    else break
+  return new
+
 /-! ## Representations -/
 
 deriving instance ToJson, FromJson for Bitset
@@ -320,6 +346,9 @@ Rephrasing of `f (n.get k)` for readability. -/
 /-- Whether the component bitset at `k : NeedsKind` is empty. -/
 @[inline] def isEmptyAt (k : NeedsKind) (n : Needs) : Bool := n.get k |>.isEmpty
 
+/-- The minimum size of the ambient index set necessary to hold every component `Bitset`. -/
+@[inline] def univSize (n : Needs) : Nat := n.fold (fun size b => max size b.univSize) 0
+
 instance : SDiff Needs where
   sdiff a b := a.map₂ b (· \ ·)
 
@@ -339,6 +368,46 @@ also `Needs.coveredBy` for testing against an import hierarchy. -/
 theorem directLe_eq_allWithKind_le :
     directLe = fun n m => n.allWithKind fun k nb => nb.le <| m.get k := by
   ext; simp [directLe, allWithKind, applyAt, NeedsKind.all, get, Bool.and_assoc]
+
+/-! ## Representations -/
+
+/-- A braille cell depicting the set of `NeedsKind`s of `n` at index `i`. The left column holds
+non-meta needs, and the right column meta needs; the top row holds public needs, the middle row
+private, and the bottom row private-of-private. -/
+def brailleCellAt (i : Nat) (n : Needs) : Char := Id.run do
+  let mut dots := 0
+  -- Accumulate per `NeedsKind` so that the cell does not depend on the order of `NeedsKind.all`
+  for k in NeedsKind.all do
+    if n.has k i then
+      let row := if k.isExported then 0 else if k.isAll then 2 else 1
+      let col := if k.isMeta then 1 else 0
+      -- Braille numbers its dots down the left column, then down the right
+      dots := dots ||| (1 <<< (3 * col + row))
+  return .ofNat (0x2800 + dots)
+
+/-- Represents a `Needs` as a string of the form e.g. `│⠇│⠑│⠁│⠝│`, where each braille cell
+represents the set of `NeedsKind`s expressed by a single "column" of the `Needs` (i.e. at a given
+index). The left column of each Braille cell are non-meta needs, and the right column holds meta
+needs; the top row holds public needs, the middle private, and the bottom private-of-private.
+
+By default, shows dividers (`│`) between each braille cell; `dividers := false` omits dividers.
+
+By default this shows only as many cells as necessary, or a single empty cell for an empty `Needs`.
+Instead, `univSize? : Option Nat` can be provided to set the total number of indices, and will
+either truncate (even if higher indices are set) or pad with empty cells as appropriate. -/
+def toString (n : Needs) (univSize? : Option Nat := none) (dividers : Bool := true) : String :=
+    Id.run do
+  let size := univSize?.getD n.univSize
+  -- Show a single empty cell rather than no cells at all, unless `0` cells were asked for
+  let size := if size == 0 && !univSize?.isEqSome 0 then 1 else size
+  let mut s := if size == 0 || !dividers then "" else "│"
+  for i in 0...size do
+    s := s.push (n.brailleCellAt i)
+    if dividers then s := s.push '│'
+  return s
+
+instance : ToString Needs where
+  toString n := n.toString
 
 end Needs
 
@@ -440,5 +509,18 @@ def andThen (k₁ k₂ : NeedsKind) (connectable : k₁.target = k₂.source := 
     (connectable₁₂ : k₁.target = k₂.source) (connectable₂₃ : k₂.target = k₃.source) :
     (k₁.andThen k₂).andThen k₃ = k₁.andThen (k₂.andThen k₃) := by
   grind only [andThen, k₁.not_isExported_and_isAll]
+
+-- The following is necessary for `if h : k₁.target = k₂.source then ...`.
+deriving instance DecidableEq for Environment.Visibility
+
+/-- The `NeedsKind` that represents a connection from `src` to `tgt`, with `tgt` the importing
+file. E.g., `connecting? .public .private` is the `NeedsKind` that imports a public scope into a
+private scope. -/
+def connecting? (src tgt : Environment.Visibility) (isMeta : Bool := false) : Option NeedsKind :=
+  match src, tgt with
+  | .public,  .public  => some { isExported := true,  isMeta }
+  | .public,  .private => some { isExported := false, isMeta }
+  | .private, .private => some { isExported := false, isMeta, isAll := true }
+  | .private, .public  => none
 
 end ImportGraph.Shake.NeedsKind
