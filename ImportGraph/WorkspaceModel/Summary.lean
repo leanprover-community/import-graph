@@ -150,15 +150,17 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     IO WorkspaceSummary := do
   let lakeDirPath ← lakeDirPath wsDir
   unless ← lakeDirPath.isDir do
-    throw (.userError "Could not find `.lake` folder at {lakeFolderPath}")
+    throw (.userError s!"Could not find `.lake` folder at {lakeDirPath}")
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
   if readCache then
     if ← cachePath.pathExists then
-      let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
-        (← IO.FS.readFile cachePath)
-      if ← ws.isUpToDate then
-        return ws
+      try
+        let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
+            (← IO.FS.readFile cachePath)
+          if ← ws.isUpToDate then
+            return ws
+      catch _ => pure () -- Regenerate if we failed the above for any reason
   let out ← IO.Process.run {
     cmd := "lake"
     args := #["exe", WorkspaceSummary.exeName]

@@ -11,5 +11,6 @@ import ImportGraphTest.ToTarget
 import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
+import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Widget.Collapsible
 import ImportGraphTest.Widget.GoToModule.Msg
