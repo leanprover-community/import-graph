@@ -15,6 +15,7 @@ as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`
 
 - `ImportGraph.parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
   string or file
+- `Lean.ModuleHeader.filterInit`: Remove `Init` imports from a parsed header
 - `parseCurrentHeader`: parse the imports of the current file from the `FileMap`
 - `modToRelFilePath`: like `modToFilePath`, but does not insert a leading file separator
 - `findTransitiveImportsFromSource`: Compute a nameset of the transitive closure of imports from
@@ -24,19 +25,6 @@ as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`
 public section
 
 open Lean System
-
-namespace ImportGraph
-
--- TODO: consider returning `prelude`. `parseImports'` translates a `prelude` into `Init` imports.
-/-- Like `parseImports'`, but pure. Instead of returning the `fileName:pos <msg>` error of
-`parseImports'` of `parseImports'`, returns `(fileMap, pos, <msg>)`. -/
-def parseImports? (input : String) : Except (FileMap × Position × String) ModuleHeader := do
-  let s := ParseImports.main input (ParseImports.whitespace input {})
-  let some err := s.error?
-    | return { s with }
-  let fileMap := input.toFileMap
-  let pos := fileMap.toPosition s.pos
-  throw (fileMap, pos, err)
 
 /--
 Parse all imports in a source file at `path` and return their module names.
@@ -53,6 +41,19 @@ def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := 
 /-- Removes `Init` imports from `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
+
+namespace ImportGraph
+
+-- TODO: consider returning `prelude`. `parseImports'` translates a `prelude` into `Init` imports.
+/-- Like `parseImports'`, but pure. Instead of returning the `fileName:pos <msg>` error of
+`parseImports'` of `parseImports'`, returns `(fileMap, pos, <msg>)`. -/
+def parseImports? (input : String) : Except (FileMap × Position × String) ModuleHeader := do
+  let s := ParseImports.main input (ParseImports.whitespace input {})
+  let some err := s.error?
+    | return { s with }
+  let fileMap := input.toFileMap
+  let pos := fileMap.toPosition s.pos
+  throw (fileMap, pos, err)
 
 /--
 Parses the header of the current file via the source string present in the ambient `FileMap`.
@@ -92,7 +93,6 @@ where
   | Name.str p h => go p / h
   | _ => panic! "ill-formed import"
 
-open ImportGraph in
 /--
 Compute the transitive closure of imports starting from a source file.
 
