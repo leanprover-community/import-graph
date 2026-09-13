@@ -63,7 +63,7 @@ partial def mkTransDeps (env : Environment) : ArrayHierarchy := Id.run do
       let some j := env.getModuleIdx? imp.module | continue
       let some transDepsj := transDeps[j]?
         -- We expect a topological order. Break if Lean breaks this.
-        | panic! "Nontopological order encountered:\n\
+        | panic! s!"Nontopological order encountered:\n\
             `{imp.module}` is imported by `{env.header.modules[i]!.module}`, \
             but comes afterwards in the environment"
           continue
