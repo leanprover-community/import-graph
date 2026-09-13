@@ -190,8 +190,18 @@ contain module data and *is* validated (by `getWorkspaceSummary`). -/
 def getWorkspaceModel (extraMods : Array Name := #[])
     (useCache := true) (cwd : Option System.FilePath := none) :
     IO WorkspaceModel := do
-  if useCache then if let some wm ← WorkspaceModel.cacheRef.get then
-    return wm
+  if useCache then
+    if let some wm ← WorkspaceModel.cacheRef.get then
+      -- Ensure all `extraMods` are in the cached workspace model.
+      -- In the common case they are, so let's do nothing fancy.
+      if extraMods.all wm.hasModule then
+        return wm
+      else
+        let mut wm := wm
+        for extraMod in extraMods do
+          unless wm.hasModule extraMod do
+            wm ← wm.collect extraMod
+        return wm
   let summary ← getWorkspaceSummary cwd
   let wm ← summary.toWorkspaceModel extraMods
   WorkspaceModel.cacheRef.set wm
