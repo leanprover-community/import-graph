@@ -15,6 +15,9 @@ public import ImportGraph.Lean.Environment
 public import ImportGraph.Lean.Name
 public import ImportGraph.Lean.Syntax
 public import ImportGraph.Lean.WithImportModules
+public import ImportGraph.Shake.Algebra
+public import ImportGraph.Shake.Basic
+public import ImportGraph.Shake.Core
 public import ImportGraph.Shake.EnvExtension
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Tools.FindHome
