@@ -48,7 +48,7 @@ This is a thin wrapper around `Lean.parseImports'` which:
 Note that it does not filter out `Init` modules. See `ModuleHeader.filterInit`.
 -/
 def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := do
-  Lean.parseImports' (← IO.FS.readFile path) (path.fileName.getD "<input>")
+  Lean.parseImports' (← IO.FS.readFile path) path.toString
 
 /-- Removes `Init` imports from `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
