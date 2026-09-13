@@ -48,6 +48,8 @@ structure PackageSummary extends BasePackage where
   /-- The package's `lean_lib`s. -/
   libs : Array LibrarySummary
   -- TODO: include other targets, e.g. `exe`'s, for import analysis.
+  /-- The package's config file (absolute). We use this (only) for hashing. -/
+  configFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
 /-- A summary of the lake workspace suitable for transport over `Json`. This may be obtained with
@@ -60,21 +62,49 @@ structure WorkspaceSummary extends BaseWorkspace where
   /-- The hash of inputs to this workspace summary: the lakefile, the lake manifest, and the
   toolchain version. -/
   inputHash : Hash
+  /-- The `.lake/package-overrides.json` filepath (absolute). May not exist. -/
+  packageOverridesFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
-def computeSummaryInputHash (ver : ToolchainVer)
-    (manifestFile rootConfigFile : System.FilePath) : IO Hash := do
-  let hash := Hash.ofHashable ver
-  let hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile manifestFile
-  return hash.mix <|← Hash.ofText <$> IO.FS.readFile rootConfigFile
+@[inherit_doc ToolchainVer.ofDir?, inline]
+def ToolchainVer.ofDir (toolchainDir : FilePath) : IO ToolchainVer := do
+  let some ver ← ToolchainVer.ofDir? toolchainDir
+    | throw (.userError s!"Could not find toolchain file in {toolchainDir}")
+  return ver
+
+private def computeInputHash (leanGitHash : String) (ver : ToolchainVer)
+    (manifestFile packageOverridesFile : FilePath)
+    (packageConfigs : Array FilePath) : IO Hash := do
+  let mut hash := Hash.ofHashable ver
+  hash := hash.mix <| Hash.ofText leanGitHash
+  hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile manifestFile
+  if ← packageOverridesFile.pathExists then
+    try
+      hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile packageOverridesFile
+    catch _ => pure () -- ignore it if something went wrong
+  for configFile in packageConfigs do
+    hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile configFile
+  return hash
+
+nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
+  let ver ← ToolchainVer.ofDir ws.dir
+  computeInputHash ws.lakeEnv.leanGithash ver
+    (manifestFile := ws.manifestFile)
+    (packageOverridesFile := ws.packageOverridesFile)
+    (packageConfigs := ws.packages.map (·.configFile))
+
+def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceSummary) :
+    IO Hash := do
+  let ver ← ToolchainVer.ofDir ws.dir
+  computeInputHash leanGitHash ver
+    (manifestFile := ws.manifestFile)
+    (packageOverridesFile := ws.packageOverridesFile)
+    (packageConfigs := ws.packages.map (·.configFile))
 
 /-- Recomputes the hash of the data referred to by the paths in `WorkspaceSummary` and compares it
-to the hash in `WorkspaceSummary`. -/
+to the hash in `WorkspaceSummary`, using the current lean process's git hash. -/
 def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) : IO Bool := do
-  let some newVer ← ToolchainVer.ofDir? ws.dir
-    | throw (.userError s!"Could not find toolchain file in {ws.dir}")
-  let newHash ← computeSummaryInputHash newVer ws.manifestFile ws.rootConfigFile
-  return newHash == ws.inputHash
+  return (← ws.recomputedInputHash Lean.githash) == ws.inputHash
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
@@ -82,9 +112,11 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version
+  leanGitHash := ws.lakeEnv.leanGithash
   inputHash
   manifestFile := ws.manifestFile
   rootConfigFile := ws.root.configFile
+  packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
     deps := pkg.depPkgs.map (·.wsIdx)
