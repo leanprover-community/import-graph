@@ -73,7 +73,7 @@ Note: This only sees syntactic imports in the source file.
 It does not account for what declarations are actually used.
 -/
 @[deprecated "Use `System.FilePath.parseImports'` and `Lean.ModuleHeader.filterInit` instead"
-  (since := "2026-07-18")]
+  (since := "2026-09-13")]
 public def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
   -- Note: we use `filter` rather than `erase`, since module-system files may contain
   -- both an implicit `public import Init` and a `meta import Init`, so `Init` can
