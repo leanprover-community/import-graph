@@ -48,6 +48,13 @@ respects the module system.
 - Capture and copy over scopes/namespaces.
 - Optionally leave behind `relocated ... to ...` commands
 - Handle meta definitions.
+- Handle movements between libraries in the same package, and be more careful about labeling other
+  packages as "upstream".
+  - Currently `#find_home` makes the simplifying assumptions that you do not want to move code
+    laterally to other libraries in the same package, and that all other packages in the workspace
+    are "upstream."
+  - Similarly, make the allowed target locations configurable somehow (see below).
+  - Also allow non-default targets.
 - Allow for "mutation": find near-misses, where slight alterations to (1) the import hierarchy or
   (2) aspects of the current commands might allow other "homes" to be found.
 - Allow for configurable queries, which could express e.g. e.g. "only consider modules which don't
