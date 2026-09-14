@@ -184,13 +184,14 @@ Before calling out to the executable, this function checks a cache file in the `
 determines whether it's up-to-date. If so, it skips the executable call. If not, and it does call
 out to the executable, then we also write the result to that cache file.
 -/
-def getWorkspaceSummary (wsDir : Option FilePath := none) : IO WorkspaceSummary := do
+def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
+    IO WorkspaceSummary := do
   let lakeDirPath ← lakeDirPath wsDir
   unless ← lakeDirPath.isDir do
     throw (.userError s!"Could not find `.lake` folder at {lakeDirPath}")
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
-  if ← cachePath.pathExists then
+  if ← pure readCache <&&> cachePath.pathExists then
     try
       let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
         (← IO.FS.readFile cachePath)
