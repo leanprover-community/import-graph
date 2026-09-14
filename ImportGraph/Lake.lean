@@ -143,14 +143,6 @@ def Glob.Modules.forIn [Monad m] [MonadLiftT IO m] {β}
 instance [Monad m] [MonadLiftT IO m] : ForIn m Glob.Modules (Name × IO.FS.DirEntry) where
   forIn := Glob.Modules.forIn
 
-/-! ## Misc. -/
-
-/-- Gets the toolchain version from a `Lake.Workspace`. -/
-def Workspace.getToolchainVer (ws : Lake.Workspace) : IO ToolchainVer := do
-  let some ver ← ToolchainVer.ofDir? ws.dir
-    | throw (.userError s!"Could not find toolchain file in {ws.dir}")
-  return ver
-
 namespace IO
 
 /-- Loads the lake workspace from the current directory (or, if specified, from `wsDir?`) in `IO`.
