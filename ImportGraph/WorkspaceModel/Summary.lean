@@ -127,7 +127,6 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   leanGitHash := ws.lakeEnv.lean.githash
   inputHash
   manifestFile := ws.manifestFile
-  rootConfigFile := ws.root.configFile
   packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
