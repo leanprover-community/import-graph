@@ -61,8 +61,8 @@ structure WorkspaceSummary extends BaseWorkspace where
   packages : Array PackageSummary
   /--
   The hash of inputs to this workspace summary: the lakefile (and the lakefiles of required
-  packages), the lake manifest, the `package-overrides.json`, and the toolchain version and
-  githash. -/
+  packages), the lake manifest, the `package-overrides.json`, the `lean-toolchain` file, and
+  the lean githash. -/
   inputHash : Hash
   /-- The `.lake/package-overrides.json` filepath (absolute). May not exist. -/
   packageOverridesFile : FilePath
