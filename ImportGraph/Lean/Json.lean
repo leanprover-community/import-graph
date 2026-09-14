@@ -13,10 +13,12 @@ open Lean
 
 public section
 
-instance : ToJson UInt32 where
+namespace ImportGraph.Json
+
+scoped instance : ToJson UInt32 where
   toJson uint := uint.toNat
 
-instance : FromJson UInt32 where
+scoped instance : FromJson UInt32 where
   fromJson? uint := fromJson? (α := Nat) uint |>.map .ofNat
 
 deriving instance ToJson, FromJson, Repr for IO.Error

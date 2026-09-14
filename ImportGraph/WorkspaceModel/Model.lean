@@ -178,6 +178,9 @@ namespace WorkspaceModel
 /-- Whether errors have been produced when creating the `WorkspaceModel`. -/
 @[inline] def hasErrors (w : WorkspaceModel) := !w.errors.isEmpty
 
+/-- Whether the `WorkspaceModel` contains the given module. -/
+@[inline] def hasModule (mod : Name) (w : WorkspaceModel) := w.idxOfMod.contains mod
+
 /-! ## Lookups -/
 
 variable (m : WorkspaceModel)

@@ -124,20 +124,9 @@ private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceMod
 end WorkspaceModel
 
 open WorkspaceModel in
-/--
-Elaborate a `WorkspaceSummary` into a `WorkspaceModel` by following imports from the
-libraries' roots, plus `extraMods` (curated modules not reachable from any root — e.g. a new
-file not yet added to `Mathlib.lean`) and their imports. We do *not* walk the filesystem, so
-scratch files that no root imports and that aren't in `extraMods` stay out. The resulting
-`mods` array is topologically sorted (see `collect`).
-
-The model is built incrementally: after the packages/libraries scaffold is in place we seed
-an otherwise-empty model and grow it with `collect`, which fills every field except the
-transitive closures `Module.transDeps`/`prevs` (the seam below). Until that seam runs the
-returned model is partial.
-
-Deliberately unoptimized: collection is one sequential recursive pass. Parallel header
-parsing and caching the (per-toolchain, fixed) core graph are later iterations. -/
+/-- Compute a rich `WorkspaceModel` from a `WorkspaceSummary`. This iterates through all the
+modules and parses all imports, incorporating them into an import hierarchy. Any modules in
+`extraMods` are absorbed into the model as well. -/
 def Lake.WorkspaceSummary.toWorkspaceModel (ws : WorkspaceSummary)
     (extraMods : Array Name := #[]) : IO WorkspaceModel := do
   -- Phase 1: handle packages and libraries
@@ -190,8 +179,18 @@ contain module data and *is* validated (by `getWorkspaceSummary`). -/
 def getWorkspaceModel (extraMods : Array Name := #[])
     (useCache := true) (cwd : Option System.FilePath := none) :
     IO WorkspaceModel := do
-  if useCache then if let some wm ← WorkspaceModel.cacheRef.get then
-    return wm
+  if useCache then
+    if let some wm ← WorkspaceModel.cacheRef.get then
+      -- Ensure all `extraMods` are in the cached workspace model.
+      -- In the common case they are, so let's do nothing fancy.
+      if extraMods.all wm.hasModule then
+        return wm
+      else
+        let mut wm := wm
+        for extraMod in extraMods do
+          unless wm.hasModule extraMod do
+            wm ← wm.collect extraMod
+        return wm
   let summary ← getWorkspaceSummary cwd
   let wm ← summary.toWorkspaceModel extraMods
   WorkspaceModel.cacheRef.set wm

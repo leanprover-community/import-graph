@@ -48,6 +48,8 @@ structure PackageSummary extends BasePackage where
   /-- The package's `lean_lib`s. -/
   libs : Array LibrarySummary
   -- TODO: include other targets, e.g. `exe`'s, for import analysis.
+  /-- The package's config file (absolute). We use this (only) for hashing. -/
+  configFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
 /-- A summary of the lake workspace suitable for transport over `Json`. This may be obtained with
@@ -57,24 +59,63 @@ structure WorkspaceSummary extends BaseWorkspace where
   /-- The packages of the workspace, in Lake's workspace order (root first); each
   package's position is its `lakeIdx`. -/
   packages : Array PackageSummary
-  /-- The hash of inputs to this workspace summary: the lakefile, the lake manifest, and the
-  toolchain version. -/
+  /--
+  The hash of inputs to this workspace summary: the lakefile (and the lakefiles of required
+  packages), the lake manifest, the `package-overrides.json`, and the toolchain version and
+  githash. -/
   inputHash : Hash
+  /-- The `.lake/package-overrides.json` filepath (absolute). May not exist. -/
+  packageOverridesFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
-def computeSummaryInputHash (ver : ToolchainVer)
-    (manifestFile rootConfigFile : System.FilePath) : IO Hash := do
-  let hash := Hash.ofHashable ver
-  let hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile manifestFile
-  return hash.mix <|← Hash.ofText <$> IO.FS.readFile rootConfigFile
+private def computeInputHash (leanGitHash : String) (ver : Option ToolchainVer)
+    (manifestFile packageOverridesFile : FilePath)
+    (packageConfigs : Array FilePath) : IO Hash := do
+  let mut hash := Hash.ofHashable ver
+  hash := hash.mix <| Hash.ofText leanGitHash
+  hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile manifestFile
+  if ← packageOverridesFile.pathExists then
+    try
+      hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile packageOverridesFile
+    catch _ => pure () -- ignore it if something went wrong
+  -- Note: `packageConfigs` should (and by default does) include the root package's config as well.
+  for configFile in packageConfigs do
+    hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile configFile
+  return hash
+
+/-- Computes the hash for the given workspace to persist in the summary. This should agree with the
+recomputed hash from the workspace summary if no changes are made to the package configuration. -/
+nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
+  -- Note: we avoid the override with `ws.lakeEnv.lean.githash` instead of `ws.lakeEnv.leanGithash`.
+  -- It's possible the opposite choice is more useful.
+  computeInputHash ws.lakeEnv.lean.githash (← ToolchainVer.ofDir? ws.dir)
+    (manifestFile := ws.manifestFile)
+    (packageOverridesFile := ws.packageOverridesFile)
+    (packageConfigs := ws.packages.map (·.configFile))
+
+/-- Recomputes the input hash for the `WorkspaceSummary` by re-hashing the files at the given
+paths. Also mixes in the hash for the given lean version. -/
+def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceSummary) :
+    IO Hash := do
+  computeInputHash leanGitHash (← ToolchainVer.ofDir? ws.dir)
+    (manifestFile := ws.manifestFile)
+    (packageOverridesFile := ws.packageOverridesFile)
+    (packageConfigs := ws.packages.map (·.configFile))
 
 /-- Recomputes the hash of the data referred to by the paths in `WorkspaceSummary` and compares it
-to the hash in `WorkspaceSummary`. -/
-def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) : IO Bool := do
-  let some newVer ← ToolchainVer.ofDir? ws.dir
-    | throw (.userError s!"Could not find toolchain file in {ws.dir}")
-  let newHash ← computeSummaryInputHash newVer ws.manifestFile ws.rootConfigFile
-  return newHash == ws.inputHash
+to the hash in `WorkspaceSummary`, using the current lean process's git hash.
+
+If `wsDir?` is provided, ensures that the workspace directory provided in the summary is the same
+as the given `wsDir`, else considers it not up-to-date. -/
+def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePath := none) :
+    IO Bool := do
+  try
+    if let some wsDir := wsDir? then
+      unless (← IO.FS.realPath ws.dir).normalize == (← IO.FS.realPath wsDir).normalize do
+        return false
+    return (← ws.recomputedInputHash Lean.githash) == ws.inputHash
+  catch _ =>
+    return false
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
@@ -82,9 +123,11 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version
+  leanGitHash := ws.lakeEnv.leanGithash
   inputHash
   manifestFile := ws.manifestFile
   rootConfigFile := ws.root.configFile
+  packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
     deps := pkg.depPkgs.map (·.wsIdx)
@@ -153,14 +196,13 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     throw (.userError s!"Could not find `.lake` folder at {lakeDirPath}")
   let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
   let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
-  if readCache then
-    if ← cachePath.pathExists then
-      try
-        let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
-            (← IO.FS.readFile cachePath)
-          if ← ws.isUpToDate then
-            return ws
-      catch _ => pure () -- Regenerate if we failed the above for any reason
+  if ← pure readCache <&&> cachePath.pathExists then
+    try
+      let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
+        (← IO.FS.readFile cachePath)
+      if ← ws.isUpToDate (wsDir? := ← wsDir.getDM IO.currentDir) then
+        return ws
+    catch _ => pure () -- Regenerate if we failed the above for any reason
   let out ← IO.Process.run {
     cmd := "lake"
     args := #["exe", WorkspaceSummary.exeName]
