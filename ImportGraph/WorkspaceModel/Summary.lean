@@ -82,10 +82,13 @@ private def computeInputHash (leanGitHash : String) (ver : ToolchainVer)
     try
       hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile packageOverridesFile
     catch _ => pure () -- ignore it if something went wrong
+  -- Note: `packageConfigs` should (and by default does) include the root package's config as well.
   for configFile in packageConfigs do
     hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile configFile
   return hash
 
+/-- Computes the hash for the given workspace to persist in the summary. This should agree with the
+recomputed hash from the workspace sommary if no changes are made to the package configuration. -/
 nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
   let ver ← ToolchainVer.ofDir ws.dir
   computeInputHash ws.lakeEnv.leanGithash ver
@@ -93,6 +96,8 @@ nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
 
+/-- Recomputes the input hash for the `WorkspaceSummary` by re-hashing the files at the given
+paths. Also mixes in the hash for the given lean version. -/
 def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceSummary) :
     IO Hash := do
   let ver ← ToolchainVer.ofDir ws.dir
