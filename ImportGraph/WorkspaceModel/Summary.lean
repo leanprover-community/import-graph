@@ -86,7 +86,9 @@ private def computeInputHash (leanGitHash : String) (ver : Option ToolchainVer)
 /-- Computes the hash for the given workspace to persist in the summary. This should agree with the
 recomputed hash from the workspace summary if no changes are made to the package configuration. -/
 nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
-  computeInputHash ws.lakeEnv.leanGithash (← ToolchainVer.ofDir? ws.dir)
+  -- Note: we avoid the override with `ws.lakeEnv.lean.githash` instead of `ws.lakeEnv.leanGithash`.
+  -- It's possible the opposite choice is more useful.
+  computeInputHash ws.lakeEnv.lean.githash (← ToolchainVer.ofDir? ws.dir)
     (manifestFile := ws.manifestFile)
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
