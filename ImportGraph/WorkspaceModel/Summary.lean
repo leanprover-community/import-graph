@@ -106,6 +106,10 @@ def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceS
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
 
+/- TODO: this does not (yet) guard against the whole repo having been copied.
+This would mean that the copied summary would contain paths which pointed to pre-copying files, and
+may be erroneously considered up-to-date with respect to those files. But we regard this
+possibility as unlikely.
 /-- Recomputes the hash of the data referred to by the paths in `WorkspaceSummary` and compares it
 to the hash in `WorkspaceSummary`, using the current lean process's git hash. -/
 def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) : IO Bool := do
