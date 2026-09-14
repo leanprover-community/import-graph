@@ -72,7 +72,7 @@ This is a thin wrapper around `Lean.parseImports'` that:
 Note: This only sees syntactic imports in the source file.
 It does not account for what declarations are actually used.
 -/
-@[deprecated "Use `System.FilePath.parseImports'` and `Lean.ModuleHeader.filterInit` instead"
+@[deprecated "Use `ImportGraph.System.FilePath.parseImports'` and `ImportGraph.Lean.ModuleHeader.filterInit` instead"
   (since := "2026-09-13")]
 public def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
   -- Note: we use `filter` rather than `erase`, since module-system files may contain
