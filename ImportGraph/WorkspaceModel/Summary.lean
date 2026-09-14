@@ -123,7 +123,7 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version
-  leanGitHash := ws.lakeEnv.leanGithash
+  leanGitHash := ws.lakeEnv.lean.githash
   inputHash
   manifestFile := ws.manifestFile
   rootConfigFile := ws.root.configFile
@@ -205,7 +205,7 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     /-
     Search-path variables inherited from the spawning process (e.g. the language server) describe *its* setup and should not leak into a fresh `lake` invocation.
     -/
-    env := #[("LEAN_PATH", none), ("LEAN_SRC_PATH", none), ("LAKE", none)] }
+    env := #[("LEAN_PATH", none), ("LEAN_SRC_PATH", none)] }
   -- Note: `.lake` is expected to still exist from the earlier check
   atomicWriteFileViaTempSibling cachePath out
   jsonOfString "Failed to get workspace summary" out
