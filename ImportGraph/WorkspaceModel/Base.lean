@@ -57,9 +57,9 @@ deriving ToJson, FromJson, Repr, BEq, Inhabited
 /-- The prefix we use for modelling the Lean toolchain, which is simply `toolchain`. -/
 def toolchainPrefix := `toolchain
 
-/-- A `ToolchainVer` as a `Name`. -/
-@[inline] def ToolchainVer.toToolchainName (ver : ToolchainVer) :=
-  Name.str toolchainPrefix ver.toString
+/-- A Lean githash as a `Name` for uniquely identifying the Lean toolchain. -/
+@[inline] def toolchainName (githash : String) :=
+  Name.str toolchainPrefix githash
 
 /-- Whether a name is of the form `toolchain.<ver>`. -/
 @[inline] def isToolchainName (n : Name) :=
@@ -82,13 +82,11 @@ structure BaseWorkspace where
   dir : FilePath
   /-- The Lean toolchain's sysroot (absolute). -/
   sysroot : FilePath
-  /-- The Lean toolchain's version. -/
-  version : ToolchainVer
+  /-- The Lean toolchain's version, as read from the `lean-toolchain` file, if possible. -/
+  version : Option ToolchainVer
   /-- The git hash of the lean version. -/
   leanGitHash : String
   /-- The path to the lake manifest. Should be uniform, but is allowed to change in lake internals,
   so just in case. -/
   manifestFile : System.FilePath
-  /-- The lakefile of the root package. -/
-  rootConfigFile : FilePath
 deriving ToJson, FromJson, Repr, BEq, Inhabited

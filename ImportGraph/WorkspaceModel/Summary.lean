@@ -61,8 +61,8 @@ structure WorkspaceSummary extends BaseWorkspace where
   packages : Array PackageSummary
   /--
   The hash of inputs to this workspace summary: the lakefile (and the lakefiles of required
-  packages), the lake manifest, the `package-overrides.json`, and the toolchain version and
-  githash. -/
+  packages), the lake manifest, the `package-overrides.json`, the `lean-toolchain` file, and
+  the lean githash. -/
   inputHash : Hash
   /-- The `.lake/package-overrides.json` filepath (absolute). May not exist. -/
   packageOverridesFile : FilePath
@@ -119,14 +119,14 @@ def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePat
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
-    (version : ToolchainVer) (inputHash : Hash) : WorkspaceSummary where
+    (version : Option ToolchainVer) (inputHash : Hash) : WorkspaceSummary where
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version
-  leanGitHash := ws.lakeEnv.leanGithash
+  -- Note: we avoid the override with `ws.lakeEnv.lean.githash` instead of `ws.lakeEnv.leanGithash`.
+  leanGitHash := ws.lakeEnv.lean.githash
   inputHash
   manifestFile := ws.manifestFile
-  rootConfigFile := ws.root.configFile
   packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
@@ -205,7 +205,7 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     /-
     Search-path variables inherited from the spawning process (e.g. the language server) describe *its* setup and should not leak into a fresh `lake` invocation.
     -/
-    env := #[("LEAN_PATH", none), ("LEAN_SRC_PATH", none), ("LAKE", none)] }
+    env := #[("LEAN_PATH", none), ("LEAN_SRC_PATH", none)] }
   -- Note: `.lake` is expected to still exist from the earlier check
   atomicWriteFileViaTempSibling cachePath out
   jsonOfString "Failed to get workspace summary" out
