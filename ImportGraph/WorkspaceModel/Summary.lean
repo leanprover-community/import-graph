@@ -68,13 +68,7 @@ structure WorkspaceSummary extends BaseWorkspace where
   packageOverridesFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
-@[inherit_doc ToolchainVer.ofDir?, inline]
-def ToolchainVer.ofDir (toolchainDir : FilePath) : IO ToolchainVer := do
-  let some ver ← ToolchainVer.ofDir? toolchainDir
-    | throw (.userError s!"Could not find toolchain file in {toolchainDir}")
-  return ver
-
-private def computeInputHash (leanGitHash : String) (ver : ToolchainVer)
+private def computeInputHash (leanGitHash : String) (ver : Option ToolchainVer)
     (manifestFile packageOverridesFile : FilePath)
     (packageConfigs : Array FilePath) : IO Hash := do
   let mut hash := Hash.ofHashable ver
@@ -92,8 +86,7 @@ private def computeInputHash (leanGitHash : String) (ver : ToolchainVer)
 /-- Computes the hash for the given workspace to persist in the summary. This should agree with the
 recomputed hash from the workspace summary if no changes are made to the package configuration. -/
 nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
-  let ver ← ToolchainVer.ofDir ws.dir
-  computeInputHash ws.lakeEnv.leanGithash ver
+  computeInputHash ws.lakeEnv.leanGithash (← ToolchainVer.ofDir? ws.dir)
     (manifestFile := ws.manifestFile)
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
@@ -102,8 +95,7 @@ nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
 paths. Also mixes in the hash for the given lean version. -/
 def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceSummary) :
     IO Hash := do
-  let ver ← ToolchainVer.ofDir ws.dir
-  computeInputHash leanGitHash ver
+  computeInputHash leanGitHash (← ToolchainVer.ofDir? ws.dir)
     (manifestFile := ws.manifestFile)
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
