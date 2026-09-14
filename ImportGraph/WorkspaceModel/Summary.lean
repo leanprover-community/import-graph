@@ -119,7 +119,7 @@ def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePat
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
-    (version : ToolchainVer) (inputHash : Hash) : WorkspaceSummary where
+    (version : Option ToolchainVer) (inputHash : Hash) : WorkspaceSummary where
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version

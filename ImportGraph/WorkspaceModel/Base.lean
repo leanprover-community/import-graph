@@ -82,8 +82,8 @@ structure BaseWorkspace where
   dir : FilePath
   /-- The Lean toolchain's sysroot (absolute). -/
   sysroot : FilePath
-  /-- The Lean toolchain's version. -/
-  version : ToolchainVer
+  /-- The Lean toolchain's version, as read from the `lean-toolchain` file, if possible. -/
+  version : Option ToolchainVer
   /-- The git hash of the lean version. -/
   leanGitHash : String
   /-- The path to the lake manifest. Should be uniform, but is allowed to change in lake internals,
