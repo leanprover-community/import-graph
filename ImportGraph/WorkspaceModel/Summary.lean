@@ -123,6 +123,7 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
   version := version
+  -- Note: we avoid the override with `ws.lakeEnv.lean.githash` instead of `ws.lakeEnv.leanGithash`.
   leanGitHash := ws.lakeEnv.lean.githash
   inputHash
   manifestFile := ws.manifestFile
