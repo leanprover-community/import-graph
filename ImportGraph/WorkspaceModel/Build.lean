@@ -136,9 +136,8 @@ def Lake.WorkspaceSummary.toWorkspaceModel (ws : WorkspaceSummary)
       deps := Bitset.ofArray pkg.deps ∪ {toolchainPkgIdx}
       -- Filled in later:
       libs := ∅, mods := ∅ }
-  let toolchainName := ws.version.toToolchainName
   packages := packages.push
-    { baseName := toolchainName, origName := `lean4, wsIdx := toolchainPkgIdx
+    { baseName := toolchainName ws.leanGitHash, origName := `lean4, wsIdx := toolchainPkgIdx
       dir := ws.sysroot, leanLibDir := ws.sysroot / "lib" / "lean", deps := ∅
       -- Filled in later:
       libs := ∅, mods := ∅ }

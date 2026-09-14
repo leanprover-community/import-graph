@@ -57,9 +57,9 @@ deriving ToJson, FromJson, Repr, BEq, Inhabited
 /-- The prefix we use for modelling the Lean toolchain, which is simply `toolchain`. -/
 def toolchainPrefix := `toolchain
 
-/-- A `ToolchainVer` as a `Name`. -/
-@[inline] def ToolchainVer.toToolchainName (ver : ToolchainVer) :=
-  Name.str toolchainPrefix ver.toString
+/-- A Lean githash as a `Name` for uniquely identifying the Lean toolchain. -/
+@[inline] def toolchainName (githash : String) :=
+  Name.str toolchainPrefix githash
 
 /-- Whether a name is of the form `toolchain.<ver>`. -/
 @[inline] def isToolchainName (n : Name) :=
