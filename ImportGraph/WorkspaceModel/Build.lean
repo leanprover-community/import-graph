@@ -136,9 +136,8 @@ def Lake.WorkspaceSummary.toWorkspaceModel (ws : WorkspaceSummary)
       deps := Bitset.ofArray pkg.deps ∪ {toolchainPkgIdx}
       -- Filled in later:
       libs := ∅, mods := ∅ }
-  let toolchainName := ws.version.toToolchainName
   packages := packages.push
-    { baseName := toolchainName, origName := `lean4, wsIdx := toolchainPkgIdx
+    { baseName := toolchainName ws.leanGitHash, origName := `lean4, wsIdx := toolchainPkgIdx
       dir := ws.sysroot, leanLibDir := ws.sysroot / "lib" / "lean", deps := ∅
       -- Filled in later:
       libs := ∅, mods := ∅ }
@@ -177,9 +176,10 @@ validity of the cache in the case where adjacent file imports are changed.
 Note that this also implicitly relies on the workspace summary json cache, but that cache does not
 contain module data and *is* validated (by `getWorkspaceSummary`). -/
 def getWorkspaceModel (extraMods : Array Name := #[])
-    (useCache := true) (cwd : Option System.FilePath := none) :
+    (readInteractiveCache := true) (readPersistentCache := true)
+    (cwd : Option System.FilePath := none) :
     IO WorkspaceModel := do
-  if useCache then
+  if readInteractiveCache then
     if let some wm ← WorkspaceModel.cacheRef.get then
       -- Ensure all `extraMods` are in the cached workspace model.
       -- In the common case they are, so let's do nothing fancy.
@@ -191,7 +191,7 @@ def getWorkspaceModel (extraMods : Array Name := #[])
           unless wm.hasModule extraMod do
             wm ← wm.collect extraMod
         return wm
-  let summary ← getWorkspaceSummary cwd
+  let summary ← getWorkspaceSummary cwd (readCache := readPersistentCache)
   let wm ← summary.toWorkspaceModel extraMods
   WorkspaceModel.cacheRef.set wm
   return wm
