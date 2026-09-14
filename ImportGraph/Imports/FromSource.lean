@@ -11,7 +11,7 @@ public import Lean.Elab.ParseImportsFast
 # Source-File-Based Import Analysis
 
 This module provides functions for analyzing imports by parsing source files directly,
-as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`) Specifically:
+as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`). Specifically:
 
 - `ImportGraph.parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
   string or file
@@ -27,7 +27,7 @@ public section
 open Lean System
 
 /--
-Parse all imports in a source file at `path` and return their module names.
+Parse the header of the source file at `path`, returning its `ModuleHeader`.
 
 This is a thin wrapper around `Lean.parseImports'` which:
 - Reads the file from disk
@@ -38,15 +38,18 @@ Note that it does not filter out `Init` modules. See `ModuleHeader.filterInit`.
 def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := do
   Lean.parseImports' (← IO.FS.readFile path) (path.fileName.getD "<input>")
 
-/-- Removes `Init` imports from `ModuleHeader`. -/
+/-- Removes every import in the `Init` namespace (`Init` itself and `Init.*`) from a
+`ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
 
 namespace ImportGraph
 
--- TODO: consider returning `prelude`. `parseImports'` translates a `prelude` into `Init` imports.
+-- TODO: consider reporting whether the file was marked `prelude`. That is not recoverable from
+-- the result: `parseImports'` gives a `prelude` file no implicit `Init` imports, and gives every
+-- other file an implicit `public import Init` and `meta import Init`.
 /-- Like `parseImports'`, but pure. Instead of returning the `fileName:pos <msg>` error of
-`parseImports'` of `parseImports'`, returns `(fileMap, pos, <msg>)`. -/
+`parseImports'`, returns `(fileMap, pos, <msg>)`. -/
 def parseImports? (input : String) : Except (FileMap × Position × String) ModuleHeader := do
   let s := ParseImports.main input (ParseImports.whitespace input {})
   let some err := s.error?
