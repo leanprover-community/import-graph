@@ -90,7 +90,7 @@ private def computeInputHash (leanGitHash : String) (ver : ToolchainVer)
   return hash
 
 /-- Computes the hash for the given workspace to persist in the summary. This should agree with the
-recomputed hash from the workspace sommary if no changes are made to the package configuration. -/
+recomputed hash from the workspace summary if no changes are made to the package configuration. -/
 nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
   let ver ← ToolchainVer.ofDir ws.dir
   computeInputHash ws.lakeEnv.leanGithash ver
@@ -108,14 +108,20 @@ def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceS
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
 
-/- TODO: this does not (yet) guard against the whole repo having been copied.
-This would mean that the copied summary would contain paths which pointed to pre-copying files, and
-may be erroneously considered up-to-date with respect to those files. But we regard this
-possibility as unlikely. -/
 /-- Recomputes the hash of the data referred to by the paths in `WorkspaceSummary` and compares it
-to the hash in `WorkspaceSummary`, using the current lean process's git hash. -/
-def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) : IO Bool := do
-  return (← ws.recomputedInputHash Lean.githash) == ws.inputHash
+to the hash in `WorkspaceSummary`, using the current lean process's git hash.
+
+If `wsDir?` is provided, ensures that the workspace directory provided in the summary is the same
+as the given `wsDir`, else considers it not up-to-date. -/
+def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePath := none) :
+    IO Bool := do
+  try
+    if let some wsDir := wsDir? then
+      unless (← IO.FS.realPath ws.dir).normalize == (← IO.FS.realPath wsDir).normalize do
+        return false
+    return (← ws.recomputedInputHash Lean.githash) == ws.inputHash
+  catch _ =>
+    return false
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
@@ -194,7 +200,7 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) : IO WorkspaceSummary 
     try
       let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
         (← IO.FS.readFile cachePath)
-      if ← ws.isUpToDate then
+      if ← ws.isUpToDate (wsDir? := ← wsDir.getDM IO.currentDir) then
         return ws
     catch _ => pure () -- Regenerate if we failed the above for any reason
   let out ← IO.Process.run {
