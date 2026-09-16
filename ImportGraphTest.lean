@@ -1,6 +1,7 @@
 import ImportGraphTest.AnotherFileWithTransitiveImports
 import ImportGraphTest.Dot
 import ImportGraphTest.FileWithTransitiveImports
+import ImportGraphTest.FindHome.Viewpoint
 import ImportGraphTest.FromSource
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
@@ -11,5 +12,5 @@ import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
 import ImportGraphTest.Shake.Algebra
-import ImportGraphTest.Widget.GoToModule.Msg
 import ImportGraphTest.Widget.Collapsible
+import ImportGraphTest.Widget.GoToModule.Msg
