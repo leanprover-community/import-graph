@@ -13,7 +13,7 @@ open Lean
 
 public section
 
-namespace ImportGraph.Json
+namespace ImportGraph.Lean.Json
 
 scoped instance : ToJson UInt32 where
   toJson uint := uint.toNat
