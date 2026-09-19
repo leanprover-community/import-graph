@@ -9,6 +9,7 @@ public import Lake.Config.Workspace
 public import Lean.Data.Json
 public import ImportGraph.WorkspaceModel.Base
 
+meta import Lean.Elab.Term.TermElabM
 import ImportGraph.Lake
 
 /-!
@@ -130,6 +131,9 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
+    -- NOTE: if `depPkgs` changes, we should use whatever API allows us to get the indices of the
+    -- dependent pacakges. It's acceptable if these become transitive dependencies instead of
+    -- direct dependencies; in this case, we should rename `PackageSummary.deps` to `transDeps`.
     deps := pkg.depPkgs.map (·.wsIdx)
     libs := pkg.leanLibs.filterMap fun lib => do
       -- This is a hack to allow us to test the import hierarchy while within `importGraph`.
@@ -156,27 +160,13 @@ private def lakeDirPath (wsDir : Option FilePath) : IO System.FilePath :=
 
 /-- A (new) folder in the given `.lake` directory for storing import graph data. -/
 def importGraphBuildDirPath (lakeDir : System.FilePath) : System.FilePath :=
-  lakeDir / "importGraph"
+  -- We use the decapitalized root of the current module for future-proofing.
+  lakeDir / by_elab return toExpr (← getMainModule).getRoot.toString.decapitalize
 
 /-- Given a special-purpose build folder in the lake directory, the path to
 `workspace-summary.json`, where we cache the workspace summary. -/
 def WorkspaceSummary.cachePath (importGraphBuildDirPath : System.FilePath) : System.FilePath :=
   importGraphBuildDirPath / "workspace-summary.json"
-
--- TODO: think about this more. Is it really better than `withTempFile`?
-/-- Atomically write `content` to `path` via a sibling temp file + rename. -/
-private def atomicWriteFileViaTempSibling (path : FilePath) (content : String) : IO Unit := do
-  let dir := path.parent.getD "."
-  IO.FS.createDirAll dir
-  -- Unique temp name IN THE SAME DIRECTORY, so the rename stays on one filesystem.
-  let stamp ← IO.monoNanosNow
-  let tmp := dir / s!"{path.fileName.getD "temp"}.{stamp}.tmp"
-  try
-    IO.FS.writeFile tmp content   -- open, write, deterministic close+flush
-    IO.FS.rename tmp path         -- atomic same-fs replace
-  catch e =>
-    try IO.FS.removeFile tmp catch _ => pure ()  -- best-effort cleanup
-    throw e
 
 /--
 Get the workspace summary by calling out to `lake exe import-graph-workspace-summary`, which emits
@@ -211,8 +201,11 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     Search-path variables inherited from the spawning process (e.g. the language server) describe *its* setup and should not leak into a fresh `lake` invocation.
     -/
     env := #[("LEAN_PATH", none), ("LEAN_SRC_PATH", none)] }
-  -- Note: `.lake` is expected to still exist from the earlier check
-  atomicWriteFileViaTempSibling cachePath out
+  -- Note: `.lake` is expected to still exist from the earlier check.
+  -- We regenerate the cache if the result of this fails to parse, so we don't
+  -- take pains to prevent bad caches due to killing the process mid-write.
+  try IO.FS.writeFile cachePath out catch ex =>
+    throw (IO.userError s!"Failed to write workspace summary cache:\n{ex}")
   jsonOfString "Failed to get workspace summary" out
 where jsonOfString errMsgHeader str : IO WorkspaceSummary := do
   let json ← IO.ofExcept <| Json.parse str |>.mapError
