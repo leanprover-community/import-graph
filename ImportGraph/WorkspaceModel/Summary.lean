@@ -131,6 +131,9 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
   packageOverridesFile := ws.packageOverridesFile
   packages := ws.packages.map fun pkg => { pkg with
     leanLibDir := pkg.leanLibDir
+    -- NOTE: if `depPkgs` changes, we should use whatever API allows us to get the indices of the
+    -- dependent pacakges. It's acceptable if these become transitive dependencies instead of
+    -- direct dependencies; in this case, we should rename `PackageSummary.deps` to `transDeps`.
     deps := pkg.depPkgs.map (·.wsIdx)
     libs := pkg.leanLibs.filterMap fun lib => do
       -- TODO: include non-default targets with a flag instead of excluding them entirely
