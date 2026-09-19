@@ -71,9 +71,10 @@ partial def mkTransDeps (env : Environment) : ArrayHierarchy := Id.run do
     transDeps := transDeps.push transImps.linearize
   return transDeps
 
-/-- Assuming that the indices in `Needs` correspond to module indices **in the provided
-environment**, record an `Import` for each set index in `Needs` in some order. Note that this
-should **not** be used in tandem with a `WorkspaceModel`, which uses different indices for modules
+/-- Assuming that the indices in `Needs` correspond to module indices
+**in the provided environment**, record an `Import` for each set index
+in `Needs` in some order. Note that this should **not** be used in tandem
+with a `WorkspaceModel`,which uses different indices for modules
 than those used in the environment. -/
 def toRawImports (env : Environment)
     (n : Needs) (skipInit := true) : Array Import := Id.run do
