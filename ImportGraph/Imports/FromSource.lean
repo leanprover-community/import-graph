@@ -13,7 +13,7 @@ public import Lean.Elab.ParseImportsFast
 This module provides functions for analyzing imports by parsing source files directly,
 as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`). Specifically:
 
-- `ImportGraph.parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
+- `parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
   string or file
 - `Lean.ModuleHeader.filterInit`: Remove `Init` imports from a parsed header
 - `parseCurrentHeader`: parse the imports of the current file from the `FileMap`
@@ -38,8 +38,8 @@ Note that it does not filter out `Init` modules. See `ModuleHeader.filterInit`.
 def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := do
   Lean.parseImports' (← IO.FS.readFile path) path.toString
 
-/-- Removes every import in the `Init` namespace (`Init` itself and `Init.*`) from a
-`ModuleHeader`. -/
+/-- Removes every import in the `Init` namespace (`Init` itself and `Init.*`)
+from a `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
 
