@@ -9,6 +9,7 @@ public import Lake.Config.Workspace
 public import Lean.Data.Json
 public import ImportGraph.WorkspaceModel.Base
 
+meta import Lean.Elab.Term.TermElabM
 import ImportGraph.Lake
 
 /-!
@@ -153,7 +154,8 @@ private def lakeDirPath (wsDir : Option FilePath) : IO System.FilePath :=
 
 /-- A (new) folder in the given `.lake` directory for storing import graph data. -/
 def importGraphBuildDirPath (lakeDir : System.FilePath) : System.FilePath :=
-  lakeDir / "importGraph"
+  -- We use the decapitalized root of the current module for future-proofing.
+  lakeDir / by_elab return toExpr (← getMainModule).getRoot.toString.decapitalize
 
 /-- Given a special-purpose build folder in the lake directory, the path to
 `workspace-summary.json`, where we cache the workspace summary. -/
