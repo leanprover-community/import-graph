@@ -385,6 +385,13 @@ def brailleCellAt (i : Nat) (n : Needs) : Char := Id.run do
       dots := dots ||| (1 <<< (3 * col + row))
   return .ofNat (0x2800 + dots)
 
+/-- A braille cell in brackets depicting the set of `NeedsKind`s of `n` at index `i`. The left
+column holds non-meta needs, and the right column meta needs; the top row holds public needs, the
+middle row private, and the bottom row private-of-private.
+
+For the braille cell character without brackets, see `Needs.brailleCellAt`. -/
+@[inline] def toStringAt (i : Nat) (n : Needs) : String := s!"[{n.brailleCellAt i}]"
+
 /-- Represents a `Needs` as a string of the form e.g. `│⠇│⠑│⠁│⠝│`, where each braille cell
 represents the set of `NeedsKind`s expressed by a single "column" of the `Needs` (i.e. at a given
 index). The left column of each Braille cell are non-meta needs, and the right column holds meta

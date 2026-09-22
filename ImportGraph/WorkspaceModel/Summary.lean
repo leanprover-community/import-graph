@@ -136,8 +136,11 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
     -- direct dependencies; in this case, we should rename `PackageSummary.deps` to `transDeps`.
     deps := pkg.depPkgs.map (·.wsIdx)
     libs := pkg.leanLibs.filterMap fun lib => do
-      -- TODO: include non-default targets with a flag instead of excluding them entirely
-      guard <| pkg.defaultTargets.contains lib.name
+      -- This is a hack to allow us to test the import hierarchy while within `importGraph`.
+      -- This does not add `ImportGraphTest` to the hierarchy outside of `importGraph`.
+      unless pkg.isRoot && lib.name == `ImportGraphTest do
+        -- TODO: include non-default targets with a flag instead of excluding them entirely
+        guard <| pkg.defaultTargets.contains lib.name
       return {
         name := lib.name
         srcDir := lib.srcDir
@@ -173,6 +176,8 @@ in the language server causes a crash.)
 Before calling out to the executable, this function checks a cache file in the `.lake` folder and
 determines whether it's up-to-date. If so, it skips the executable call. If not, and it does call
 out to the executable, then we also write the result to that cache file.
+
+If `readCache := false`, do not read from the cache, but still write to it.
 -/
 def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
     IO WorkspaceSummary := do
