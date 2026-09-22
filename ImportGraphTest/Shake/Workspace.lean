@@ -14,16 +14,13 @@ It also tests a small artificial hierarchy in the adjacent folder `ImportGraphTe
 - module `aB`: `import A; public import B`
 - module `bc`: `import aB; import C` (receives `B` and `C` privately)
 
-The current module is excluded because it does not come from a default target and does not live
-above `bc`, which is included via `extraMods`.
-
 Recall that a public (transitive) import looks like `⠃` and a private import looks like `⠂`.
 -/
 
 open ImportGraph Lean Shake
 
 /--
-info: Has `ImportGraphTest.Shake.Workspace`: false
+info: Has `ImportGraphTest.Shake.Workspace`: true
 
 `ImportGraph.WorkspaceModel.Summary` > `ImportGraph.WorkspaceModel.Build`: [⠃]
 
