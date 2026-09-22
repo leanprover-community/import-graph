@@ -1,6 +1,6 @@
 module
 
-public meta import ImportGraph.WorkspaceModel.Build
+meta import ImportGraph.WorkspaceModel.Build
 import Lean.Elab.Command
 
 /-!
