@@ -4,11 +4,11 @@ import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FromSource
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
-import ImportGraphTest.Unused
-import ImportGraphTest.Used
-import ImportGraphTest.ToTarget
 import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Shake.Workspace
+import ImportGraphTest.ToTarget
+import ImportGraphTest.Unused
+import ImportGraphTest.Used
 import ImportGraphTest.Widget.GoToModule.Msg
 import ImportGraphTest.Widget.Collapsible
 import ImportGraphTest.Widget.Copy
