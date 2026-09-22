@@ -37,6 +37,14 @@ ImportGraphTest.Shake.Workspace.B: [⠀|⠇|⠀|⠀|⠀]
 ImportGraphTest.Shake.Workspace.C: [⠀|⠀|⠇|⠀|⠀]
 ImportGraphTest.Shake.Workspace.aB: [⠂|⠃|⠀|⠇|⠀]
 ImportGraphTest.Shake.Workspace.bc: [⠀|⠂|⠂|⠂|⠇]
+
+Package of `ImportGraph.WorkspaceModel.Build`: importGraph
+
+Library of `ImportGraph.WorkspaceModel.Build`: ImportGraph
+
+Package of `ImportGraphTest.Shake.Workspace.A`: importGraph
+
+Library of `ImportGraphTest.Shake.Workspace.A`: ImportGraphTest
 -/
 #guard_msgs in
 run_cmd
@@ -88,5 +96,11 @@ run_cmd
     s!"{modModIdx.1}: [{"|".intercalate chars.toList}]"
   let header := s!"[{"|".intercalate <| testMods.map (·.getString!) |>.toList}]"
   msgs := msgs.push m!"{header}\n{"\n".intercalate <| testDepStrings.toList}"
+
+  msgs := msgs.push m!"Package of `{buildMod}`: {w.pkgOfModIdx! buildModIdx |>.origName}"
+  msgs := msgs.push m!"Library of `{buildMod}`: {w.libOfModIdx! buildModIdx |>.name}"
+  let (testMod, testModIdx) := testModIdxs[0]!
+  msgs := msgs.push m!"Package of `{testMod}`: {w.pkgOfModIdx! testModIdx |>.origName}"
+  msgs := msgs.push m!"Library of `{testMod}`: {w.libOfModIdx! testModIdx |>.name}"
 
   logInfo <| m!"\n\n".joinSep msgs.toList
