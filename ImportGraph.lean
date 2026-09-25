@@ -10,8 +10,10 @@ public import ImportGraph.Imports.Pretty
 public import ImportGraph.Imports.Redundant
 public import ImportGraph.Imports.RequiredModules
 public import ImportGraph.Imports.Unused
+public import ImportGraph.Lake
 public import ImportGraph.Lean.EnvExtension
 public import ImportGraph.Lean.Environment
+public import ImportGraph.Lean.Json
 public import ImportGraph.Lean.Name
 public import ImportGraph.Lean.Syntax
 public import ImportGraph.Lean.WithImportModules
@@ -32,3 +34,7 @@ public import ImportGraph.Util.FindSorry
 public meta import ImportGraph.Widget.GoToModule
 public meta import ImportGraph.Widget.Collapsible
 public meta import ImportGraph.Widget.Copy
+public import ImportGraph.WorkspaceModel.Base
+public import ImportGraph.WorkspaceModel.Build
+public import ImportGraph.WorkspaceModel.Model
+public import ImportGraph.WorkspaceModel.Summary
