@@ -26,19 +26,6 @@ public section
 
 open Lean System
 
-namespace ImportGraph
-
--- TODO: consider returning `prelude`. `parseImports'` translates a `prelude` into `Init` imports.
-/-- Like `parseImports'`, but pure. Instead of returning the `fileName:pos <msg>` error of
-`parseImports'` of `parseImports'`, returns `(fileMap, pos, <msg>)`. -/
-def parseImports? (input : String) : Except (FileMap × Position × String) ModuleHeader := do
-  let s := ParseImports.main input (ParseImports.whitespace input {})
-  let some err := s.error?
-    | return { s with }
-  let fileMap := input.toFileMap
-  let pos := fileMap.toPosition s.pos
-  throw (fileMap, pos, err)
-
 /--
 Parse the header of the source file at `path`, returning its `ModuleHeader`.
 
@@ -55,6 +42,21 @@ def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := 
 from a `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
+
+namespace ImportGraph
+
+-- TODO: consider reporting whether the file was marked `prelude`. That is not recoverable from
+-- the result: `parseImports'` gives a `prelude` file no implicit `Init` imports, and gives every
+-- other file an implicit `public import Init` and `meta import Init`.
+/-- Like `parseImports'`, but pure. Instead of returning the `fileName:pos <msg>` error of
+`parseImports'`, returns `(fileMap, pos, <msg>)`. -/
+def parseImports? (input : String) : Except (FileMap × Position × String) ModuleHeader := do
+  let s := ParseImports.main input (ParseImports.whitespace input {})
+  let some err := s.error?
+    | return { s with }
+  let fileMap := input.toFileMap
+  let pos := fileMap.toPosition s.pos
+  throw (fileMap, pos, err)
 
 /--
 Parses the header of the current file via the source string present in the ambient `FileMap`.
@@ -94,7 +96,6 @@ where
   | Name.str p h => go p / h
   | _ => panic! "ill-formed import"
 
-open ImportGraph in
 /--
 Compute the transitive closure of imports starting from a source file.
 
