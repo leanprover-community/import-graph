@@ -42,16 +42,23 @@ resulting import block in a standard fashion, ensuring that the same modules are
 same visibilities and phases. It does **not** take into account the declarations or usages of those
 modules in the current file.
 
-`#norm_imports` will also ignore (and remove) any direct imports of `ImportGraph.Tools.NormImports`
-or `ImportGraph.Tools`. -/
+`#norm_imports` will keep any direct imports of `ImportGraph.Tools.NormImports`,
+`ImportGraph.Tools`, or `ImportGraph` in place, while ignoring them for the caluclation
+of the redundant imports. -/
 elab tk:"#norm_imports" : command => do
   unless (← getEnv).header.isModule do
     -- TODO: handle non-modules. The internals should still work.
     throwError "`#norm_imports` currently only works in the module system."
   let transDeps := (← getEnv).mkTransDeps
-  let currentTransNeeds := (← getEnv).currentTransNeeds transDeps
-    (excluding := {`ImportGraph.Tools.NormImports, `ImportGraph.Tools})
-  let reducedImps := (← getEnv).toRawImports <| currentTransNeeds.reduce transDeps
+
+  -- ignore direct imports of the script for the transitive import calculation and
+  -- add them back in afterwards
+  let ignoring: NameSet := {`ImportGraph.Tools.NormImports, `ImportGraph.Tools, `ImportGraph}
+  let ignoredImports : Array Import := (← getEnv).header.imports.filter
+    (ignoring.contains ·.module) |>.toList.eraseDups.toArray
+  let currentTransNeeds := (← getEnv).currentTransNeeds transDeps (excluding := ignoring)
+  let reducedImps := ((← getEnv).toRawImports <| currentTransNeeds.reduce transDeps) ++ ignoredImports
+
   -- TODO: allow the user to filter out the `#norm_imports` import?
   let (header, _, log) ← parseCurrentHeader
   if log.hasErrors then

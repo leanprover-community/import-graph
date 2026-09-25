@@ -1,13 +1,12 @@
 module
 
-
 import all Lean.Syntax
 
 public meta import ImportGraph.Tools.NormImports
 
 public import ImportGraph.Imports.Pretty
 
-
+        public meta import ImportGraph.Tools.NormImports
 
 import ImportGraph.Lean.EnvExtension -- redundant
 
@@ -18,7 +17,8 @@ import ImportGraph.Lean.EnvExtension -- redundant
 /--
 warning: Imports can be normalized, but some comments could not be carried over. Please review the comment that will be inserted after the imports.
 
-  [apply] public import ImportGraph.Imports.Pretty
+  [apply] public meta import ImportGraph.Tools.NormImports
+  public import ImportGraph.Imports.Pretty
   public import ImportGraph.Shake.EnvExtension
   ⏎
   import all Lean.Syntax
