@@ -11,10 +11,11 @@ public import Lean.Elab.ParseImportsFast
 # Source-File-Based Import Analysis
 
 This module provides functions for analyzing imports by parsing source files directly,
-as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`) Specifically:
+as an alternative to `Environment`-based analysis (e.g. in `ImportGraph.Imports`). Specifically:
 
-- `ImportGraph.parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
+- `parseImports?`, `System.FilePath.parseImports'`: Parse direct imports from a single
   string or file
+- `Lean.ModuleHeader.filterInit`: Remove `Init` imports from a parsed header
 - `parseCurrentHeader`: parse the imports of the current file from the `FileMap`
 - `modToRelFilePath`: like `modToFilePath`, but does not insert a leading file separator
 - `findTransitiveImportsFromSource`: Compute a nameset of the transitive closure of imports from
@@ -39,7 +40,7 @@ def parseImports? (input : String) : Except (FileMap × Position × String) Modu
   throw (fileMap, pos, err)
 
 /--
-Parse all imports in a source file at `path` and return their module names.
+Parse the header of the source file at `path`, returning its `ModuleHeader`.
 
 This is a thin wrapper around `Lean.parseImports'` which:
 - Reads the file from disk
@@ -48,9 +49,10 @@ This is a thin wrapper around `Lean.parseImports'` which:
 Note that it does not filter out `Init` modules. See `ModuleHeader.filterInit`.
 -/
 def System.FilePath.parseImports' (path : System.FilePath) : IO ModuleHeader := do
-  Lean.parseImports' (← IO.FS.readFile path) (path.fileName.getD "<input>")
+  Lean.parseImports' (← IO.FS.readFile path) path.toString
 
-/-- Removes `Init` imports from `ModuleHeader`. -/
+/-- Removes every import in the `Init` namespace (`Init` itself and `Init.*`)
+from a `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
 
@@ -72,7 +74,7 @@ This is a thin wrapper around `Lean.parseImports'` that:
 Note: This only sees syntactic imports in the source file.
 It does not account for what declarations are actually used.
 -/
-@[deprecated "Use `System.FilePath.parseImports'` and `Lean.ModuleHeader.filterInit` instead"
+@[deprecated "Use `ImportGraph.System.FilePath.parseImports'` and `ImportGraph.Lean.ModuleHeader.filterInit` instead"
   (since := "2026-09-13")]
 public def findImportsFromSource (path : System.FilePath) : IO (Array Name) := do
   -- Note: we use `filter` rather than `erase`, since module-system files may contain
