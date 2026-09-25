@@ -25,6 +25,7 @@ public meta import ImportGraph.Tools
 public meta import ImportGraph.Tools.FindHome
 public meta import ImportGraph.Tools.ImportDiff
 public meta import ImportGraph.Tools.MinImports
+public meta import ImportGraph.Tools.NormImports
 public meta import ImportGraph.Tools.RedundantImports
 public import ImportGraph.Util.CurrentModule
 public import ImportGraph.Util.FindSorry
