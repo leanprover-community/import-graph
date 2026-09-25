@@ -160,13 +160,17 @@ private def lakeDirPath (wsDir : Option FilePath) : IO System.FilePath :=
 
 /-- A (new) folder in the given `.lake` directory for storing import graph data. -/
 def importGraphBuildDirPath (lakeDir : System.FilePath) : System.FilePath :=
-  -- We use the decapitalized root of the current module for future-proofing.
-  lakeDir / by_elab return toExpr (← getMainModule).getRoot.toString.decapitalize
+  lakeDir / "importGraph"
+
+/-- The directory in which the cache lives. This is currently
+`importGraphBuildDirPath := .lake/importGraph/`, a directory exclusively for special import graph
+data such as the workspace summary cache. -/
+def WorkspaceSummary.cacheDirPath := importGraphBuildDirPath
 
 /-- Given a special-purpose build folder in the lake directory, the path to
 `workspace-summary.json`, where we cache the workspace summary. -/
-def WorkspaceSummary.cachePath (importGraphBuildDirPath : System.FilePath) : System.FilePath :=
-  importGraphBuildDirPath / "workspace-summary.json"
+def WorkspaceSummary.cachePath (cacheDir : System.FilePath) : System.FilePath :=
+  cacheDir / "workspace-summary.json"
 
 /--
 Get the workspace summary by calling out to `lake exe import-graph-workspace-summary`, which emits
@@ -184,8 +188,8 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
   let lakeDirPath ← lakeDirPath wsDir
   unless ← lakeDirPath.isDir do
     throw (.userError s!"Could not find `.lake` folder at {lakeDirPath}")
-  let importGraphBuildDirPath := importGraphBuildDirPath lakeDirPath
-  let cachePath := WorkspaceSummary.cachePath importGraphBuildDirPath
+  let cacheDirPath := WorkspaceSummary.cacheDirPath lakeDirPath
+  let cachePath := WorkspaceSummary.cachePath cacheDirPath
   if ← pure readCache <&&> cachePath.pathExists then
     try
       let ws ← jsonOfString s!"Failed to get workspace summary from cache file at {cachePath}"
@@ -204,7 +208,10 @@ def getWorkspaceSummary (wsDir : Option FilePath := none) (readCache := true) :
   -- Note: `.lake` is expected to still exist from the earlier check.
   -- We regenerate the cache if the result of this fails to parse, so we don't
   -- take pains to prevent bad caches due to killing the process mid-write.
-  try IO.FS.writeFile cachePath out catch ex =>
+  try
+    IO.FS.createDirAll cacheDirPath
+    IO.FS.writeFile cachePath out
+  catch ex =>
     throw (IO.userError s!"Failed to write workspace summary cache:\n{ex}")
   jsonOfString "Failed to get workspace summary" out
 where jsonOfString errMsgHeader str : IO WorkspaceSummary := do
