@@ -17,9 +17,11 @@ import Std.Data.HashMap.AdditionalOperations
 /-!
 # `WorkspaceModel` and shake
 
-This file defines interactions between a `WorkspaceModel` and shake. The import hierarchy and workspace model data allows us to turn needs into imports and  Notably, it provides
+This file defines interactions between a `WorkspaceModel` and shake. The import hierarchy and
+workspace model data allows us to turn needs into imports and compare different imports with
+respect to minimality. Notably, it provides
 
-- `WorkspaceModel.toRawImports`, which converts the indices in a `Needs` into `Import`s (without)
+- `WorkspaceModel.toRawImports`, which converts the indices in a `Needs` into `Import`s (without
   doing any reduction)
 - `DeclNeeds.toSimultaneousImportNeeds`, which bakes the needs expressed in `DeclNeeds` into a
   single `ImportNeeds`
