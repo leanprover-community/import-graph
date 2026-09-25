@@ -4,6 +4,7 @@ import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FromSource
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
+import ImportGraphTest.NormImports
 import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Shake.Workspace
 import ImportGraphTest.ToTarget
