@@ -37,7 +37,7 @@ namespace ImportGraph
 model, record an `Import` for each set index in `Needs` in some order. This does **not** remove
 redundant imports. By default, this skips modules with prefix `Init`. -/
 def WorkspaceModel.toRawImports (w : WorkspaceModel) (n : Needs) (skipInit := true) :
-  Array Import := Id.run do
+    Array Import := Id.run do
   let mut out := #[]
   for (k, i) in n.highToLow do
     let module := w.getMod! i |>.name
