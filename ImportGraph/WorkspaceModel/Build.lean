@@ -274,4 +274,4 @@ def getWorkspaceModel (extraMods : Array Name := #[])
   WorkspaceModel.cacheRef.set wm
   return wm
 
-end ImportGraph
+end ImportGraph.Lake.WorkspaceSummary
