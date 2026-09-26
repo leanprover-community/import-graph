@@ -194,6 +194,14 @@ def getToolchainLibs (ws : WorkspaceSummary) : IO (Array Lake.LibrarySummary) :=
     }
   return toolchainLibs
 
+/-- The "main" user-facing toolchain libraries, `Lean` and `Std`, with `Init` and `Lake` if their
+corresponding flags are `true` (`false` by default). -/
+def mainToolchainLibs (withInit := false) (withLake := false) : NameSet := Id.run do
+  let mut libs := {`Lean, `Std}
+  if withInit then libs := libs.insert `Init
+  if withLake then libs := libs.insert `Lake
+  return libs
+
 /-- Compute a rich `WorkspaceModel` from a `WorkspaceSummary`. This iterates through all the
 modules and parses all imports, incorporating them into an import hierarchy. Any modules in
 `extraMods` are absorbed into the model as well. -/
