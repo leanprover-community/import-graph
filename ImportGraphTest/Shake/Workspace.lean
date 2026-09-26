@@ -108,20 +108,26 @@ run_cmd
   logInfo <| m!"\n\n".joinSep msgs.toList
 
 -- The following test checks that we've found the correct toolchain data.
-/--
-info: `Lake.lean` in `lakeSrcDir`: true
-`Init.lean` in `leanSrcDir`: true
-`Init.olean` in `leanLibDir`: true
--/
-#guard_msgs in
 run_cmd do
   let s ← getWorkspaceSummary
-  logInfo m!"\
-    `Lake.lean` in `lakeSrcDir`: {← s.lakeSrcDir / "Lake.lean" |>.pathExists}\n\
-    `Init.lean` in `leanSrcDir`: {← s.leanSrcDir / "Init.lean" |>.pathExists}\n\
-    `Init.olean` in `leanLibDir`: {← s.leanLibDir / "Init.olean" |>.pathExists}"
+  let lakeSrc := s.lakeSrcDir / "Lake.lean"
+  unless ← lakeSrc.pathExists do
+    throwError "Lake.lean not at {lakeSrc}"
+  let initSrc := s.leanSrcDir / "Init.lean"
+  unless ← initSrc.pathExists do
+    throwError "Init.lean not at {initSrc}"
+  let initOlean := s.leanLibDir / "Init.olean"
+  unless ← initOlean.pathExists do
+    throwError "Init.olean not at {initOlean}"
   let wm ← getWorkspaceModel
   if wm.hasErrors then throwError "Errors while getting workspace model:\n{wm.errors}"
-  let testedCoreLibs := #[`Lean, `Init, `Std, `Lake]
-  unless testedCoreLibs.all fun libName => wm.libs.any (·.name == libName) do
-    throwError "One of the core libraries {testedCoreLibs} was not in the model."
+  let testedCoreLibs := WorkspaceModel.mainToolchainLibs (withInit := true) (withLake := true)
+  for libName in testedCoreLibs do
+    let some libIdx := wm.getLibIdx? wm.toolchainPkgIdx libName
+      | throwError "The core library `{libName}` was not in the model."
+    unless
+      (wm.getLib! libIdx).srcDir == (if libName == `Lake then s.lakeSrcDir else s.leanSrcDir)
+    do
+      throwError "Incorrect source directory for core library {libName}:\n\
+        model: {(wm.getLib! libIdx).srcDir}\n\
+        summary: {if libName == `Lake then s.lakeSrcDir else s.leanSrcDir}"
