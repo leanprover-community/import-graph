@@ -14,6 +14,8 @@ import Lean.Compiler.NoncomputableAttr
 import ImportGraph.Shake.EnvExtension
 import ImportGraph.Lean.Syntax
 
+public meta import Lean.Elab.Term.TermElabM
+
 import all Lean.Compiler.LCNF.Visibility -- for `collectUsedDecls`
 
 /-!
@@ -134,6 +136,19 @@ namespace ImportNeedsKind
 
 end matchers
 
+/-- Every possible `ImportNeedsKind`. -/
+def all : Array ImportNeedsKind := #[
+  .pubNoMeta,
+  .privNoMeta,
+  .privOfPrivNoMeta,
+  .metaPub,
+  .metaPriv,
+  .metaPrivOfPriv,
+  .pubAllowMeta,
+  .privAllowMeta,
+  .privOfPrivAllowMeta,
+]
+
 instance : ToString ImportNeedsKind where
   toString k := Id.run do
     let mut tks := #[]
@@ -241,6 +256,72 @@ def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs where
 
 def union (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) : ImportNeeds :=
   needs.modify k (· ∪ s)
+
+/-- A pair of braille cells depicting the import needs at index `i`.
+
+In the left cell, the left column denotes definite non-meta needs (due to runtime IR). The right
+column denotes meta or non-meta needs.
+
+The left column of the right cell denotes definitely meta needs. The right column of the right cell
+is unused.
+
+The top row denotes public needs, the middle row private needs, and the bottom row
+private-of-private needs.
+
+We call this `brailleCellAt` instead of `brailleCellsAt` so that dot notation does not accidentally
+resolve to `Needs.brailleCellAt`. -/
+def brailleCellAt (i : Nat) (n : ImportNeeds) : Char × Char := Id.run do
+  let mut dotsLeft := 0
+  let mut dotsRight := 0
+  for k in ImportNeedsKind.all do
+    if n.has k i then
+      let row := if k.isExported then 0 else if k.isAll then 2 else 1
+      if k.isMeta then
+        dotsRight := dotsRight ||| (1 <<< row)
+      else
+        let col := if k.allowMeta then 1 else 0
+        dotsLeft := dotsLeft ||| (1 <<< (3 * col + row))
+  return (.ofNat (0x2800 + dotsLeft), .ofNat (0x2800 + dotsRight))
+
+/-- A pair of braille cells depicting the import needs at index `i`.
+
+In the left cell, the left column denotes definite non-meta needs (due to runtime IR). The right
+column denotes meta or non-meta needs.
+
+The left column of the right cell denotes definitely meta needs. The right column of the right cell
+is unused.
+
+The top row denotes public needs, the middle row private needs, and the bottom row
+private-of-private needs.
+
+For the braille cell characters without brackets, see `ImportNeeds.brailleCellAt`. -/
+@[inline] def toStringAt (i : Nat) (n : ImportNeeds) : String :=
+  let (l, r) := n.brailleCellAt i
+  s!"[{l}{r}]"
+
+/-- Represents an `ImportNeeds` as a string of the form e.g. `│⠇⠁│⠑⠁│⠁│⠝⠁│`, where each braille cell
+represents the set of `ImportNeedsKind`s expressed by a single "column" of the `ImportNeeds` (i.e.
+at a given index). The left column of the left cell is non-meta-only needs; the next column is
+meta-or-non-meta needs; the next column is meta-only needs; and the final column is unused. The top
+row holds public needs, the middle private, and the bottom private-of-private.
+
+By default, shows dividers (`│`) between each braille cell; `dividers := false` omits dividers.
+
+By default this shows only as many cells as necessary, or a single empty cell for an empty
+`ImportNeeds`. Instead, `univSize? : Option Nat` can be provided to set the total number of
+indices, and will either truncate (even if higher indices are set) or pad with empty cells as
+appropriate. -/
+def toString (n : ImportNeeds) (univSize? : Option Nat := none) (dividers : Bool := true) :
+    String := Id.run do
+  let size := univSize?.getD n.univSize
+  -- Show a single empty cell rather than no cells at all, unless `0` cells were asked for
+  let size := if size == 0 && !univSize?.isEqSome 0 then 1 else size
+  let mut s := if size == 0 || !dividers then "" else "│"
+  for i in 0...size do
+    let (l, r) := n.brailleCellAt i
+    s := s.push l |>.push r
+    if dividers then s := s.push '│'
+  return s
 
 end ImportNeeds
 
