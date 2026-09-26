@@ -53,15 +53,20 @@ run_cmd
   let bcMod := testDir ++ `bc
   let testMods := #[aMod, bMod, cMod, abMod, bcMod]
   let extraMods := #[bcMod]
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  let w ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(1) Errors while getting workspace model:\n{w.errors}"
   -- ensure no errors on cache and non-cache paths post-cache creation
-  let _ ← getWorkspaceModel (extraMods := extraMods)
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  let w ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(2) Errors while getting workspace model:\n{w.errors}"
+  let w ← getWorkspaceModel (extraMods := extraMods)
     (readInteractiveCache := false)
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(3) Errors while getting workspace model:\n{w.errors}"
+  let w ← getWorkspaceModel (extraMods := extraMods)
     (readPersistentCache := false)
+  if w.hasErrors then throwError "(4) Errors while getting workspace model:\n{w.errors}"
   let w ← getWorkspaceModel (extraMods := extraMods)
     (readInteractiveCache := false) (readPersistentCache := false)
+  if w.hasErrors then throwError "(5) Errors while getting workspace model:\n{w.errors}"
 
   let mut msgs := #[]
   let mainModule ← getMainModule
@@ -116,6 +121,7 @@ run_cmd do
     `Init.lean` in `leanSrcDir`: {← s.leanSrcDir / "Init.lean" |>.pathExists}\n\
     `Init.olean` in `leanLibDir`: {← s.leanLibDir / "Init.olean" |>.pathExists}"
   let wm ← getWorkspaceModel
+  if wm.hasErrors then throwError "Errors while getting workspace model:\n{wm.errors}"
   let testedCoreLibs := #[`Lean, `Init, `Std, `Lake]
   unless testedCoreLibs.all fun libName => wm.libs.any (·.name == libName) do
     throwError "One of the core libraries {testedCoreLibs} was not in the model."
