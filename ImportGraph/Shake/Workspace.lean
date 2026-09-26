@@ -71,11 +71,8 @@ def DeclNeeds.toSimultaneousImportNeeds
         withTraceNode `ImportGraph.Shake
           (fun _ => return m!"Uses decl `{.ofConstName usedDecl}`") do←
         let some usedStance ← getStance? usedDecl | continue
-        let mut usedKs : DeclDeclNeedsKindSet := {}
         for k in ks do
           trace[ImportGraph.Shake] "{k.pretty}"
-          if usedKs.contains k then continue
-          usedKs := usedKs.insert k
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := w.idxOfMod[modName]? | continue
