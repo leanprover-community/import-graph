@@ -59,6 +59,74 @@ private structure InferredLibraryGlob where
   /-- If we've recorded it, it better have at least one of these. -/
   hasRoot_or_hasDir : hasRoot || hasDir := by grind
 
+-- TODO: just alter `parseImports'` to account for this.
+private def hasImplicitPrelude (header : Lean.ModuleHeader) : Bool :=
+  header.imports[0]?.isEqSome { module := `Init } &&
+  header.imports[1]?.isEqSome { module := `Init, isMeta := true }
+
+/--
+Collects the imports of the module (transitively) into the `WorkspaceModel`.
+
+Note that this does not include all files local to a library (and so e.g. avoids including scratch
+files), but does *allow* `mod` to be merely local to a library without e.g. appearing in its root
+file, if we do call `collect` on such a `mod`. This mirrors `LeanLib.recCollectLocalModules`, and
+brings in all transitively-imported library-local modules imported by `mod`.
+-/
+private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceModel := do
+  if wm.idxOfMod.contains mod then return wm
+  let some libIdx := wm.libIdxOfMod? mod | return { wm with
+    errors := wm.errors.push <| .noLibOfModule mod }
+  let srcFile := (wm.getLib! libIdx).srcPathOfMod mod
+  let headerE ← observing do Lean.parseImports' (← IO.FS.readFile srcFile) srcFile.toString
+  let header ← match headerE with
+    | .ok header => pure header
+    | .error err =>
+      return { wm with errors := wm.errors.push <| .readImportsFailure mod srcFile err }
+  let mut wm := wm
+  for imp in header.imports do
+    wm ← collect imp.module wm
+  -- All local imports of `mod` are indexed now; gather the libraries they live in.
+  let pkgIdx := wm.pkgIdxOfLibIdx! libIdx
+
+  -- Module aggregates. TODO: consider consolidating?
+  let modIdx := wm.mods.size -- the position of `modData` in `mods` below
+  let mut transPkgDeps : PackageBitset := ∅
+  let mut transLibDeps : LibraryBitset := ∅
+  let mut transDeps := Needs.reflOf modIdx
+  let mut prevs := ∅
+  -- TODO: dynamically extend arrays?
+  let mut depthsPerLib := Array.replicate wm.libs.size 0
+  let mut depthsPerPkg := Array.replicate wm.packages.size 0
+  for imp in header.imports do
+    -- TODO: Potentially we ought to record an error if we can't find it here.
+    if let some j := wm.idxOfMod[imp.module]? then
+      let impModData := wm.getMod! j
+      transLibDeps := transLibDeps ∪ impModData.transLibDeps ∪ {impModData.libIdx}
+      transPkgDeps := transPkgDeps ∪ impModData.transPkgDeps ∪ {impModData.pkgIdx}
+      transDeps := transDeps ∪ impModData.transDeps ≫ imp
+      prevs := prevs ∪ impModData.prevs ∪ {j}
+      depthsPerLib := depthsPerLib.zipWith max impModData.depthsPerLib
+      depthsPerPkg := depthsPerPkg.zipWith max impModData.depthsPerPkg
+  transDeps := transDeps.linearize
+  depthsPerLib := depthsPerLib.modify libIdx (· + 1)
+  depthsPerPkg := depthsPerPkg.modify pkgIdx (· + 1)
+  let isPrelude := hasImplicitPrelude header
+  let modData : WorkspaceModel.Module := { header with
+    name := mod, srcFile, isPrelude, prevs, depthsPerLib, depthsPerPkg
+    transDeps, transLibDeps, transPkgDeps, libIdx, pkgIdx }
+  return { wm with
+    idxOfMod := wm.idxOfMod.insert mod modIdx
+    mods := wm.mods.push modData
+    packages := wm.packages.modify pkgIdx fun p => { p with mods := insert modIdx p.mods }
+    libs := wm.libs.modify libIdx fun l =>
+      { l with mods := insert modIdx l.mods, revealedDeps := l.revealedDeps ∪ transLibDeps } }
+
+end WorkspaceModel
+
+namespace Lake.WorkspaceSummary
+
+open WorkspaceModel
+
 /--
 Infers the toolchain's libraries (e.g. `Lean`, `Lake`, `Init`, `Std`, etc.).
 
@@ -126,75 +194,10 @@ def getToolchainLibs (ws : WorkspaceSummary) : IO (Array Lake.LibrarySummary) :=
     }
   return toolchainLibs
 
--- TODO: just alter `parseImports'` to account for this.
-private def hasImplicitPrelude (header : Lean.ModuleHeader) : Bool :=
-  header.imports[0]?.isEqSome { module := `Init } &&
-  header.imports[1]?.isEqSome { module := `Init, isMeta := true }
-
-/--
-Collects the imports of the module (transitively) into the `WorkspaceModel`.
-
-Note that this does not include all files local to a library (and so e.g. avoids including scratch
-files), but does *allow* `mod` to be merely local to a library without e.g. appearing in its root
-file, if we do call `collect` on such a `mod`. This mirrors `LeanLib.recCollectLocalModules`, and
-brings in all transitively-imported library-local modules imported by `mod`.
--/
-private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceModel := do
-  if wm.idxOfMod.contains mod then return wm
-  let some libIdx := wm.libIdxOfMod? mod | return { wm with
-    errors := wm.errors.push <| .noLibOfModule mod }
-  let srcFile := (wm.getLib! libIdx).srcPathOfMod mod
-  let headerE ← observing do Lean.parseImports' (← IO.FS.readFile srcFile) srcFile.toString
-  let header ← match headerE with
-    | .ok header => pure header
-    | .error err =>
-      return { wm with errors := wm.errors.push <| .readImportsFailure mod srcFile err }
-  let mut wm := wm
-  for imp in header.imports do
-    wm ← collect imp.module wm
-  -- All local imports of `mod` are indexed now; gather the libraries they live in.
-  let pkgIdx := wm.pkgIdxOfLibIdx! libIdx
-
-  -- Module aggregates. TODO: consider consolidating?
-  let modIdx := wm.mods.size -- the position of `modData` in `mods` below
-  let mut transPkgDeps : PackageBitset := ∅
-  let mut transLibDeps : LibraryBitset := ∅
-  let mut transDeps := Needs.reflOf modIdx
-  let mut prevs := ∅
-  -- TODO: dynamically extend arrays?
-  let mut depthsPerLib := Array.replicate wm.libs.size 0
-  let mut depthsPerPkg := Array.replicate wm.packages.size 0
-  for imp in header.imports do
-    -- TODO: Potentially we ought to record an error if we can't find it here.
-    if let some j := wm.idxOfMod[imp.module]? then
-      let impModData := wm.getMod! j
-      transLibDeps := transLibDeps ∪ impModData.transLibDeps ∪ {impModData.libIdx}
-      transPkgDeps := transPkgDeps ∪ impModData.transPkgDeps ∪ {impModData.pkgIdx}
-      transDeps := transDeps ∪ impModData.transDeps ≫ imp
-      prevs := prevs ∪ impModData.prevs ∪ {j}
-      depthsPerLib := depthsPerLib.zipWith max impModData.depthsPerLib
-      depthsPerPkg := depthsPerPkg.zipWith max impModData.depthsPerPkg
-  transDeps := transDeps.linearize
-  depthsPerLib := depthsPerLib.modify libIdx (· + 1)
-  depthsPerPkg := depthsPerPkg.modify pkgIdx (· + 1)
-  let isPrelude := hasImplicitPrelude header
-  let modData : WorkspaceModel.Module := { header with
-    name := mod, srcFile, isPrelude, prevs, depthsPerLib, depthsPerPkg
-    transDeps, transLibDeps, transPkgDeps, libIdx, pkgIdx }
-  return { wm with
-    idxOfMod := wm.idxOfMod.insert mod modIdx
-    mods := wm.mods.push modData
-    packages := wm.packages.modify pkgIdx fun p => { p with mods := insert modIdx p.mods }
-    libs := wm.libs.modify libIdx fun l =>
-      { l with mods := insert modIdx l.mods, revealedDeps := l.revealedDeps ∪ transLibDeps } }
-
-end WorkspaceModel
-
-open WorkspaceModel in
 /-- Compute a rich `WorkspaceModel` from a `WorkspaceSummary`. This iterates through all the
 modules and parses all imports, incorporating them into an import hierarchy. Any modules in
 `extraMods` are absorbed into the model as well. -/
-def Lake.WorkspaceSummary.toWorkspaceModel (ws : WorkspaceSummary)
+def toWorkspaceModel (ws : WorkspaceSummary)
     (extraMods : Array Name := #[]) : IO WorkspaceModel := do
   -- Phase 1: handle packages and libraries
   let toolchainPkgIdx := ws.packages.size
