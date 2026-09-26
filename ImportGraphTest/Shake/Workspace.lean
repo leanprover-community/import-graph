@@ -17,7 +17,7 @@ It also tests a small artificial hierarchy in the adjacent folder `ImportGraphTe
 Recall that a public (transitive) import looks like `⠃` and a private import looks like `⠂`.
 -/
 
-open ImportGraph Lean Shake
+open ImportGraph Lean Lake Shake
 
 /--
 info: Has `ImportGraphTest.Shake.Workspace`: true
@@ -101,3 +101,21 @@ run_cmd
   msgs := msgs.push m!"Library of `{testMod}`: {w.libOfModIdx! testModIdx |>.name}"
 
   logInfo <| m!"\n\n".joinSep msgs.toList
+
+-- The following test checks that we've found the correct toolchain data.
+/--
+info: `Lake.lean` in `lakeSrcDir`: true
+`Init.lean` in `leanSrcDir`: true
+`Init.olean` in `leanLibDir`: true
+-/
+#guard_msgs in
+run_cmd do
+  let s ← getWorkspaceSummary
+  logInfo m!"\
+    `Lake.lean` in `lakeSrcDir`: {← s.lakeSrcDir / "Lake.lean" |>.pathExists}\n\
+    `Init.lean` in `leanSrcDir`: {← s.leanSrcDir / "Init.lean" |>.pathExists}\n\
+    `Init.olean` in `leanLibDir`: {← s.leanLibDir / "Init.olean" |>.pathExists}"
+  let wm ← getWorkspaceModel
+  let testedCoreLibs := #[`Lean, `Init, `Std, `Lake]
+  unless testedCoreLibs.all fun libName => wm.libs.any (·.name == libName) do
+    throwError "One of the core libraries {testedCoreLibs} was not in the model."

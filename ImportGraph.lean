@@ -23,6 +23,7 @@ public import ImportGraph.Shake.Core
 public import ImportGraph.Shake.DeclNeeds
 public import ImportGraph.Shake.EnvExtension
 public import ImportGraph.Shake.Environment
+public import ImportGraph.Shake.Workspace
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Tools.FindHome
 public meta import ImportGraph.Tools.ImportDiff
