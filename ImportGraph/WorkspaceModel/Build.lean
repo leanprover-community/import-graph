@@ -48,6 +48,17 @@ instance : Hierarchy WorkspaceModel where
   getDeps? w i := w.mods[i]?.map (·.transDeps)
   getDeps! w i := w.mods[i]!.transDeps
 
+/-- Internal structure for keeping track of which globs we need for inferred toolchain libraries.
+We need this because we (and lake) will use these to attempt to enumerate modules, and throw an
+error if the directory/file is not in the place it's expected to be. -/
+private structure InferredLibraryGlob where
+  /-- Whether we found a top-level olean in the build dir. -/
+  hasRoot : Bool := false
+  /-- Whether we found a top-level directory in the build dir. -/
+  hasDir : Bool := false
+  /-- If we've recorded it, it better have at least one of these. -/
+  hasRoot_or_hasDir : hasRoot || hasDir := by grind
+
 /--
 Infers the toolchain's libraries (e.g. `Lean`, `Lake`, `Init`, `Std`, etc.).
 
@@ -60,43 +71,54 @@ we find from the build directory to the contents of both to figure out which one
 source directory for the given library.
 -/
 def getToolchainLibs (ws : WorkspaceSummary) : IO (Array Lake.LibrarySummary) := do
-  let mut toolchainLibs := #[]
-  -- The two possibilities for source directories in Lean core + the (file/directory)names of their
-  -- contents.
-  -- We need to check `ws.lakeSrcDir` first so that case-insensitive systems do not confuse
-  -- `src/lean/lake` with `src/lean/Lake`.
+  -- A map `lib ↦ (whether the library apparently has a root file and/or a directory)`.
+  let mut toolchainLibGlobs : Std.TreeMap String InferredLibraryGlob := {}
+  /- The two possibilities for source directories in Lean core + the (file/directory)names of their
+  contents.
+  We need to check `ws.lakeSrcDir` first so that case-insensitive systems do not confuse
+  `src/lean/lake` with `src/lean/Lake`. -/
   let srcDirs ← #[ws.lakeSrcDir, ws.leanSrcDir].mapM fun dir =>
     return (dir, (← dir.readDir).map (·.fileName))
   for entry in ← ws.leanLibDir.readDir do
-    let nameStr := ←
+    -- Note that `!foundDir` implies a top-level olean, hence a root file.
+    -- If we find neither we `continue`.
+    let (nameStr, foundDir) ←
       if entry.path.extension.isEqSome "olean" then
-        entry.path.fileStem.getDM do
+        if let some nameStr := entry.path.fileStem then
+          pure (nameStr, false)
+        else
           throw (.userError s!"Could not get filestem for core olean:\n  {entry.path}")
       else if ← entry.path.isDir then
-        pure <| entry.fileName
+        pure (entry.fileName, true)
       else
         continue
     if nameStr.contains '.' then
       throw (.userError s!"Unexpected '.' in inferred core library {nameStr}:\n  {entry.path}")
     let name := Name.mkSimple nameStr
-    -- in case the build dir has both a directory and an olean:
-    if toolchainLibs.any (·.name == name) then continue
-    -- To determine the source directory, try to find either `{nameStr}.lean` or a `{nameStr}`
-    -- directory in our source directories, starting with the lake source directory.
-    let possibleRoot := s!"{nameStr}.lean"
+    toolchainLibGlobs := toolchainLibGlobs.alter nameStr fun
+      | none => some { hasRoot := !foundDir, hasDir := foundDir }
+      | some { hasRoot, hasDir .. } =>
+        some { hasRoot := hasRoot || !foundDir, hasDir := hasDir || foundDir }
+  let mut toolchainLibs := #[]
+  for (nameStr, { hasRoot, hasDir, .. }) in toolchainLibGlobs do
+    /- To determine the source directory, try to find either `{nameStr}.lean` or a `{nameStr}`
+    directory in our source directories, starting with the lake source directory.
+    (Note that `filenames` contains any directory names immediately under `dirPath` too.) -/
     let some srcDir := srcDirs.findSome? fun (dirPath, filenames) =>
-        if filenames.contains possibleRoot || filenames.contains nameStr then some dirPath else none
-      | throw (.userError s!"Could not find source for core library {nameStr}:\n  {entry.path}")
+        if filenames.contains s!"{nameStr}.lean" || filenames.contains nameStr then
+          some dirPath else none
+      | throw (.userError s!"Could not find source for core library {nameStr}.")
+    let name := Name.mkSimple nameStr
     toolchainLibs := toolchainLibs.push {
-      name, srcDir,
-      -- This is inaccurate in terms of what is literally recorded in Lean's lakefile, but should
-      -- be accurate in terms of which modules are included for which library.
-      -- (Assuming Lean does not include non-building modules that are not reachable from a root,
-      -- if a root exists for the library.)
-      -- Note that `.andSubmodules name` is `{name}.*`, and includes the root if present.
-      roots := #[], globs := #[.andSubmodules name]
+      name, srcDir
+      globs := match hasRoot, hasDir with
+        | true,  false => #[.one name]
+        | false, true  => #[.submodules name]
+        | true,  true  => #[.andSubmodules name]
+      /- Note: we use the default value `roots := #[name]` in all cases, since this (surprisingly)
+      does not actually communicate to lake that a root file should exist, and is the default.
+      Strictly speaking we cannot infer the `roots` field, but we encode the presence of a root file in the globs anyway. -/
     }
-
   return toolchainLibs
 
 -- TODO: just alter `parseImports'` to account for this.
