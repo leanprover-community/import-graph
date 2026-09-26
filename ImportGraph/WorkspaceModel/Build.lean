@@ -48,6 +48,14 @@ instance : Hierarchy WorkspaceModel where
   getDeps? w i := w.mods[i]?.map (·.transDeps)
   getDeps! w i := w.mods[i]!.transDeps
 
+/-- The "main" user-facing toolchain libraries, `Lean` and `Std`, with `Init` and `Lake` if their
+corresponding flags are `true` (`false` by default). -/
+def mainToolchainLibs (withInit := false) (withLake := false) : NameSet := Id.run do
+  let mut libs := {`Lean, `Std}
+  if withInit then libs := libs.insert `Init
+  if withLake then libs := libs.insert `Lake
+  return libs
+
 /-- Internal structure for keeping track of which globs we need for inferred toolchain libraries.
 We need this because we (and lake) will use these to attempt to enumerate modules, and throw an
 error if the directory/file is not in the place it's expected to be. -/
@@ -193,14 +201,6 @@ def getToolchainLibs (ws : WorkspaceSummary) : IO (Array Lake.LibrarySummary) :=
       Strictly speaking we cannot infer the `roots` field, but we encode the presence of a root file in the globs anyway. -/
     }
   return toolchainLibs
-
-/-- The "main" user-facing toolchain libraries, `Lean` and `Std`, with `Init` and `Lake` if their
-corresponding flags are `true` (`false` by default). -/
-def mainToolchainLibs (withInit := false) (withLake := false) : NameSet := Id.run do
-  let mut libs := {`Lean, `Std}
-  if withInit then libs := libs.insert `Init
-  if withLake then libs := libs.insert `Lake
-  return libs
 
 /-- Compute a rich `WorkspaceModel` from a `WorkspaceSummary`. This iterates through all the
 modules and parses all imports, incorporating them into an import hierarchy. Any modules in
