@@ -53,15 +53,20 @@ run_cmd
   let bcMod := testDir ++ `bc
   let testMods := #[aMod, bMod, cMod, abMod, bcMod]
   let extraMods := #[bcMod]
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  let w ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(1) Errors while getting workspace model:\n{w.errors}"
   -- ensure no errors on cache and non-cache paths post-cache creation
-  let _ ← getWorkspaceModel (extraMods := extraMods)
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  let w ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(2) Errors while getting workspace model:\n{w.errors}"
+  let w ← getWorkspaceModel (extraMods := extraMods)
     (readInteractiveCache := false)
-  let _ ← getWorkspaceModel (extraMods := extraMods)
+  if w.hasErrors then throwError "(3) Errors while getting workspace model:\n{w.errors}"
+  let w ← getWorkspaceModel (extraMods := extraMods)
     (readPersistentCache := false)
+  if w.hasErrors then throwError "(4) Errors while getting workspace model:\n{w.errors}"
   let w ← getWorkspaceModel (extraMods := extraMods)
     (readInteractiveCache := false) (readPersistentCache := false)
+  if w.hasErrors then throwError "(5) Errors while getting workspace model:\n{w.errors}"
 
   let mut msgs := #[]
   let mainModule ← getMainModule
@@ -103,19 +108,26 @@ run_cmd
   logInfo <| m!"\n\n".joinSep msgs.toList
 
 -- The following test checks that we've found the correct toolchain data.
-/--
-info: `Lake.lean` in `lakeSrcDir`: true
-`Init.lean` in `leanSrcDir`: true
-`Init.olean` in `leanLibDir`: true
--/
-#guard_msgs in
 run_cmd do
   let s ← getWorkspaceSummary
-  logInfo m!"\
-    `Lake.lean` in `lakeSrcDir`: {← s.lakeSrcDir / "Lake.lean" |>.pathExists}\n\
-    `Init.lean` in `leanSrcDir`: {← s.leanSrcDir / "Init.lean" |>.pathExists}\n\
-    `Init.olean` in `leanLibDir`: {← s.leanLibDir / "Init.olean" |>.pathExists}"
+  let lakeSrc := s.lakeSrcDir / "Lake.lean"
+  unless ← lakeSrc.pathExists do
+    throwError "Lake.lean not at {lakeSrc}"
+  let initSrc := s.leanSrcDir / "Init.lean"
+  unless ← initSrc.pathExists do
+    throwError "Init.lean not at {initSrc}"
+  let initOlean := s.leanLibDir / "Init.olean"
+  unless ← initOlean.pathExists do
+    throwError "Init.olean not at {initOlean}"
   let wm ← getWorkspaceModel
-  let testedCoreLibs := #[`Lean, `Init, `Std, `Lake]
-  unless testedCoreLibs.all fun libName => wm.libs.any (·.name == libName) do
-    throwError "One of the core libraries {testedCoreLibs} was not in the model."
+  if wm.hasErrors then throwError "Errors while getting workspace model:\n{wm.errors}"
+  let testedCoreLibs := WorkspaceModel.mainToolchainLibs (withInit := true) (withLake := true)
+  for libName in testedCoreLibs do
+    let some libIdx := wm.getLibIdx? wm.toolchainPkgIdx libName
+      | throwError "The core library `{libName}` was not in the model."
+    unless
+      (wm.getLib! libIdx).srcDir == (if libName == `Lake then s.lakeSrcDir else s.leanSrcDir)
+    do
+      throwError "Incorrect source directory for core library {libName}:\n\
+        model: {(wm.getLib! libIdx).srcDir}\n\
+        summary: {if libName == `Lake then s.lakeSrcDir else s.leanSrcDir}"
