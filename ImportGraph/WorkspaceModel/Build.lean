@@ -48,16 +48,83 @@ instance : Hierarchy WorkspaceModel where
   getDeps? w i := w.mods[i]?.map (·.transDeps)
   getDeps! w i := w.mods[i]!.transDeps
 
--- TODO: deduce this from core's lakefile instead of hardcoding it, ideally during `Emit`
--- Somehow exclude "LakeMain", "LeanIR", "Leanc", "LeanChecker"? Or will these be ignored by not being above the current package?
-/-- A hardcoded list of the four libraries we want to consider in the toolchain (`Init`, `Std`, `Lean`, `Lake`) with directories relative to the `sysroot`. -/
-private def toolchainLibs (sysroot : FilePath) : Array Lake.LibrarySummary :=
-  #[{ name := `Init, srcDir := sysroot / "src" / "lean" },
-    { name := `Std, srcDir := sysroot / "src" / "lean" },
-    { name := `Lean, srcDir := sysroot / "src" / "lean"
-      globs := #[`Lean, `Lean.Compiler.IR.EmitLLVM, `Lean.Compiler.LCNF.Probing] },
-    { name := `Lake, srcDir := sysroot / "src" / "lean" / "lake"
-      globs := #[`Lake.*] }]
+/-- Internal structure for keeping track of which globs we need for inferred toolchain libraries.
+We need this because we (and lake) will use these to attempt to enumerate modules, and throw an
+error if the directory/file is not in the place it's expected to be. -/
+private structure InferredLibraryGlob where
+  /-- Whether we found a top-level olean in the build dir. -/
+  hasRoot : Bool := false
+  /-- Whether we found a top-level directory in the build dir. -/
+  hasDir : Bool := false
+  /-- If we've recorded it, it better have at least one of these. -/
+  hasRoot_or_hasDir : hasRoot || hasDir := by grind
+
+/--
+Infers the toolchain's libraries (e.g. `Lean`, `Lake`, `Init`, `Std`, etc.).
+
+Since lean toolchains do not ship with a lakefile, we infer the libraries obtained by looking for
+top-level directories and `*.olean` files in the toolchain's build directory (since there is only
+one build directory).
+
+We model the library with synthetic globs that match the structure we found in the build directory,
+so that the model will at least accurately cover the real modules present, even if core's actual
+lakefile goes about building these differently (assuming core does not contain unbuilt modules, or
+modules apparently in one library that are actually built by another).
+
+The source files live in either `ws.lakeSrcDir` or `ws.leanSrcDir`. We match the stem of anything
+we find from the build directory to the contents of both to figure out which one is the correct
+source directory for the given library.
+-/
+def getToolchainLibs (ws : WorkspaceSummary) : IO (Array Lake.LibrarySummary) := do
+  -- A map `lib ↦ (whether the library apparently has a root file and/or a directory)`.
+  let mut toolchainLibGlobs : Std.TreeMap String InferredLibraryGlob := {}
+  /- The two possibilities for source directories in Lean core + the (file/directory)names of their
+  contents.
+  We need to check `ws.lakeSrcDir` first so that case-insensitive systems do not confuse
+  `src/lean/lake` with `src/lean/Lake`. -/
+  let srcDirs ← #[ws.lakeSrcDir, ws.leanSrcDir].mapM fun dir =>
+    return (dir, (← dir.readDir).map (·.fileName))
+  for entry in ← ws.leanLibDir.readDir do
+    -- Note that `!foundDir` implies a top-level olean, hence a root file.
+    -- If we find neither we `continue`.
+    let (nameStr, foundDir) ←
+      if entry.path.extension.isEqSome "olean" then
+        if let some nameStr := entry.path.fileStem then
+          pure (nameStr, false)
+        else
+          throw (.userError s!"Could not get filestem for core olean:\n  {entry.path}")
+      else if ← entry.path.isDir then
+        pure (entry.fileName, true)
+      else
+        continue
+    if nameStr.contains '.' then
+      throw (.userError s!"Unexpected '.' in inferred core library {nameStr}:\n  {entry.path}")
+    let name := Name.mkSimple nameStr
+    toolchainLibGlobs := toolchainLibGlobs.alter nameStr fun
+      | none => some { hasRoot := !foundDir, hasDir := foundDir }
+      | some { hasRoot, hasDir .. } =>
+        some { hasRoot := hasRoot || !foundDir, hasDir := hasDir || foundDir }
+  let mut toolchainLibs := #[]
+  for (nameStr, { hasRoot, hasDir, .. }) in toolchainLibGlobs do
+    /- To determine the source directory, try to find either `{nameStr}.lean` or a `{nameStr}`
+    directory in our source directories, starting with the lake source directory.
+    (Note that `filenames` contains any directory names immediately under `dirPath` too.) -/
+    let some srcDir := srcDirs.findSome? fun (dirPath, filenames) =>
+        if filenames.contains s!"{nameStr}.lean" || filenames.contains nameStr then
+          some dirPath else none
+      | throw (.userError s!"Could not find source for core library {nameStr}.")
+    let name := Name.mkSimple nameStr
+    toolchainLibs := toolchainLibs.push {
+      name, srcDir
+      globs := match hasRoot, hasDir with
+        | true,  false => #[.one name]
+        | false, true  => #[.submodules name]
+        | true,  true  => #[.andSubmodules name]
+      /- Note: we use the default value `roots := #[name]` in all cases, since this (surprisingly)
+      does not actually communicate to lake that a root file should exist, and is the default.
+      Strictly speaking we cannot infer the `roots` field, but we encode the presence of a root file in the globs anyway. -/
+    }
+  return toolchainLibs
 
 -- TODO: just alter `parseImports'` to account for this.
 private def hasImplicitPrelude (header : Lean.ModuleHeader) : Bool :=
@@ -138,14 +205,14 @@ def Lake.WorkspaceSummary.toWorkspaceModel (ws : WorkspaceSummary)
       libs := ∅, mods := ∅ }
   packages := packages.push
     { baseName := toolchainName ws.leanGitHash, origName := `lean4, wsIdx := toolchainPkgIdx
-      dir := ws.sysroot, leanLibDir := ws.sysroot / "lib" / "lean", deps := ∅
+      dir := ws.sysroot, leanLibDir := ws.leanLibDir, deps := ∅
       -- Filled in later:
       libs := ∅, mods := ∅ }
   let mut libs : Array WorkspaceModel.Library := #[]
   for pkg in ws.packages do
     for l in pkg.libs do
       libs := libs.push { l with pkgIdx := pkg.wsIdx, revealedDeps := ∅, mods := ∅ }
-  for lib in toolchainLibs ws.sysroot do
+  for lib in ← getToolchainLibs ws do
     libs := libs.push { lib with pkgIdx := toolchainPkgIdx, revealedDeps := ∅, mods := ∅ }
   for lib in libs, libIdx in 0...libs.size do
     packages := packages.modify lib.pkgIdx fun p => { p with libs := insert libIdx p.libs }

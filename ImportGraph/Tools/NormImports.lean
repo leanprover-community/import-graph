@@ -43,7 +43,7 @@ same visibilities and phases. It does **not** take into account the declarations
 modules in the current file.
 
 `#norm_imports` will keep any direct imports of `ImportGraph.Tools.NormImports`,
-`ImportGraph.Tools`, or `ImportGraph` in place, while ignoring them for the caluclation
+`ImportGraph.Tools`, or `ImportGraph` in place, while ignoring them for the calculation
 of the redundant imports. -/
 elab tk:"#norm_imports" : command => do
   unless (← getEnv).header.isModule do
@@ -51,13 +51,18 @@ elab tk:"#norm_imports" : command => do
     throwError "`#norm_imports` currently only works in the module system."
   let transDeps := (← getEnv).mkTransDeps
 
-  -- ignore direct imports of the script for the transitive import calculation and
-  -- add them back in afterwards
-  let ignoring: NameSet := {`ImportGraph.Tools.NormImports, `ImportGraph.Tools, `ImportGraph}
-  let ignoredImports : Array Import := (← getEnv).header.imports.filter
-    (ignoring.contains ·.module) |>.toList.eraseDups.toArray
+  -- ignore direct imports of `#norm_imports` for the transitive import calculation, reduce them
+  -- among themselves, and add them back in afterwards
+  let ignoring : NameSet := {`ImportGraph.Tools.NormImports, `ImportGraph.Tools, `ImportGraph}
+  let ignoredImports : Array Import := (← getEnv).header.imports.filter (ignoring.contains ·.module)
+  let ignoredReduced ←
+    if ignoredImports.isEmpty then pure #[] else
+      let ignoredTransNeeds := (← getEnv).transitiveClosureOf ignoredImports transDeps
+      pure <| (← getEnv).toRawImports <| ignoredTransNeeds.reduce transDeps
+
   let currentTransNeeds := (← getEnv).currentTransNeeds transDeps (excluding := ignoring)
-  let reducedImps := ((← getEnv).toRawImports <| currentTransNeeds.reduce transDeps) ++ ignoredImports
+  let reducedImps := ((← getEnv).toRawImports <| currentTransNeeds.reduce transDeps) ++
+    ignoredReduced
 
   -- TODO: allow the user to filter out the `#norm_imports` import?
   let (header, _, log) ← parseCurrentHeader
