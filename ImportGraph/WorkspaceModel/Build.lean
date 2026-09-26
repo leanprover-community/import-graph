@@ -242,6 +242,8 @@ def toWorkspaceModel (ws : WorkspaceSummary)
     wm ← collect mod wm
   return wm
 
+end Lake.WorkspaceSummary
+
 /-- An interactive cache for the `WorkspaceModel`. -/
 initialize WorkspaceModel.cacheRef : IO.Ref (Option WorkspaceModel) ← IO.mkRef none
 
@@ -274,4 +276,4 @@ def getWorkspaceModel (extraMods : Array Name := #[])
   WorkspaceModel.cacheRef.set wm
   return wm
 
-end ImportGraph.Lake.WorkspaceSummary
+end ImportGraph
