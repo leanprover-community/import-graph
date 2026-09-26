@@ -115,3 +115,7 @@ run_cmd do
     `Lake.lean` in `lakeSrcDir`: {← s.lakeSrcDir / "Lake.lean" |>.pathExists}\n\
     `Init.lean` in `leanSrcDir`: {← s.leanSrcDir / "Init.lean" |>.pathExists}\n\
     `Init.olean` in `leanLibDir`: {← s.leanLibDir / "Init.olean" |>.pathExists}"
+  let wm ← getWorkspaceModel
+  let testedCoreLibs := #[`Lean, `Init, `Std, `Lake]
+  unless testedCoreLibs.all fun libName => wm.libs.any (·.name == libName) do
+    throwError "One of the core libraries {testedCoreLibs} was not in the model."
