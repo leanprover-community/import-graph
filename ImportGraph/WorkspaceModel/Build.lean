@@ -66,6 +66,11 @@ Since lean toolchains do not ship with a lakefile, we infer the libraries obtain
 top-level directories and `*.olean` files in the toolchain's build directory (since there is only
 one build directory).
 
+We model the library with synthetic globs that match the structure we found in the build directory,
+so that the model will at least accurately cover the real modules present, even if core's actual
+lakefile goes about building these differently (assuming core does not contain unbuilt modules, or
+modules apparently in one library that are actually built by another).
+
 The source files live in either `ws.lakeSrcDir` or `ws.leanSrcDir`. We match the stem of anything
 we find from the build directory to the contents of both to figure out which one is the correct
 source directory for the given library.
