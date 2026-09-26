@@ -33,10 +33,23 @@ public def main (args : List String) : IO UInt32 := do
     | [] => IO.currentDir
     | [dir] => IO.FS.realPath dir
     | _ => IO.eprintln "Expected either no arguments or a path to a package's root."; return 2
-  let (elan?, lean?, lake?) ← findInstall?
+  let (elan?, lean?, _) ← findInstall?
   let some lean := lean?
     | IO.eprintln "error: no Lean installation found"; return 1
-  let lake := lake?.getD (.ofLean lean)
+  /- `findInstall?` looks at the currently-running executable and tries to find the lean and lake
+  installs next to it. If the executable were the toolchain, it'd be correct. But since it's this
+  executable instead, it falls back to the lean inferred from the `sysroot` (correct, the same as
+  the toolchain from the spawning parent) and the lake from `LAKE_HOME`, which is *not* correct for
+  our purposes. Instead, we should try to infer it from the `lean` install.
+
+  Note that if we moved to a lake script or facet, we could just use `ws.lakeEnv` directly instead
+  of recomputing it from `lake` and `lean`.
+
+  This does not account for developer installs of lake, but we consider this possibility
+  vanishingly small. Currently, guarding against this would mean using `lake?` from `findInstall?`
+  if the environment variable `$LAKE` did not match `(.ofLean lean).lake.toString`, but we don't
+  want to introduce code like that for maintenance purposes. -/
+  let lake := .ofLean lean
   let lakeEnv ← (Env.compute lake lean elan?).toIO (IO.userError ·)
   let cfg : LoadConfig := { lakeEnv, wsDir }
   let (ws?, log) ← (loadWorkspace cfg).run?
