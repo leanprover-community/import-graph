@@ -49,6 +49,13 @@ lake exe graph my_graph.html
 
 creates a stand-alone HTML file visualising the import structure.
 
+Clicking a node opens its page in the Mathlib documentation. For another project, pass the base URL
+of its documentation:
+
+```
+lake exe graph --to MyProject --doc-url https://example.org/docs/ my_graph.html
+```
+
 ## Commands
 
 There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Tools` to your lean file.

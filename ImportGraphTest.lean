@@ -3,6 +3,7 @@ import ImportGraphTest.Dot
 import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FindHome.Viewpoint
 import ImportGraphTest.FromSource
+import ImportGraphTest.Html
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.NormImports

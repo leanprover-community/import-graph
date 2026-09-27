@@ -147,7 +147,7 @@
 const preferDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 var params = new URLSearchParams(window.location.search);
-var docs_url = params.get("docs_url") || "https://leanprover-community.github.io/mathlib4_docs/";
+var doc_url = "https://leanprover-community.github.io/mathlib4_docs/";
 
 // From stackoverflow
 /**
@@ -535,7 +535,7 @@ var render_gexf = (gexf) => {
   renderer.on("leaveNode", () => { setHoveredNode(default_hover ? state.defaultNode : undefined); });
   renderer.on("clickNode", ({ node }) => {
     let path = graph.getNodeAttribute(node, 'full_path');
-    window.open(docs_url + path.join('/') + ".html");
+    window.open(doc_url + path.join('/') + ".html");
   });
 
   setHoveredNode(default_hover ? state.defaultNode : undefined);
