@@ -6,6 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public import ImportGraph.WorkspaceModel.Summary.Core
+
 import ImportGraph.WorkspaceModel.Summary.Lake
 
 open ImportGraph Lean Lake System
