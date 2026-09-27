@@ -11,13 +11,10 @@ public meta import ImportGraph.Shake.Workspace
 public meta import ImportGraph.Imports.ImportGraph -- for old `#find_home`
 public meta import ImportGraph.Imports.RequiredModules -- for old `#find_home`
 public meta import ImportGraph.Graph.TransitiveClosure -- for old `#find_home`
-public meta import ImportGraph.WorkspaceModel.Build
+public import ImportGraph.WorkspaceModel.Build
 public import ImportGraph.Widget.Collapsible
 public import ImportGraph.Widget.Copy
 public import ImportGraph.Widget.GoToModule
-
-import ImportGraph.Shake.DeclNeeds
-import ImportGraph.WorkspaceModel.Model
 
 /-!
 # `#find_home for ...`
