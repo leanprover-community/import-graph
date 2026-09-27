@@ -1,6 +1,7 @@
 module
 
 meta import ImportGraph.WorkspaceModel.Build
+meta import ImportGraph.WorkspaceModel.Summary
 import Lean.Elab.Command
 
 /-!
@@ -22,9 +23,9 @@ open ImportGraph Lean Lake Shake
 /--
 info: Has `ImportGraphTest.Shake.Workspace`: true
 
-`ImportGraph.WorkspaceModel.Summary` > `ImportGraph.WorkspaceModel.Build`: [⠃]
+`ImportGraph.WorkspaceModel.Summary.Core` > `ImportGraph.WorkspaceModel.Build`: [⠃]
 
-`ImportGraph.WorkspaceModel.Build` > `ImportGraph.WorkspaceModel.Summary`: [⠀]
+`ImportGraph.WorkspaceModel.Build` > `ImportGraph.WorkspaceModel.Summary.Core`: [⠀]
 
 `ImportGraph.WorkspaceModel.Base` > `ImportGraph.WorkspaceModel.Build`: [⠃]
 
@@ -71,7 +72,7 @@ run_cmd
   let mut msgs := #[]
   let mainModule ← getMainModule
   let buildMod := `ImportGraph.WorkspaceModel.Build
-  let summaryMod := `ImportGraph.WorkspaceModel.Summary
+  let summaryMod := `ImportGraph.WorkspaceModel.Summary.Core
   let baseMod := `ImportGraph.WorkspaceModel.Base
   msgs := msgs.push m!"Has `{mainModule}`: \
     {w.mods.any (·.name == mainModule)}"
