@@ -157,6 +157,10 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         -- note: changes in `index.html` might need to be reflected here!
         let escapedFile := gexfFile.replace "\n" "" |>.replace "\"" "\\\""
         let toFormatted : String := ", ".intercalate <| (to.map toString).toList
+        if let some docsUrl := args.flag? "docs-url" |>.map (·.as! String) then
+          let docsUrl := if docsUrl.endsWith "/" then docsUrl else docsUrl ++ "/"
+          html := html.replace "\"https://leanprover-community.github.io/mathlib4_docs/\""
+            (Json.str docsUrl).compress
         html := html
           |>.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)" s!"render_gexf(\"{escapedFile}\")"
           |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {toFormatted}</h1>"
@@ -188,6 +192,8 @@ def graph : Cmd := `[Cli|
     "include-lean";            "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
     "mark-package";            "Visually highlight the package containing the first `--to` target (used in combination with some `--include-XXX`)."
     "mark-sorry";              "Visually highlight modules containing sorries."
+    "docs-url" : String;       "Base URL of the documentation that nodes link to in `.html` output \
+      (default: the Mathlib docs)."
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \

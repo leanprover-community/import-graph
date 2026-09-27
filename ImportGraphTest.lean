@@ -2,6 +2,7 @@ import ImportGraphTest.AnotherFileWithTransitiveImports
 import ImportGraphTest.Dot
 import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FromSource
+import ImportGraphTest.Html
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.NormImports
