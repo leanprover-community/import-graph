@@ -9,7 +9,7 @@ public import Lean.Message
 
 /-! # Extra utilities for `Lean.MessageData` -/
 
-public section
+namespace ImportGraph
 
 open Lean
 
