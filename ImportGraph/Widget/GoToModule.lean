@@ -6,10 +6,6 @@ Authors: Kim Morrison, Paul Lezeau, Thomas R. Murrills
 module
 
 public meta import Lean.Widget.UserWidget
-public import Lean.Data.Lsp.BasicAux
-public import Lean.Server.Rpc.Basic
-
-import Lean.Exception
 
 /-! # A Go-To-Module widget
 
