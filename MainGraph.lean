@@ -157,10 +157,10 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
         -- note: changes in `index.html` might need to be reflected here!
         let escapedFile := gexfFile.replace "\n" "" |>.replace "\"" "\\\""
         let toFormatted : String := ", ".intercalate <| (to.map toString).toList
-        if let some docsUrl := args.flag? "docs-url" |>.map (·.as! String) then
-          let docsUrl := if docsUrl.endsWith "/" then docsUrl else docsUrl ++ "/"
+        if let some docUrl := args.flag? "doc-url" |>.map (·.as! String) then
+          let docUrl := if docUrl.endsWith "/" then docUrl else docUrl ++ "/"
           html := html.replace "\"https://leanprover-community.github.io/mathlib4_docs/\""
-            (Json.str docsUrl).compress
+            (Json.str docUrl).compress
         html := html
           |>.replace "fetch(\"imports.gexf\").then((res) => res.text()).then(render_gexf)" s!"render_gexf(\"{escapedFile}\")"
           |>.replace "<h1>Import Graph</h1>" s!"<h1>Import Graph for {toFormatted}</h1>"
@@ -176,7 +176,7 @@ def importGraphCLI (args : Cli.Parsed) : IO UInt32 := do
 
 /-- Setting up command line options and help text for `lake exe graph`. -/
 def graph : Cmd := `[Cli|
-  graph VIA importGraphCLI; ["0.0.3"]
+  graph VIA importGraphCLI; ["0.1.0"]
   "Generate representations of a Lean import graph. \
    By default generates the import graph up to `Mathlib`. \
    If you are working in a downstream project, use `lake exe graph --to MyProject`."
@@ -192,8 +192,8 @@ def graph : Cmd := `[Cli|
     "include-lean";            "Include used files from Lean itself (implies `--include-deps` and `--include-std`)"
     "mark-package";            "Visually highlight the package containing the first `--to` target (used in combination with some `--include-XXX`)."
     "mark-sorry";              "Visually highlight modules containing sorries."
-    "docs-url" : String;       "Base URL of the documentation that nodes link to in `.html` output \
-      (default: the Mathlib docs)."
+    "doc-url" : String;        "Base URL of the documentation that nodes link to. \
+      Only relevant in `.html` output. (default: the mathlib docs)."
 
   ARGS:
     ...outputs : String;  "Filename(s) for the output. \

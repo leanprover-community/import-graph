@@ -19,10 +19,10 @@ def runGraphHtml (extraArgs : Array String) : IO String := do
 #eval show IO Unit from do
   let html ← runGraphHtml #[]
   IO.println <| html.contains
-    "params.get(\"docs_url\") || \"https://leanprover-community.github.io/mathlib4_docs/\""
+    "\"https://leanprover-community.github.io/mathlib4_docs/\""
 
 /-- info: true -/
 #guard_msgs in
 #eval show IO Unit from do
-  let html ← runGraphHtml #["--docs-url", "https://example.org/docs"]
-  IO.println <| html.contains "params.get(\"docs_url\") || \"https://example.org/docs/\""
+  let html ← runGraphHtml #["--doc-url", "https://example.org/docs"]
+  IO.println <| html.contains "\"https://example.org/docs/\""

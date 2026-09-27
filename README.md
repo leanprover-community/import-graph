@@ -53,10 +53,10 @@ Clicking a node opens its page in the Mathlib documentation. For another project
 of its documentation:
 
 ```
-lake exe graph --to MyProject --docs-url https://example.org/docs/ my_graph.html
+lake exe graph --to MyProject --doc-url https://example.org/docs/ my_graph.html
 ```
 
-The link target can also be changed when viewing the file by adding `?docs_url=...` to its URL.
+The link target can also be changed when viewing the file by adding `?doc_url=...` to its URL.
 
 ## Commands
 

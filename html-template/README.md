@@ -21,7 +21,7 @@ And open http://localhost:8000
 
 Currently `lake exe graph output.html` will use the files here to create a stand-alone
 HTML file. It does so by search-replacing the JS-scripts, the `fetch('imports.gexf')`
-statement, the `<h1>` header, and (with `--docs-url`) the default `docs_url`.
+statement, the `<h1>` header, and (with `--doc-url`) the default `doc_url`.
 
 Therefore any modifications to these lines need to be reflected in `MainGraph.lean`!
 
