@@ -6,6 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public meta import Lean.Widget.UserWidget
+public import Lean.Message
 
 /-!
 # Collapsible `MessageData` widget

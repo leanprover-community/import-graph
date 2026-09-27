@@ -6,6 +6,8 @@ Authors: Thomas R. Murrills
 module
 
 public meta import Lean.Widget.UserWidget
+public import Lean.Data.Json.Basic
+import Lean.Message
 
 /-!
 # A "copy to clipboard" infoview widget

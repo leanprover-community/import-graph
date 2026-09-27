@@ -5,10 +5,10 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Lean.Json
-public import ImportGraph.Shake.Basic
 public import ImportGraph.WorkspaceModel.Base
 public import Lean.Message -- only for `ToMessageData` on `WorkspaceModel.Error`
+public import ImportGraph.Shake.Core
+import ImportGraph.Lean.Json
 
 /-!
 # A model of the Lake workspace
