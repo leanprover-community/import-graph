@@ -21,4 +21,4 @@ for the types `Glob` and `ToolchainVer` in `WorkspaceSummary` field types.
 For Lake interaction with `WorkspaceSummary`, import `ImportGraph.WorkspaceModel.Summary.Lake`.
 -/
 
-assert_not_exists Lake.Workspace --
+assert_not_exists Lake.Workspace -- ensure we do not import deep lake internals
