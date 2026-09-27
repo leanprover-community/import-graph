@@ -82,6 +82,16 @@ structure BaseWorkspace where
   dir : FilePath
   /-- The Lean toolchain's sysroot (absolute). -/
   sysroot : FilePath
+  /-- The Lean toolchain's directory for its oleans (absolute), usually `{sysroot}/lib/lean/`. -/
+  leanLibDir : FilePath
+  /-- The Lean toolchain's lake source directory (absolute), usually `{sysroot}/src/lean/lake/`.
+  Note that we should search here first for files, lest we confuse `src/lean/lake/` with
+  `src/lean/Lake` on case-insensitive filesystems. -/
+  lakeSrcDir : FilePath
+  /-- The Lean toolchain's lean source directory (absolute), usually `{sysroot}/src/lean/`.
+  Note that we should search `lakeSrcDir` first for files, lest we confuse `src/lean/lake/` with
+  `src/lean/Lake` on case-insensitive filesystems. -/
+  leanSrcDir : FilePath
   /-- The Lean toolchain's version, as read from the `lean-toolchain` file, if possible. -/
   version : Option ToolchainVer
   /-- The git hash of the lean version. -/

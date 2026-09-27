@@ -123,6 +123,9 @@ def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)
     (version : Option ToolchainVer) (inputHash : Hash) : WorkspaceSummary where
   dir := ws.dir
   sysroot := ws.lakeEnv.lean.sysroot
+  leanLibDir := ws.lakeEnv.lean.leanLibDir
+  lakeSrcDir := ws.lakeEnv.lake.srcDir
+  leanSrcDir := ws.lakeEnv.lean.srcDir
   version := version
   -- Note: we avoid the override with `ws.lakeEnv.lean.githash` instead of `ws.lakeEnv.leanGithash`.
   leanGitHash := ws.lakeEnv.lean.githash
