@@ -5,12 +5,12 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.Shake.Algebra
+public import ImportGraph.WorkspaceModel.Summary.Core
+public import ImportGraph.WorkspaceModel.Model
 
 import Lean.Elab.ParseImportsFast
 import ImportGraph.Lake
-public import ImportGraph.WorkspaceModel.Summary.Core
 import ImportGraph.WorkspaceModel.Summary.Get
 
 /-!

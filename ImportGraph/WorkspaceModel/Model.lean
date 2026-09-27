@@ -8,6 +8,7 @@ module
 public import ImportGraph.WorkspaceModel.Base
 public import Lean.Message -- only for `ToMessageData` on `WorkspaceModel.Error`
 public import ImportGraph.Shake.Core
+
 import ImportGraph.Lean.Json
 
 /-!
