@@ -273,10 +273,12 @@ elab_rules : command
       .text s!"[copy source{if priorDecls.isEmpty then "" else " (without prior declarations)"}]")
   Lean.logInfo m!"{m!"\n".joinSep msgs.toList}\
     \n\n\
-    {if priorDecls.isEmpty then m!"" else m!"Be sure to also move the following prior \
-      declarations:\n\
-      {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
-      \n\n"}\
+    {if priorDecls.isEmpty then m!"" else
+      m!"Be sure to also move the following prior declarations:\n\
+        {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
+        \n\n\
+        This assessment does not yet account for syntax needs of prior declarations.\
+        \n\n"}\
     {copySource}\n\n{moreInfo}"
 
 end ImportGraph.Shake
