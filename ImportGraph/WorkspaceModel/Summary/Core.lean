@@ -5,9 +5,6 @@ Authors: Thomas R. Murrills
 -/
 module
 
-
--- public import Lake.Config.Workspace
--- public import Lake.Build.Trace
 public import Lean.Data.Json
 public import ImportGraph.WorkspaceModel.Base
 
