@@ -272,7 +272,7 @@ elab_rules : command
     copyToClipboard s!"\n{disclaimerComment}\n{source}\n" (display :=
       .text s!"[copy source{if priorDecls.isEmpty then "" else " (without prior declarations)"}]")
   Lean.logInfo m!"{m!"\n".joinSep msgs.toList}\
-    \n\n\
+    \n\
     {if priorDecls.isEmpty then m!"" else
       m!"Be sure to also move the following prior declarations:\n\
         {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
