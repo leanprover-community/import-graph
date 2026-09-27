@@ -167,8 +167,24 @@ elab_rules : command
     minimalsProvidedHere[currentLibIdx]?.getD #[] |>.filter fun modIdx =>
       modIdx != currentModIdx && !(aboveSameLib.contains modIdx)
 
+  /- Record whether we actually need any dependencies from the current library/package for better
+  errors. -/
+  let dependsOnCurrentLib := importNeeds.any (· ∩ (w.getLib! currentLibIdx).mods != ∅)
+  let dependsOnCurrentPkg := importNeeds.any (· ∩ (w.getPkg! currentPkgIdx).mods != ∅)
+
   -- Construct final `MessageData`
   let mut msgs := #[]
+
+  -- Informative header if no dependencies:
+  if !dependsOnCurrentLib then
+    msgs := msgs.push m!"This command \
+        {if priorDecls.isEmpty then "" else "and its dependencies from the same file "}\
+        do not depend on {
+          if !dependsOnCurrentPkg then
+            "the current package at all!"
+          else "the current library at all, but do depend on another library from this \
+            package."}\n"
+
   -- Note that `providedHereSameLib` is disjoint from both `aboveSameLib` and `adjSameLib`.
   -- Note that `aboveSameLib.isEmpty` implies `providedHereSameLib` is empty.
   if aboveSameLib.isEmpty then
