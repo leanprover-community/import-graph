@@ -56,8 +56,6 @@ of its documentation:
 lake exe graph --to MyProject --doc-url https://example.org/docs/ my_graph.html
 ```
 
-The link target can also be changed when viewing the file by adding `?doc_url=...` to its URL.
-
 ## Commands
 
 There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Tools` to your lean file.
