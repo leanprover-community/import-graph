@@ -15,6 +15,10 @@ This file defines:
   position and with customizable visible text)
 - `goToModuleOfDecls`/`goToModuleOfDecl`, the same for bringing the user to the position before or
   after declarations from a (single) module, as specified
+
+# Future work
+
+Ideally, we would use `*.ilean` fallbacks for finding declaration positions if available.
 -/
 
 open Lean
@@ -155,7 +159,10 @@ def goToModuleOfDecls (decls : Array Name) (location := RelativeRangeLocation.en
     CoreM MessageData := do
   let env ← getEnv
   let some moduleIdx := decls.firstM env.getModuleIdxFor? <|> fallbackModule.bind env.getModuleIdx?
-    | throwError "Could not find module when constructing go-to-module link."
+    | if let some fallbackModule := fallbackModule then goToModule fallbackModule else
+        throwError "Could not find module when constructing go-to-module link for decls (and no \
+          fallback module was provided):\
+          {indentD (decls.toList.map MessageData.ofConstName)}"
   unless decls.all fun decl => (env.getModuleIdxFor? decl).all (· == moduleIdx) do
     throwError "Not all provided declarations come from the same module."
   let pos ← match location with
