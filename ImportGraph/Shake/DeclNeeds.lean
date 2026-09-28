@@ -803,8 +803,11 @@ def withElabCommandCapturingNeeds (cmd : Syntax.Command) :
     let oldEnv ← getEnv
     elabCommand cmd
     let env ← getEnv
+    let oldConstants := oldEnv.constants.map₂
     let newDecls := env.constants.foldStage2 (s := #[]) fun acc decl _ =>
-      if oldEnv.contains decl then acc else acc.push decl
+      if oldConstants.contains decl then acc else acc.push decl
+    trace[ImportGraph.Shake] "New constants captured from command:\
+      {indentD (newDecls.toList.map MessageData.ofConstName)}"
     let mut declNeeds := {}
     let mut autoDecls := #[] -- Save auto decls, and ensure we found them
     -- TODO-TAG: auto decl handling
