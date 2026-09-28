@@ -52,21 +52,23 @@ elab tk:"#show_imports" ppSpace &"for" ppLine cmd:command : command => do
   let reduced := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce transDeps
   let prettyImports := Import.pretty reduced
   let copyIcon ← liftCoreM <| copyToClipboard s!"{prettyImports}"
-  let moreInfo ← liftCoreM do collapsible m!"More information" <|← do
+  let moreInfo ← liftCoreM do
     if newDecls.isEmpty then pure m!"This command did not produce any new declarations." else
       let new ← collapsible m!"New declarations produced by this command:"
+        (initiallyOpen := newDecls.size ≤ 5)
         m!"{.bulletList <| newDecls.toList.map MessageData.ofConstName}"
       let prior ← do
         let prior := declNeeds.keysArray.filter (!newDecls.contains ·)
         if prior.isEmpty then pure m!"" else
           collapsible m!"Declarations from the current file needed by this command:"
+            (initiallyOpen := prior.size ≤ 5)
             m!"{.bulletList <| prior.toList.map MessageData.ofConstName}"
       pure m!"{new}{prior}"
-  let metas := newDecls.filter (isMarkedMeta (← getEnv)) |>.map MessageData.ofConstName
+  let metas := declNeeds.keysArray.filter (isMarkedMeta (← getEnv)) |>.map MessageData.ofConstName
   unless metas.isEmpty do
     logWarningAt tk
       m!"Warning: Some new declarations are marked meta. `#show_imports` does not yet handle meta \
         IR; the following is an approximation.\n{.bulletList metas.toList}"
-  logInfoAt tk m!"{copyIcon}Imports needed:\n\n\
+  logInfoAt tk m!"{copyIcon} Imports needed:\n\n\
     {prettyImports}\n\n\
     {moreInfo}"
