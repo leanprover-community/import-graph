@@ -7,6 +7,8 @@ public meta import ImportGraph.Widget.GoToModule
 -- To load declaration ranges under `lake build` (usually only present in the server):
 import all ImportGraphTest.Widget.GoToModule.Decls
 
+assert_not_imported ImportGraphTest.Widget.GoToModule.Fallback
+
 open ImportGraph Widget Lean Elab Command GoToModule
 
 elab "#go_to" : command => liftCoreM do
@@ -25,6 +27,8 @@ elab "#go_to" : command => liftCoreM do
     ← goToModuleOfDecls #[``bar, ``foo] (.start true),
     m!"start of `foo`:",
     ← goToModuleOfDecls #[``bar, ``foo] (.start false),
+    m!"use fallback even if not imported:",
+    ← goToModuleOfDecls #[] (fallbackModule := `ImportGraphTest.Widget.GoToModule.Fallback),
   ]
   logInfo <| m!"\n".joinSep msgs
 
@@ -42,6 +46,8 @@ line before `foo`:
 ImportGraphTest.Widget.GoToModule.Decls (8:0)
 start of `foo`:
 ImportGraphTest.Widget.GoToModule.Decls (9:0)
+use fallback even if not imported:
+ImportGraphTest.Widget.GoToModule.Fallback (1:0)
 -/
 #guard_msgs in
 #go_to
