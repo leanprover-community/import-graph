@@ -178,12 +178,13 @@ elab_rules : command
   -- Informative header if no dependencies:
   if !dependsOnCurrentLib then
     msgs := msgs.push m!"This command \
-        {if priorDecls.isEmpty then "" else "and its dependencies from the same file "}\
-        do not depend on {
-          if !dependsOnCurrentPkg then
-            "the current package at all!"
-          else "the current library at all, but do depend on another library from this \
-            package."}\n"
+      {if priorDecls.isEmpty then "does " else "and its dependencies from the same file do "}\
+      not depend on {
+        if !dependsOnCurrentPkg then
+          "the current package at all!"
+        else s!"the current library at all, but \
+        {if priorDecls.isEmpty then "does " else "do "}\
+        depend on another library from this package."}\n"
 
   -- Note that `providedHereSameLib` is disjoint from both `aboveSameLib` and `adjSameLib`.
   -- Note that `aboveSameLib.isEmpty` implies `providedHereSameLib` is empty.
