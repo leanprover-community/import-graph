@@ -15,10 +15,6 @@ This file defines:
   position and with customizable visible text)
 - `goToModuleOfDecls`/`goToModuleOfDecl`, the same for bringing the user to the position before or
   after declarations from a (single) module, as specified
-
-# Future work
-
-Ideally, we would use `*.ilean` fallbacks for finding declaration positions if available.
 -/
 
 open Lean
