@@ -10,7 +10,6 @@ public import ImportGraph.Imports.Pretty
 public import ImportGraph.Imports.Redundant
 public import ImportGraph.Imports.RequiredModules
 public import ImportGraph.Imports.Unused
-public import ImportGraph.Lake
 public import ImportGraph.Lean.EnvExtension
 public import ImportGraph.Lean.Environment
 public import ImportGraph.Lean.Json

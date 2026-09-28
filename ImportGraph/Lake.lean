@@ -22,6 +22,10 @@ This file defines a few convenient lake utilities, notably:
 - `ImportGraph.IO.getWorkspace : IO Lake.Workspace`: a version of
   `Lake.loadWorkspace : LoggerIO Lake.Workspace` for use in `IO` which constructs the IO
   environment variables and finds the lean installation.
+
+Note that this file should generally not be transitively imported, and is not imported via
+`import ImportGraph`. However, it is a dependency of the `import-graph-workspace-summary` exe,
+which is a default target. As such, it will always get built under `lake build`.
 -/
 
 open Lean Lake

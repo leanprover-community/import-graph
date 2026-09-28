@@ -7,7 +7,7 @@ module
 
 import Lake.Load.Workspace
 import ImportGraph.Lake
-import ImportGraph.WorkspaceModel.Summary
+import ImportGraph.WorkspaceModel.Summary.Lake
 
 /-!
 # Root of `lake exe import-graph-workspace-summary`
