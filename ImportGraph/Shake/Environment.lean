@@ -105,7 +105,7 @@ def toSimultaneousImportNeeds (env : Environment)
         let some usedStance ← getStance? usedDecl | continue
         let mut usedKs : DeclDeclNeedsKindSet := {}
         for k in ks do
-          trace[ImportGraph.Shake] "{k.pretty}"
+          trace[ImportGraph.Shake] "{k}"
           if usedKs.contains k then continue
           usedKs := usedKs.insert k
           if let .comptime <| .indirect _ mods := k then

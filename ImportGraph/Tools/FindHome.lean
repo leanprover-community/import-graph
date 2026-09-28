@@ -147,7 +147,7 @@ elab_rules : command
       let modName := w.getMod! modIdx |>.name
       let mut decls : NameSet := {}
       for (_, need) in declNeeds do
-        let some declsFromMod := need.fixedDecls[modName]? | continue
+        let some declsFromMod := need.fixedDecls.get? modName | continue
         decls := decls.insertMany declsFromMod.keysArray
       let declsArray := decls.toArray
       links := links.push <|← goToModuleOfDecls declsArray (fallbackModule := modName)
