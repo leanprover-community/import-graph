@@ -72,7 +72,7 @@ def DeclNeeds.toSimultaneousImportNeeds
           (fun _ => return m!"Uses decl `{.ofConstName usedDecl}`") do←
         let some usedStance ← getStance? usedDecl | continue
         for k in ks do
-          trace[ImportGraph.Shake] "{k.pretty}"
+          trace[ImportGraph.Shake] "{k}"
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := w.idxOfMod[modName]? | continue
@@ -109,5 +109,3 @@ def ImportNeeds.providersByLib (w : WorkspaceModel) (needs : ImportNeeds)
       |>.then (compare pᵢ.size pⱼ.size)
       |>.then (Name.cmp (w.getMod! i).name (w.getMod! j).name) -- for stability if all else fails
       |>.isLT).map (·.1)
-
-initialize registerTraceClass `ImportGraph.Shake
