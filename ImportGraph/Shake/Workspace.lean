@@ -109,5 +109,3 @@ def ImportNeeds.providersByLib (w : WorkspaceModel) (needs : ImportNeeds)
       |>.then (compare pᵢ.size pⱼ.size)
       |>.then (Name.cmp (w.getMod! i).name (w.getMod! j).name) -- for stability if all else fails
       |>.isLT).map (·.1)
-
-initialize registerTraceClass `ImportGraph.Shake

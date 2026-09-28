@@ -828,3 +828,5 @@ def withElabCommandCapturingNeeds (cmd : Syntax.Command) :
     declNeeds ← declNeeds.calcSyntaxNeeds env newDecls cmd
     declNeeds ← liftCoreM <| declNeeds.calcIRNeeds.run'
     return (declNeeds, newDecls)
+
+initialize registerTraceClass `ImportGraph.Shake
