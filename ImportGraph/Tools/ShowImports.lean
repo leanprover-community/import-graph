@@ -20,7 +20,9 @@ that command, any prior declarations from the same file, and the syntax of the c
 
 Note that this currently does not work for `example`.
 
+## Future work
 
+- Better attribution of import needs to declarations/syntax/etc.
 -/
 
 meta section
