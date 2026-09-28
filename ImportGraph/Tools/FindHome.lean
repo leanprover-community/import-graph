@@ -113,7 +113,7 @@ elab_rules : command
       {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
 
   -- Elaborate command and capture new decls and decl needs
-  let (declNeeds, newDecls) ← withElabCommandCapturingNeeds cmd
+  let (declNeeds, newDecls) ← elabCommandCapturingNeeds cmd
   if ← MonadLog.hasErrors then -- Also stop if the command produced errors
     return
   unless (← getEnv).header.isModule do

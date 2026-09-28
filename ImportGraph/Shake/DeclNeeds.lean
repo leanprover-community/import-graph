@@ -798,8 +798,7 @@ open Lean Elab Command in
 /-- Elaborates the command and captures the `DeclNeeds` of all new declarations. Attaches the needs
 implied by the command's syntax to each new declaration. Note: does **not** capture extra rev mod
 uses influencing the file as a whole. -/
-def withElabCommandCapturingNeeds (cmd : Syntax.Command) :
-    CommandElabM (DeclNeeds × Array Name) := do
+def elabCommandCapturingNeeds (cmd : Syntax.Command) : CommandElabM (DeclNeeds × Array Name) := do
   withFreshShakeRecords do
     let oldEnv ← getEnv
     elabCommand cmd
