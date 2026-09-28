@@ -8,7 +8,7 @@ import ImportGraphTest.Shake.Algebra
 open ImportGraph Shake Lean Elab Command
 
 elab "#show_decl_needs" colGe cmd:command : command => do
-  let (declNeeds, newDecls) ← elabCommandCapturingNeeds cmd
+  let (declNeeds, newDecls) ← withElabCommandCapturingNeeds cmd
   let w ← getWorkspaceModel (extraMods := #[← getMainModule])
   let (importNeeds, stances) ← liftCoreM <| declNeeds.toSimultaneousImportNeeds w |>.run
   let stanceMsg : MessageData := .bracket (l := "{") (r := "}") <|
