@@ -73,3 +73,17 @@ info: This command can be moved to the following module above this module:
 #guard_msgs in
 #find_home for
 def x₁₂foo := bar₁ && bar₂ && foo
+
+def nothingDep := true
+
+/--
+info: This command and its dependencies from the same file do not depend on the current package at all!
+
+This command and its dependencies can be moved to the following modules above this module:
+• ImportGraphTest.FindHome.ComponentHome1 (1:0)
+• ImportGraphTest.FindHome.ComponentHome2 (1:0)
+-/
+-- `(substring := true)` so we do not list all leaf modules from this file and above
+#guard_msgs (substring := true) in
+#find_home for
+def nothing := nothingDep

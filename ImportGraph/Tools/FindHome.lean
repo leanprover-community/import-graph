@@ -167,15 +167,32 @@ elab_rules : command
     minimalsProvidedHere[currentLibIdx]?.getD #[] |>.filter fun modIdx =>
       modIdx != currentModIdx && !(aboveSameLib.contains modIdx)
 
+  /- Record whether we actually need any dependencies from the current library/package for better
+  errors. -/
+  let dependsOnCurrentLib := importNeeds.any (· ∩ (w.getLib! currentLibIdx).mods != ∅)
+  let dependsOnCurrentPkg := importNeeds.any (· ∩ (w.getPkg! currentPkgIdx).mods != ∅)
+
   -- Construct final `MessageData`
   let mut msgs := #[]
+
+  -- Informative header if no dependencies:
+  if !dependsOnCurrentLib then
+    msgs := msgs.push m!"This command \
+      {if priorDecls.isEmpty then "does " else "and its dependencies from the same file do "}\
+      not depend on {
+        if !dependsOnCurrentPkg then
+          "the current package at all!"
+        else s!"the current library at all, but \
+        {if priorDecls.isEmpty then "does " else "do "}\
+        depend on another library from this package."}\n"
+
   -- Note that `providedHereSameLib` is disjoint from both `aboveSameLib` and `adjSameLib`.
   -- Note that `aboveSameLib.isEmpty` implies `providedHereSameLib` is empty.
   if aboveSameLib.isEmpty then
     msgs := msgs.push m!"In this library, this command \
       {if priorDecls.isEmpty then "is " else "and its dependencies from this file are "}\
       as high in the import hierarchy as {if priorDecls.isEmpty then "it" else "they"} can be\
-      {if adjSameLib.isEmpty then "" else " above the current module"}."
+      {if adjSameLib.isEmpty then "" else " above the current module"}.\n"
   else
     unless aboveSameLib.isEmpty do
       let modLinks ← mkModLinks aboveSameLib
@@ -185,21 +202,21 @@ elab_rules : command
         m!"This command {if priorDecls.isEmpty then "" else "and its dependencies "}\
           can be moved to the following module\
           {if aboveSameLib.size = 1 then "" else "s"} above this module:\n\
-          {.bulletList modLinks.toList}"
+          {.bulletList modLinks.toList}\n"
     unless providedHereSameLib.isEmpty do
       let modLinks ← mkModLinks providedHereSameLib
       msgs := msgs.push <|← liftCoreM <|
         collapsible m!"This command can also be moved to modules which are highest in the \
           hierarchy among modules currently imported in this file, but are not highest among all \
           modules."
-          m!"{.bulletList modLinks.toList}"
+          m!"{.bulletList modLinks.toList}\n"
   unless adjSameLib.isEmpty do
     let modLinks ← mkModLinks adjSameLib
     msgs := msgs.push <|← liftCoreM <|
       collapsible m!"{if aboveSameLib.isEmpty then
         "However, this command can be moved to" else "This command can also be moved to"} \
         files adjacent to the current module in the import hierarchy."
-        m!"{.bulletList modLinks.toList}"
+        m!"{.bulletList modLinks.toList}\n"
   if aboveSameLib.isEmpty && adjSameLib.isEmpty then
     msgs := msgs.push <|
       m!"`#find_home` attempted to move the following new declaration\
@@ -209,7 +226,7 @@ elab_rules : command
         m!"\n\
           as well as the following existing declaration{if priorDecls.size = 1 then "" else "s"} \
           in this file, on which {if newDecls.size = 1 then "it depends" else "they depend"}:\n\
-          {.bulletList (priorDecls.toList.map .ofConstName)}"}"
+          {.bulletList (priorDecls.toList.map .ofConstName)}"}\n"
   let upstreams := minimals.filter fun libIdx _ => libIdx != currentLibIdx &&
   -- TODO: we assume all unequal packages are upstream. This is not necessarily the case.
     (w.pkgIdxOfLibIdx! libIdx != currentPkgIdx)
@@ -256,11 +273,13 @@ elab_rules : command
     copyToClipboard s!"\n{disclaimerComment}\n{source}\n" (display :=
       .text s!"[copy source{if priorDecls.isEmpty then "" else " (without prior declarations)"}]")
   Lean.logInfo m!"{m!"\n".joinSep msgs.toList}\
-    \n\n\
-    {if priorDecls.isEmpty then m!"" else m!"Be sure to also move the following prior \
-      declarations:\n\
-      {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
-      \n\n"}\
+    \n\
+    {if priorDecls.isEmpty then m!"" else
+      m!"Be sure to also move the following prior declarations:\n\
+        {.bulletList (priorDecls.toList.map MessageData.ofConstName)}\
+        \n\n\
+        This assessment does not yet account for syntax needs of prior declarations.\
+        \n\n"}\
     {copySource}\n\n{moreInfo}"
 
 end ImportGraph.Shake
