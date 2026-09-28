@@ -1,6 +1,5 @@
 module
 
-public import Cli.Basic
 import ImportGraph.Export.DotFile
 import ImportGraph.Export.Gexf
 import ImportGraph.Graph.Filter
@@ -10,6 +9,7 @@ import ImportGraph.Lean.Name
 import ImportGraph.Util.CurrentModule
 import ImportGraph.Util.FindSorry
 import Lean.Data.NameMap.AdditionalOperations
+import Cli.Basic
 
 /-!
 # `lake exe graph`

@@ -6,8 +6,7 @@ Authors: Kim Morrison, Paul Lezeau
 module
 
 public meta import Lean.Elab.Command
-public meta import Lean.Widget.UserWidget
-public meta import ImportGraph.Imports.ImportGraph
+import Lean.Exception
 
 public meta section
 
