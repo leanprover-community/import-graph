@@ -8,12 +8,8 @@ module
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Lean.MessageData
 public meta import ImportGraph.Shake.Environment
--- public meta import ImportGraph.Imports.ImportGraph -- for old `#find_home`
--- public meta import ImportGraph.Graph.TransitiveClosure -- for old `#find_home`
--- public meta import ImportGraph.Imports.RequiredModules -- for old `#find_home`
 public import ImportGraph.Widget.Collapsible
 public import ImportGraph.Widget.Copy
--- public import ImportGraph.Util.GoTo
 
 /-!
 # `#show_imports for <cmd>`
@@ -23,6 +19,8 @@ imports needed to elaborate `<cmd>`, including the import needs of the declarati
 that command, any prior declarations from the same file, and the syntax of the command.
 
 Note that this currently does not work for `example`.
+
+
 -/
 
 meta section
@@ -45,27 +43,30 @@ elab tk:"#show_imports" ppSpace &"for" ppLine cmd:command : command => do
   unless (← getEnv).header.isModule do
     logWarningAt tk "`#show_imports` may not function correctly outside of the module system. \
       This may be addressed in the future."
+  if cmd.raw.find? (·.isOfKind  ``Parser.Command.example) |>.isSome then
+    logWarningAt tk "Note: `#show_imports` does not yet handle `example`s. Please create a
+      temporary declaration."
   let transDeps := (← getEnv).mkTransDeps
   let (declNeeds, newDecls) ← withElabCommandCapturingNeeds cmd
   let importNeeds ← liftCoreM ((← getEnv).toSimultaneousImportNeeds declNeeds).run'
   let reduced := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce transDeps
   let prettyImports := Import.pretty reduced
   let copyIcon ← liftCoreM <| copyToClipboard s!"{prettyImports}"
-  let moreInfo ← liftCoreM do
-    if newDecls.isEmpty then pure m!"" else
-      let new ← collapsible m!"New declarations produced by this command"
+  let moreInfo ← liftCoreM do collapsible m!"More information" <|← do
+    if newDecls.isEmpty then pure m!"This command did not produce any new declarations." else
+      let new ← collapsible m!"New declarations produced by this command:"
         m!"{.bulletList <| newDecls.toList.map MessageData.ofConstName}"
       let prior ← do
         let prior := declNeeds.keysArray.filter (!newDecls.contains ·)
         if prior.isEmpty then pure m!"" else
-          collapsible m!"Declarations from the current file needed by this command"
+          collapsible m!"Declarations from the current file needed by this command:"
             m!"{.bulletList <| prior.toList.map MessageData.ofConstName}"
       pure m!"{new}{prior}"
   let metas := newDecls.filter (isMarkedMeta (← getEnv)) |>.map MessageData.ofConstName
   unless metas.isEmpty do
     logWarningAt tk
-      m!"Warning: Some declarations are marked meta. `#show_imports` does not yet handle meta IR; \
-        the following is an approximation.\n{.bulletList metas.toList}"
+      m!"Warning: Some new declarations are marked meta. `#show_imports` does not yet handle meta \
+        IR; the following is an approximation.\n{.bulletList metas.toList}"
   logInfoAt tk m!"{copyIcon}Imports needed:\n\n\
     {prettyImports}\n\n\
     {moreInfo}"
