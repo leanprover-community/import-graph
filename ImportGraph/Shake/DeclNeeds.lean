@@ -31,7 +31,7 @@ Note that, crucially, `DeclNeeds` is agnostic to the source of our import hierar
 module names instead of e.g. `ModuleIdx`s/`ModIdx`s. Hence these functions are compatible with both
 a `WorkspaceModel` approach and an `Environment` approach.
 
-This file culminates in `elabCommandCapturingNeeds`, which elaborates a command and captures
+This file culminates in `withElabCommandCapturingNeeds`, which elaborates a command and captures
 the (transitive) `DeclNeeds` of declarations produced in that command, including e.g. the needs
 implied by the command's syntax.
 
