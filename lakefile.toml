@@ -13,6 +13,7 @@ rev = "v4.35.0-rc3"
 
 [[lean_lib]]
 name = "ImportGraph"
+precompileLibrary = true
 
 # `lake exe graph` constructs import graphs in `.dot` or graphical formats.
 [[lean_exe]]
