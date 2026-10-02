@@ -1,26 +1,25 @@
 /-
 Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kim Morrison, Paul Lezeau
+Authors: Kim Morrison, Paul Lezeau, Thomas R. Murrills
 -/
 module
 
-public import Lean.Elab.Command
-
-public meta import ImportGraph.Shake.DeclNeeds
 public meta import ImportGraph.Imports.FromSource
 public meta import ImportGraph.Imports.Pretty
-public meta import ImportGraph.Lean.MessageData
-public meta import ImportGraph.Shake.Environment
-public meta import ImportGraph.Shake.Workspace
-public meta import ImportGraph.Util.RunLater
-public meta import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
 public meta import ImportGraph.Imports.Redundant -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Shake.Environment
+public meta import ImportGraph.Util.RunLater
 
 /-!
 # `#min_imports`
 
-This module provides `#min_imports`
+This module provides `#min_imports`, which minimizes the imports according to which are actually
+used in the declarations and syntax of the current file.
+
+`#min_imports` uses the `runLater` `Backreporter` so that it can be run at any point in the current
+file.
 
 ## Future work
 
