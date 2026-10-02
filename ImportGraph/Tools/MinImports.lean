@@ -13,29 +13,13 @@ public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Shake.Environment
 public meta import ImportGraph.Shake.Workspace
 public meta import ImportGraph.Util.RunLater
-import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
-import ImportGraph.Imports.Redundant -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Imports.Redundant -- for deprecated `minimalRequiredModules`
 
-/-
-Comments were present when importing `ImportGraph.Util.RunLater`, but this module is now imported differently as `import ImportGraph.Util.RunLater`.
-Decide if the following original comments still apply:
-```
--- public meta import ImportGraph.Tools.NeedsGrid
-public meta import ImportGraph.Util.RunLater
-```
+/-!
+`#min_imports`
 
-Comments were present when importing `Lean.Elab.Command`, but this module is now imported differently as `public import Lean.Elab.Command`.
-Decide if the following original comments still apply:
-```
-import all Lean.Elab.Command -- for `recordUsedSyntaxKinds`
-```
-
-The following imports did not appear in the new import list, but had comments around them:
-```
--- import all ImportGraph.Tools.NeedsGrid
-import all ImportGraph.Shake.DeclNeeds
-```
-
+-- TODO-NOW: docs
 -/
 
 open ImportGraph Lean Elab Command Shake
@@ -50,7 +34,12 @@ meta def getModuleDeclNeeds (cmds : Array Syntax) :
     declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
   liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
 
-elab tk:"#min_imports" : command => runLaterWithSyntax fun cmds => withRef tk do
+elab tk:"#min_imports" : command => do
+  unless (← getEnv).header.isModule do
+    -- TODO-NOW: fall back to old behavior instead?
+    logWarning m!"`#min_imports` currently only works in the module system. This restriction may be
+      lifted soon."
+  runLaterWithSyntax fun cmds => withRef tk do
   let (declNeeds, s) ← getModuleDeclNeeds cmds
 
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
@@ -84,17 +73,7 @@ elab tk:"#min_imports" : command => runLaterWithSyntax fun cmds => withRef tk do
       logWarning m!"Imports can be reduced, but {disclaimer}\n\
         {msg}"
 
-/--
-Return the names of the modules in which constants used in the current file were defined,
-with modules already transitively imported removed.
-
-Note that this will *not* account for tactics and syntax used in the file,
-so the results may not suffice as imports.
--/
-@[deprecated
-  "Use `Environment.mkTransDeps` and `Needs.reduce` to handle imports in the module system"
-  (since := "2026-10-01")]
-def Lean.Environment.minimalRequiredModules (env : Environment) : Array Name :=
+public meta def Lean.Environment.minimalRequiredModules (env : Environment) : Array Name :=
   let required := env.requiredModules.toArray.erase env.header.mainModule
   let redundant := findRedundantImports env required
   required.filter fun n => ¬ redundant.contains n

@@ -22,6 +22,7 @@ initialize runReporter : Backreporter (Array Syntax → CommandElabM Unit) ←
       let savedState ← get
       try
         request.data cmds
+        -- TODO-NOW: markCompleted is wrong
         -- Wait for the message to be reported instead of running `request.markCompleted` here.
       catch
         | Exception.error ref msg =>
@@ -52,7 +53,7 @@ cannot persistently alter the environment or access infotrees.
 order to log on the intended ranges, e.g. `f := fun cmds => withRef ref ...`
 
 If `progressIndication := .atCommand` (the default) and both `Elab.async` and `Elab.inServer` are
-`true`, this creates a yellow bar which disappears once `x` is run at the end of the file. Use
+`true`, this creates a yellow bar which disappears once `f cmds` is run at the end of the file. Use
 `.at (ref : Syntax)` to show the progress bar at `ref` (note: this is clamped to the position range
 of the current command) and `.quiet` to show no progress bar at all. -/
 @[inline] def runLaterWithSyntax (f : Array Syntax → CommandElabM Unit)
