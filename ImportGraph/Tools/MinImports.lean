@@ -20,49 +20,75 @@ public meta import ImportGraph.Imports.Redundant -- for deprecated `minimalRequi
 /-!
 # `#min_imports`
 
+This module provides `#min_imports`
+
 ## Future work
 
 - Split out into API
-- Turn into an optional linter
+- Turn into an optional (expensive) linter
+- `#min_imports so far`
 -/
 
 open ImportGraph Lean Elab Command Shake
 
-/-- Get the `DeclNeeds` of all new constants in the `Environment`, given the `Array Syntax` of all
-commands in the file.-/
-meta def getModuleDeclNeeds (cmds : Array Syntax) :
-    CommandElabM (DeclNeeds × Std.HashMap Name (Option Stance)) := do
-  let mut declNeeds := ∅
-  -- TODO: more accurate targeting of declarations and commands.
-  for (decl, _) in (← getEnv).constants.map₂ do
-    declNeeds := calcDeclConstInfoNeeds decl (← getEnv) declNeeds
-  for cmd in cmds do
-    declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
-  liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
+namespace ImportGraph.Shake
 
+open Lean Environment in
 /-- **Does not work within the module system.** Get the names of all needed imports. -/
 public meta def Lean.Environment.minimalRequiredModules (env : Environment) : Array Name :=
   let required := env.requiredModules.toArray.erase env.header.mainModule
   let redundant := findRedundantImports env required
   required.filter fun n => ¬ redundant.contains n
 
-/--
-Minimize the imports
+/-- Get the `DeclNeeds` of all new constants in the `Environment`, given the `Array Syntax` of all
+commands in the file. Ignores any syntax (at the top level) with kind in `ignoredKinds`. -/
+meta def getModuleDeclNeeds (cmds : Array Syntax) (ignoredKinds : NameSet := {}):
+    CommandElabM (DeclNeeds × Std.HashMap Name (Option Stance)) := do
+  let mut declNeeds := ∅
+  -- TODO: more accurate targeting of declarations and commands.
+  for (decl, _) in (← getEnv).constants.map₂ do
+    declNeeds := calcDeclConstInfoNeeds decl (← getEnv) declNeeds
+  for cmd in cmds do
+    unless ignoredKinds.contains cmd.getKind do
+      declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
+  liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
 
+/--
+Minimize the imports of the entire current module.
+
+This command may be written anywhere in the file. It will wait until the file is done elaborating,
+then minimize imports for the whole file, taking into account declarations that come after it as
+well.
+
+Currently, it accounts for constants, syntax, shake records, and runtime IR (except for
+attributes like `@[inline]`), but not yet meta IR from new `meta def`s.
+
+To normalize imports without taking into account whether they are used or not, see `#norm_imports`.
+
+This command is aware of the module system.
 -/
-elab tk:"#min_imports" : command => do
+elab (name := minImportsStx) tk:"#min_imports" : command => do
   unless (← getEnv).header.isModule do
     logWarning m!"`#min_imports` currently only works within the module system."
   runLaterOnModuleSyntax fun cmds => withRef tk do
-    let (declNeeds, s) ← getModuleDeclNeeds cmds
+    let (declNeeds, s) ← getModuleDeclNeeds cmds (ignoredKinds := {``minImportsStx})
     if let some warning := declNeeds.metaWarning? (← getEnv) "#min_imports" then
       logWarning warning
+    let transDeps := (← getEnv).mkTransDeps
+
+    -- ignore direct imports of `#min_imports` for the transitive import calculation, reduce them
+    -- among themselves, and add them back in afterwards
+    let ignoring : NameSet := {`ImportGraph.Tools.MinImports, `ImportGraph.Tools, `ImportGraph}
+    let ignoredImports := (← getEnv).header.imports.filter (ignoring.contains ·.module)
+    let ignoredReduced ←
+      if ignoredImports.isEmpty then pure #[] else
+        let ignoredTransNeeds := (← getEnv).transitiveClosureOf ignoredImports transDeps
+        pure <| (← getEnv).toRawImports <| ignoredTransNeeds.reduce transDeps
 
     let importNeeds ← liftCoreM do StanceM.run' (s := s) do
       (← getEnv).toSimultaneousImportNeeds declNeeds
-    let transDeps := (← getEnv).mkTransDeps
     let reducedNeeds := importNeeds.toNeeds.reduce transDeps
-    let reducedImps := (← getEnv).toRawImports reducedNeeds
+    let reducedImps := (← getEnv).toRawImports reducedNeeds ++ ignoredReduced
 
     let (header, _, log) ← parseCurrentHeader
     if log.hasErrors then
@@ -72,6 +98,7 @@ elab tk:"#min_imports" : command => do
     let sourceImps := headerToImportRefsWithWhitespace header
     let some (msg, errs) ← liftCoreM <| Import.mkImportSuggestionMessage tk reducedImps sourceImps
       | logInfo m!"Imports are minimal."
+
     let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
     let normalizationChangeAtMost :=
       -- Whether the current imports are provided by the reduced imports
