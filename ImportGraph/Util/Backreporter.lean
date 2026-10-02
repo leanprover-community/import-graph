@@ -50,6 +50,7 @@ Progress indicators can be cleared manually with `Request.stopProgressIndicator`
 
 ## Implementation notes
 
+-- TODO-NOW
 
 ## Future work
 
@@ -58,9 +59,6 @@ Progress indicators can be cleared manually with `Request.stopProgressIndicator`
   `Backreporter BackreporterState`s, and just iterate through them in a single `ModuleLinter`. This
   might be faster if there are ever multiple `Backreporter`s.
 
-## Implementation notes
-
--- TODO
 -/
 
 open Lean Elab Command Language
@@ -280,6 +278,10 @@ def sendRequest (b : Backreporter α) (data : α)
   if let some promise := promise? then
     createProgressIndicator promise (ref? := progressIndication.toSyntax?.bind (·.getRange?))
       (desc := s!"backreport from `{b.name}`")
+
+-- TODO-NOW: docs
+@[inline] def sendSilentRequest (env : Environment) (b : Backreporter α) (data : α) :=
+  b.ext.modifyState env (·.push (.mkPure data))
 
 end Backreporter
 
