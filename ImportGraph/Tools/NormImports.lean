@@ -39,10 +39,8 @@ namespace ImportGraph.NormImports
 -- TODO: mention `#min_imports` when available
 /-- Normalizes the imports of the current file. This removes rendundant imports and formats the
 resulting import block in a standard fashion, ensuring that the same modules are available at the
-same visibilities and phases.
-
-`#norm_imports` does **not** take into account whether these imports are used in the current
-module. For that functionality, use `#min_imports`.
+same visibilities and phases. It does **not** take into account the declarations or usages of those
+modules in the current file.
 
 `#norm_imports` will keep any direct imports of `ImportGraph.Tools.NormImports`,
 `ImportGraph.Tools`, or `ImportGraph` in place, while ignoring them for the calculation

@@ -12,7 +12,6 @@ import Lean.Compiler.LCNF.Main
 import Lean.Compiler.LCNF.ToDecl
 import Lean.Compiler.NoncomputableAttr
 import ImportGraph.Shake.EnvExtension
-import ImportGraph.Lean.MessageData
 import ImportGraph.Lean.Syntax
 
 public meta import Lean.Elab.Term.TermElabM
@@ -794,15 +793,6 @@ def DeclNeeds.calcIRNeeds (declNeeds : DeclNeeds) : StanceM DeclNeeds := do
         trace[ImportGraph.Shake] "`{.ofConstName ``toDecl} {.ofConstName decl}` failed:\
           {indentD ex.toMessageData}"
   return declNeeds
-
-/-- A warning to display if any new declarations are `meta`, since `meta` declarations are not
-handled properly yet. -/
-def DeclNeeds.metaWarning? (env : Environment) (declNeeds : DeclNeeds) (cmd : String) :
-    Option MessageData := do
-  let metas := declNeeds.keysArray.filter (isMarkedMeta env) |>.map MessageData.ofConstName
-  guard !metas.isEmpty
-  return m!"Warning: Some declarations are marked meta. `{cmd}` does not yet handle meta IR; \
-    the following is an approximation. Specifically:\n{.bulletList metas.toList}"
 
 open Lean Elab Command in
 /-- Elaborates the command and captures the `DeclNeeds` of all new declarations. Attaches the needs

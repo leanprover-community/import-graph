@@ -70,6 +70,15 @@ open ImportGraph Shake Widget Lean Elab Command
 
 namespace ImportGraph.Shake
 
+/-- A warning to display if any declarations are `meta`, since `meta` declarations are not handled
+properly yet. -/
+private def DeclNeeds.metaWarning (env : Environment) (declNeeds : DeclNeeds) (cmd : String) :
+    Option MessageData := do
+  let metas := declNeeds.keysArray.filter (isMarkedMeta env) |>.map MessageData.ofConstName
+  guard !metas.isEmpty
+  return m!"Warning: Some declarations are marked meta. `{cmd}` does not yet handle meta IR; \
+    the following is an approximation. Specifically:\n{.bulletList metas.toList}"
+
 /--
 ⚠️ `#find_home` is currently experimental. Please report any wish-list features, possible ergonomic
 improvements, or errors on GitHub or Zulip.
@@ -114,7 +123,7 @@ elab_rules : command
     -- TODO: remove, allow finding homes for commands like `attribute`
     logWarningAt tk m!"This command did not produce any declarations."
     return
-  if let some warning := declNeeds.metaWarning? (← getEnv) "#find_home" then
+  if let some warning := declNeeds.metaWarning (← getEnv) "#find_home" then
     logWarningAt tk warning
   -- TODO: better handling of recursive import needs
   let importNeeds ← liftCoreM <| declNeeds.toSimultaneousImportNeeds w |>.run'
