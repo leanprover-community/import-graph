@@ -49,7 +49,7 @@ of the current command) and `.quiet` to show no progress bar at all. -/
 cannot persistently alter the environment or access infotrees.
 
 `f` will be run with the terminal command's ref as the ambient ref; bundle position info into `f` in
-order to log on the intended ranges.
+order to log on the intended ranges, e.g. `f := fun cmds => withRef ref ...`
 
 If `progressIndication := .atCommand` (the default) and both `Elab.async` and `Elab.inServer` are
 `true`, this creates a yellow bar which disappears once `x` is run at the end of the file. Use
