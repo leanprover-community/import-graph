@@ -7,21 +7,28 @@ module
 
 public import Lean.Elab.Command
 
--- TODO-NOW: check
--- TODO: change name to `Envoy` or `Emissary`? or `EndEnvoy`, `EndEmissary`?
 /-!
 # Backreporters
 
-A `Backreporter` can receive and process "requests" from command elaborators which it fulfills at the end of the file, while allowing a progress indicator (e.g. yellow bar in VS code) to be displayed at the command sending the request until it is fulfilled.
+A `Backreporter` can receive and process "requests" from command elaborators which it fulfills at
+the end of the file, while allowing a progress indicator (e.g. yellow bar in VS code) to be
+displayed at the command sending the request until it is fulfilled.
 
-Any other action with access to the `Environment` may also manually fulfill the request (and stop the progress indicator, by calling `stopProgressIndicator` on the request) prior to the end of the file, as requests are stored in a (non-persistent) environment extension state. This environment extension is part of the `Backreporter` (see `Backreporter.ext`).
+Any other action with access to the `Environment` may also manually fulfill the request (and stop
+the progress indicator, by calling `stopProgressIndicator` on the request) prior to the end of the
+file, as requests are stored in a (non-persistent) environment extension state. This environment
+extension is part of the `Backreporter` (see `Backreporter.ext`).
 
-Note: due to how `#guard_msgs` works, backreporters
+Note: due to how `#guard_msgs` works, backreporters cannot be tested with `#guard_msgs`. Manually
+inspect and fulfill the requests in a `run_cmd` for testing instead.
 
 ## API
 
 A backreporter  may be created by initializing a call to `registerBackreporter`, which asks for
-`fulfill : Array Syntax → Array (Backreporter.Request α) → CommandElabM Unit` which processes the full array of accumulated requests at the end of the file in a `ModuleLinter` created by `registerBackreporter`. The backreporter framework stops the progress bar indicators so that no promises are left unfulfilled.
+`fulfill : Array Syntax → Array (Backreporter.Request α) → CommandElabM Unit` which processes the
+full array of accumulated requests at the end of the file in a `ModuleLinter` created by
+`registerBackreporter`. The backreporter framework stops the progress bar indicators so that no
+promises are left unfulfilled.
 
 Users of the API may send a request to a given `b : Backreporter` with
 `b.sendRequest (data : α) : CommandElabM Unit`, which adds a request carrying `data α` and creates
@@ -48,9 +55,17 @@ as an indicator of whether the request has been fulfilled.
 
 Progress indicators can be cleared manually with `Request.stopProgressIndicator`.
 
-## Implementation notes
+## Design notes
 
--- TODO-NOW
+Note that due to interactive edits, we split the progress bar indicator out from the work we're actually requesting.
+
+We could, for example, have the `IO.Promise` be the place where we fulfill the request for work.
+However, this is fragile, since promises cannot be un-resolved. The problem noted above wherein
+edits made below a command do not reinstate the progress bar would similarly fail to re-request the
+work. By decoupling the work from the progress bar, we ensure the work request is robust while the
+progress bar may be fragile, since a disappearing progress bar is mostly harmless.
+
+We try to wrap promise management behind private fields and constructors.
 
 ## Future work
 
@@ -63,7 +78,7 @@ Progress indicators can be cleared manually with `Request.stopProgressIndicator`
 
 open Lean Elab Command Language
 
-public  section
+public section
 
 namespace ImportGraph
 
@@ -122,7 +137,8 @@ due to interactive editing occurring after the request but before its intended p
 @[inline] def Request.stopProgressIndicator (r : Request α) : BaseIO Unit :=
   r.promise?.forM (·.resolve ())
 
-/-- Whether this request was filed with a progress indicator (whether or not it has since been cleared). This may be `false` if e.g. `Elab.async` is `false`. -/
+/-- Whether this request was filed with a progress indicator (whether or not it has since been
+cleared). This may be `false` if e.g. `Elab.async` is `false`. -/
 @[inline] def Request.hasProgressIndicator (req : Request α) : Bool :=
   req.promise?.isSome
 
@@ -186,10 +202,11 @@ only be added with `Backreporter.sendRequest`. -/
 /--
 Registers a `BackReporter` that can receive interactive `Request α`s (via a non-persistent
 environment extension, registered here) and handles them via `fulfill` at the end of the file in a
-`ModuleLinter`. The first argument to `fulfill` is the module's command syntax passed through from the
-`ModuleLinter`, and the second is the array of all `Request`s that have been filed.
+`ModuleLinter`. The first argument to `fulfill` is the module's command syntax passed through from
+the `ModuleLinter`, and the second is the array of all `Request`s that have been filed.
 
-Note that `fulfill` has no access to info trees; if infotree information is necessary, it should be bundled into `α` so that it can be sent along with the request.
+Note that `fulfill` has no access to info trees; if infotree information is necessary, it should be
+bundled into `α` so that it can be sent along with the request.
 
 Note that `fulfill` should not use the resolved state of the `Request`'s progress bar to determine
 whether the request has been fulfilled, as interactive editing may require that the requests are
@@ -217,9 +234,14 @@ def registerBackreporter
   }
   return { name, fulfill, ext }
 
--- TODO-NOW: docs
+/-- This logs a snapshot task to show a progress bar indicator at `ref?` (and defaults to the
+current command if `ref?` is not provided). The provided `IO.Promise` should be managed with care.
+
+The currently elaborating declaration is attached to the description if not `.anonymous`. The
+description is mostly invisible to an ordinary user. -/
 def createProgressIndicator (promise : IO.Promise Unit) (ref? : Option Syntax.Range := none)
-    (desc : String := by exact s!"progress indicator from `{decl_name%}`") :
+    (desc : String := by exact s!"progress indicator{
+      let name := decl_name%;if name.isAnonymous then "" else " from `{decl_name%}`"}") :
     CommandElabM Unit :=
   logSnapshotTask {
     -- `stx?` allows infotree lookup at `stx?` to force tasks, but we don't want to block there.
@@ -254,7 +276,8 @@ def ProgressIndication.toSyntax? : ProgressIndication → Option Syntax
   | _ => none
 
 /--
-Files a request with the given `Backreporter` with content `data`, which will be processed at the end of the file by `b.fulfill cmds requests`.
+Files a request with the given `Backreporter` with content `data`, which will be processed at the
+end of the file by `b.fulfill cmds requests`.
 
 By default, this shows a progress indicator (yellow bar) at the current command until requests are
 processed at the end of the file. This behavior can be controlled by providing
@@ -279,7 +302,9 @@ def sendRequest (b : Backreporter α) (data : α)
     createProgressIndicator promise (ref? := progressIndication.toSyntax?.bind (·.getRange?))
       (desc := s!"backreport from `{b.name}`")
 
--- TODO-NOW: docs
+/-- Like `Backreporter.sendRequest`, but may be called outside of `CommandElabM`. This is "silent"
+only in the sense that it does not produce a progress bar indicator. However, note that if the
+backreporter's fulfillment involves logging messages, those messages will be unaffected. -/
 @[inline] def sendSilentRequest (env : Environment) (b : Backreporter α) (data : α)
     : Environment :=
   b.ext.modifyState env (·.push (.mkPure data))
