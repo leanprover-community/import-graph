@@ -50,40 +50,39 @@ meta def getModuleDeclNeeds (cmds : Array Syntax) :
     declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
   liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
 
-elab tk:"#min_imports" : command => do
-  runLaterWithSyntax fun cmds => withRef tk do
-    let (declNeeds, s) ← getModuleDeclNeeds cmds
+elab tk:"#min_imports" : command => runLaterWithSyntax fun cmds => withRef tk do
+  let (declNeeds, s) ← getModuleDeclNeeds cmds
 
-    let importNeeds ← liftCoreM do StanceM.run' (s := s) do
-      (← getEnv).toSimultaneousImportNeeds declNeeds
-    let reducedImps := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce (← getEnv).mkTransDeps
+  let importNeeds ← liftCoreM do StanceM.run' (s := s) do
+    (← getEnv).toSimultaneousImportNeeds declNeeds
+  let reducedImps := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce (← getEnv).mkTransDeps
 
-    let (header, _, log) ← parseCurrentHeader
-    if log.hasErrors then
-      -- This should be impossible.
-      throwError m!"The current imports failed to parse. Errors:\n\
-        {m!"\n".joinSep <| log.toList.map (·.data)}"
-    let sourceImps := headerToImportRefsWithWhitespace header
+  let (header, _, log) ← parseCurrentHeader
+  if log.hasErrors then
+    -- This should be impossible.
+    throwError m!"The current imports failed to parse. Errors:\n\
+      {m!"\n".joinSep <| log.toList.map (·.data)}"
+  let sourceImps := headerToImportRefsWithWhitespace header
 
-    let some (msg, errs) ← liftCoreM <| Import.mkImportSuggestionMessage tk reducedImps sourceImps
-      | logInfo m!"Imports are minimal."
-    let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
-    -- TODO: if imports are the same but not normalized, different message
-    if errs.isEmpty then
-      if formattingChangeAtMost then
-        logInfo m!"Imports can be reformatted, but are otherwise minimal:{msg}"
-      else
-        logWarning m!"Imports can be reduced:{msg}"
+  let some (msg, errs) ← liftCoreM <| Import.mkImportSuggestionMessage tk reducedImps sourceImps
+    | logInfo m!"Imports are minimal."
+  let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
+  -- TODO: if imports are the same but not normalized, different message
+  if errs.isEmpty then
+    if formattingChangeAtMost then
+      logInfo m!"Imports can be reformatted, but are otherwise minimal:{msg}"
     else
-      let disclaimer := "some comments could not be carried over. \
-        Please review the source comment that will be inserted after the imports."
-      if formattingChangeAtMost then
-        logInfo m!"Imports can be reformatted, but are otherwise minimal.\n\n\
-          However, {disclaimer}\n\
-          {msg}"
-      else
-        logWarning m!"Imports can be reduced, but {disclaimer}\n\
-          {msg}"
+      logWarning m!"Imports can be reduced:{msg}"
+  else
+    let disclaimer := "some comments could not be carried over. \
+      Please review the source comment that will be inserted after the imports."
+    if formattingChangeAtMost then
+      logInfo m!"Imports can be reformatted, but are otherwise minimal.\n\n\
+        However, {disclaimer}\n\
+        {msg}"
+    else
+      logWarning m!"Imports can be reduced, but {disclaimer}\n\
+        {msg}"
 
 /--
 Return the names of the modules in which constants used in the current file were defined,
