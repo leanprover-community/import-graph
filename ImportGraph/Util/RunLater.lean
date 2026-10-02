@@ -22,8 +22,7 @@ initialize runReporter : Backreporter (Array Syntax → CommandElabM Unit) ←
       let savedState ← get
       try
         request.data cmds
-        -- TODO-NOW: markCompleted is wrong
-        -- Wait for the message to be reported instead of running `request.markCompleted` here.
+        -- Wait for the message to be reported instead of running `stopProgressIndicator` here
       catch
         | Exception.error ref msg =>
           logException (.error ref m!"Backreporting request failed: {msg}")
