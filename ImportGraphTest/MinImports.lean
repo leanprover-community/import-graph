@@ -18,7 +18,7 @@ warning: Imports can be reduced:
 -/
 #guard_msgs (positions := true) in
 run_cmd
-  let runLaterRequests := ImportGraph.runReporter.ext.getState (← getEnv)
+  let runLaterRequests := ImportGraph.runLaterReporter.ext.getState (← getEnv)
   for request in runLaterRequests do
     request.data #[← `(command| #min_imports)]
     request.stopProgressIndicator
@@ -26,4 +26,4 @@ run_cmd
 /- Prevent the request from the original `#min_imports` from reaching the end of the file (which
 would be noisy) -/
 run_cmd
-  modifyEnv fun env => ImportGraph.runReporter.ext.setState env #[]
+  modifyEnv fun env => ImportGraph.runLaterReporter.ext.setState env #[]

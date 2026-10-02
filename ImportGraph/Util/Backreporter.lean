@@ -280,7 +280,8 @@ def sendRequest (b : Backreporter α) (data : α)
       (desc := s!"backreport from `{b.name}`")
 
 -- TODO-NOW: docs
-@[inline] def sendSilentRequest (env : Environment) (b : Backreporter α) (data : α) :=
+@[inline] def sendSilentRequest (env : Environment) (b : Backreporter α) (data : α)
+    : Environment :=
   b.ext.modifyState env (·.push (.mkPure data))
 
 end Backreporter
