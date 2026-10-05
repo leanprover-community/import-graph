@@ -15,6 +15,9 @@ import Lake.Load.Workspace
 
 Workspace loading is intended for executables. Library consumers needing only module traversal
 and the associated instances should import `ImportGraph.Util.Modules` instead.
+
+This file must not be imported by modules reachable from `ImportGraph` or `ImportGraph.Tools`;
+see `ImportGraphTest.NoLakeAxioms`. The workspace-summary executable imports it separately.
 -/
 
 open Lean Lake

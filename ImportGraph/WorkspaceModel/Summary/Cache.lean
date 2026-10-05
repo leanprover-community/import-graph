@@ -23,7 +23,8 @@ open Lean Lake System
 
 namespace ImportGraph.Lake
 
-/-- Hashes the toolchain identity and workspace configuration files for summary caching. -/
+/-- Internal helper shared by cache validation and the workspace-summary executable.
+Hashes the toolchain identity and workspace configuration files. -/
 def computeInputHash (leanGitHash : String) (ver : Option ToolchainVer)
     (manifestFile packageOverridesFile : FilePath)
     (packageConfigs : Array FilePath) : IO Hash := do
@@ -62,6 +63,5 @@ def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePat
     return (← ws.recomputedInputHash Lean.githash).val == ws.inputHash
   catch _ =>
     return false
-
 
 end ImportGraph.Lake

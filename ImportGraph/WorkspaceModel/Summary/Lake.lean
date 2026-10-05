@@ -10,6 +10,15 @@ public import ImportGraph.WorkspaceModel.Summary.Cache
 
 import ImportGraph.Lake
 
+/-!
+# Extraction from a Lake workspace
+
+This file must not be imported by modules reachable from `ImportGraph` or `ImportGraph.Tools`;
+see `ImportGraphTest.NoLakeAxioms`. Library consumers needing cache validation should import
+`ImportGraph.WorkspaceModel.Summary.Cache` instead. The workspace-summary executable uses this
+file to extract a summary from a loaded workspace.
+-/
+
 public section
 
 open ImportGraph Lean Lake System
