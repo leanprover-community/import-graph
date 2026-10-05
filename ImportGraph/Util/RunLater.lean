@@ -6,6 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public import ImportGraph.Util.Backreporter
+import ImportGraph.Lean.Command
 
 /-!
 ## `runLater` for running commands at the end of the file
@@ -24,22 +25,13 @@ open Lean Elab Command Backreporter
 public section
 
 /-- Runs arbitrary `Array Syntax → CommandElabM Unit` requests at the end of the file on the
-module's syntax, in the same manner as a linter (i.e. only preserving messages and the trace state
-between requests). -/
+module's syntax, in the same manner as a linter. -/
 initialize runLaterReporter : Backreporter (Array Syntax → CommandElabM Unit) ←
   registerBackreporter fun cmds requests => do
-    for request in requests do
-      let savedState ← get
-      try
-        request.data cmds
-        -- Wait for the message to be reported instead of running `stopProgressIndicator` here
-      catch
-        | Exception.error ref msg =>
-          logException (.error ref m!"Request to run failed:\n\n{msg}")
-        | ex@(Exception.internal _ _) =>
-          logException ex
-      finally
-        modify fun s => { savedState with messages := s.messages, traceState := s.traceState }
+    runLinterLikes `runLater requests
+      (run := fun request => request.data cmds)
+      (traceMsg := fun _ _ => pure m!"Running request")
+      (failureMsgHeader := fun _ => m!"Request failed:")
 
 /-- Runs `x` at the end of the file. May log messages, but cannot persistently alter the
 environment or access infotrees.
@@ -86,3 +78,5 @@ order to log on the intended ranges, e.g. `f := fun cmds => withRef ref ...` -/
 @[inline] def runLaterOnModuleSyntaxWithoutIndicator (env : Environment)
     (f : Array Syntax → CommandElabM Unit) : Environment :=
   runLaterReporter.sendSilentRequest env f
+
+initialize registerTraceClass `runLater

@@ -309,6 +309,13 @@ backreporter's fulfillment involves logging messages, those messages will be una
     : Environment :=
   b.ext.modifyState env (·.push (.mkPure data))
 
+/-- Erases all requests that have been sent from earlier in the file, making sure to stop their
+progress indicators if present. -/
+@[inline] def reset (b : Backreporter α) : CommandElabM Unit := do
+  for request in b.getRequests (← getEnv) do
+    request.stopProgressIndicator
+  modifyEnv fun env => b.ext.setState env #[]
+
 end Backreporter
 
 end ImportGraph
