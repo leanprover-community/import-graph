@@ -2,6 +2,10 @@ module
 
 import all Lean.Syntax
 
+-- `Std.Async` shouldn't come before `Lean.Meta.Sym.Simp` simply because it has fewer components
+import Std.Async
+import Lean.Meta.Sym.Simp
+
 public meta import ImportGraph.Tools.NormImports
 
 public import ImportGraph.Imports.Pretty
@@ -23,6 +27,10 @@ warning: Imports can be normalized, but some comments could not be carried over.
   [apply] public meta import ImportGraph.Tools
   public import ImportGraph.Imports.Pretty
   public import ImportGraph.Shake.EnvExtension
+  ⏎
+  import Lean.Meta.Sym.Simp
+  -- `Std.Async` shouldn't come before `Lean.Meta.Sym.Simp` simply because it has fewer components
+  import Std.Async
   ⏎
   import all Lean.Syntax
   ⏎
