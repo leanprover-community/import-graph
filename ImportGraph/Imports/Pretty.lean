@@ -103,7 +103,9 @@ def comparePretty (i₁ i₂ : Import) : Ordering :=
   (compare i₁.isExported i₂.isExported).swap -- `public import < import`
     |>.then (compare i₁.importAll i₂.importAll) -- `import < import all`
     |>.then (compare i₁.isMeta i₂.isMeta).swap -- `meta import < import`
-    |>.then (Name.cmp i₁.module i₂.module)
+    |>.then (compare i₁.module.toString i₂.module.toString) -- alphabetical
+    -- TODO: handle edge cases where `.` does not induce the same sort as "lexicographic by `Name`
+    -- component from the root" does (and prefer the latter).
 
 /-- Considers imports with `public` to come first; then those without `all`; then those with
 `meta`; then compares the modules alphabetically; then compares starting source position, c
