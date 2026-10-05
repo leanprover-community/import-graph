@@ -4,7 +4,7 @@ import ImportGraph.Tools
 public import ImportGraph.Lean.Syntax
 meta import ImportGraph.Tools.MinImports
 
-open ImportGraph
+open ImportGraph Lean
 
 #min_imports
 
@@ -12,7 +12,6 @@ open ImportGraph
 def x := Lean.SourceInfo.getLeading
 
 -- We simulate being at the end of the file by running the `runLaterReporter` manually:
-open Lean
 /--
 warning: Imports can be reduced:
   import ImportGraph.Tools
@@ -21,5 +20,9 @@ warning: Imports can be reduced:
 -/
 #guard_msgs in
 run_cmd
-  runLaterReporter.fulfill #[← `(command| #min_imports)] (runLaterReporter.getRequests (← getEnv))
+  runLaterReporter.fulfill #[
+    ← `(command| open ImportGraph Lean),
+    ← `(command| def x := true),
+    ← `(command| #min_imports)]
+    (runLaterReporter.getRequests (← getEnv))
   runLaterReporter.reset
