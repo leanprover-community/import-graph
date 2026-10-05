@@ -20,6 +20,8 @@ This module defines the following utilities for pretty-printing imports:
   - These take an optional `Import.FormatBehavior` parameter to control import sorting and
     grouping. By default, imports are grouped by visibility (`public`/(private)/`all`), sorted by
     phase and module name, and visibility groups are separated by extra newlines.
+- `ImportGraph.Lean.Import.prettyGroupedByVisibility` for stable grouping based only on whether an
+  import is `public`.
 - `headerToImportRefs`(`WithWhitespace`) to track source positions and comments around existing
   imports in source
 - `prettyWithSourceWhitespace` to pretty-print new `Import`s while attaching comments from source
@@ -27,6 +29,8 @@ This module defines the following utilities for pretty-printing imports:
   annotations (and any other informative comments).
   - If comments cannot be carried over (or may no longer apply), this is (by default) explained in
     a comment shown below the import block.
+- `mkImportBlockEdit` and `mkImportSourceEdit` to create source edits replacing an existing import
+  block.
 - `mkImportSuggestionMessage`, which creates a suggestion reformatting imports. This is used by
   `#norm_imports`.
 
@@ -231,6 +235,16 @@ def sortPretty (imports : Array Import) : Array Import := imports.qsortOrd
 def _root_.ImportGraph.Lean.ImportRef.sortPretty (imports : Array ImportRef) : Array ImportRef :=
   imports.qsortOrd
 
+private def prettyGroupedByVisibilityAux [ToFormat α] (imports : Array α)
+    (isExported : α → Bool) : Format :=
+  let groups := [imports.filter isExported, imports.filter (!isExported ·)].filter (!·.isEmpty)
+  f!"\n\n".joinSep <| groups.map (f!"\n".joinSep ·.toList)
+
+/-- Stably group imports by visibility, with `public` imports first and a blank line between public
+and private imports. The `meta` and `all` modifiers are ignored for grouping. -/
+def prettyGroupedByVisibility (imports : Array Import) : Format :=
+  prettyGroupedByVisibilityAux imports (·.isExported)
+
 /-- Pretty-print an array of `Import`s as a block of import statements (not including `module` and/
 or `prelude`). The grouping and sorting behavior may be controlled by the `formatAs` argument.
 
@@ -386,6 +400,12 @@ def prettyWithWhitespace (imps : Array (Import × Whitespace))
   else
     f!"\n".joinSep imps.toList
 
+/-- Stably group imports and their whitespace by visibility, with `public` imports first and a
+blank line between public and private imports. The `meta` and `all` modifiers are ignored for
+grouping. -/
+def prettyWithWhitespaceGroupedByVisibility (imps : Array (Import × Whitespace)) : Format :=
+  prettyGroupedByVisibilityAux imps (·.1.isExported)
+
 /-- Formats the modified `imps` and attaches whitespace from the corresponding import in
 `sourceImps` when doing so is unambiguous. Ambiguity encountered while assigning nontrivial
 whitespace is recorded in the returned `Array Import.FormatError`.
@@ -409,6 +429,59 @@ We assume `sourceImps` has been created by `ImportGraph.headerToImportRefsWithWh
       -/"
     (msg, errs)
 
+/-- A replacement of an import block's half-open byte range in a source string. -/
+structure _root_.ImportGraph.ImportBlockEdit where
+  startPos : String.Pos.Raw
+  stopPos : String.Pos.Raw
+  replacement : String
+deriving Repr, Inhabited, BEq
+
+/-- Apply an `ImportBlockEdit` to a source string. -/
+def _root_.ImportGraph.ImportBlockEdit.apply (edit : ImportBlockEdit) (source : String) : String :=
+  String.Pos.Raw.extract source 0 edit.startPos ++ edit.replacement ++
+    String.Pos.Raw.extract source edit.stopPos source.rawEndPos
+
+/-- Create a source edit that replaces `sourceImps` with the `formatted` import block. Returns
+`none` when formatting would not change the source or the source range is unavailable.
+
+We assume `sourceImps` was parsed from `source` and created by
+`ImportGraph.headerToImportRefsWithWhitespace`. -/
+def mkImportBlockEdit (source : String) (sourceImps : Array (ImportRef × Whitespace))
+    (formatted : Format) (width := 100) : Option ImportBlockEdit := Id.run do
+  let stxRef := mkNullNode (sourceImps.map (·.1.stx.raw))
+  let some startPos := stxRef.getLeadingPos?.orElse fun _ => stxRef.getPos?
+    | return none
+  let some stopPos := stxRef.getTrailingTailPos?
+    | return none
+  let sourceSubstr : Substring.Raw := { str := source, startPos, stopPos }
+  let (sourceSubstr, replacement) :=
+    -- We want two newlines in front of the replacement to separate it from `module`.
+    -- Either chop these off the source if we can, or add them to the new string.
+    let replacement := formatted.pretty (width := width)
+    if let some sourceSubstr := sourceSubstr.dropPrefix? "\n\n".toRawSubstring then
+      (sourceSubstr, replacement)
+    else
+      (sourceSubstr, s!"\n\n{replacement}")
+  if sourceSubstr.toString == replacement then
+    return none
+  else
+    return some {
+      startPos := sourceSubstr.startPos, stopPos := sourceSubstr.stopPos, replacement }
+
+/-- Create a source edit that replaces `sourceImps` with the formatted `newImps`, while carrying
+over comments and other whitespace when unambiguous. Returns `none` when formatting would not
+change the source or the source range is unavailable.
+
+We assume `sourceImps` was parsed from `source` and created by
+`ImportGraph.headerToImportRefsWithWhitespace`. -/
+def mkImportSourceEdit (source : String) (newImps : Array Import)
+    (sourceImps : Array (ImportRef × Whitespace))
+    (formatAs := Import.FormatBehavior.grouped) (includeErrorsAsComment := true)
+    (width := 100) : Option ImportBlockEdit × Import.FormatErrors := Id.run do
+  let (msg, errs) :=
+    Import.prettyWithSourceWhitespace newImps sourceImps formatAs includeErrorsAsComment
+  return (Import.mkImportBlockEdit source sourceImps msg width, errs)
+
 /-- Create a message that suggests replacing `sourceImps` with `newImps`. Includes errors as a
 comment. Returns `none` if the suggestion is would not modify the source at all (including
 whitespace).
@@ -424,33 +497,15 @@ def mkImportSuggestionMessage (ref : Syntax) (newImps : Array Import)
     (toCodeActionTitle? : Option (String → String) := some fun _ => "Modify imports")
     (includeErrorsAsComment := true) :
     CoreM (Option (MessageData × Import.FormatErrors)) := do
-  let (msg, errs) :=
-    Import.prettyWithSourceWhitespace newImps sourceImps formatAs includeErrorsAsComment
-  let stxRef := mkNullNode (sourceImps.map (·.1.stx.raw))
-  let sourceSubstr : Substring.Raw := {
-    str := (← getFileMap).source
-    startPos := stxRef.getLeadingPos?.getD (stxRef.getPos?.get!)
-    -- Ensure we include any annotation after the last import
-    stopPos := stxRef.getTrailingTailPos?.get! }
-  let (sourceSubstr, str) :=
-    -- We want two newlines in front of the suggestion to separate it from `module`.
-    -- Either chop these off the source if we can, or add them to our new string.
-    -- Chopping off allows us to avoid unsightly whitespace at the top of the suggestion.
-    let str := msg.pretty (width := Std.Format.getWidth <|← getOptions)
-    if let some sourceSubstr := sourceSubstr.dropPrefix? "\n\n".toRawSubstring then
-      (sourceSubstr, str)
-    else
-      (sourceSubstr, s!"\n\n{str}")
-  if sourceSubstr.toString == str then
-    return none
-  else
-    -- TODO: trivial case of no imports suggested
-    -- Need `.ofRange` here to insist on overwriting annotations on the last import
-    let msg ← Meta.Hint.mkSuggestionsMessage #[{
-        suggestion := str
-        span? := Syntax.ofRange ⟨sourceSubstr.startPos, sourceSubstr.stopPos⟩
-        -- The diff view often gets confused by imports that are shown in the error comment.
-        diffGranularity := if errs.isEmpty || !includeErrorsAsComment then .word else .none
-        toCodeActionTitle? }]
-      ref none (forceList := false)
-    return (msg, errs)
+  let (some edit, errs) := Import.mkImportSourceEdit (← getFileMap).source newImps sourceImps
+      formatAs includeErrorsAsComment (Std.Format.getWidth <|← getOptions)
+    | return none
+  -- Need `.ofRange` here to insist on overwriting annotations on the last import
+  let msg ← Meta.Hint.mkSuggestionsMessage #[{
+      suggestion := edit.replacement
+      span? := Syntax.ofRange ⟨edit.startPos, edit.stopPos⟩
+      -- The diff view often gets confused by imports that are shown in the error comment.
+      diffGranularity := if errs.isEmpty || !includeErrorsAsComment then .word else .none
+      toCodeActionTitle? }]
+    ref none (forceList := false)
+  return (msg, errs)

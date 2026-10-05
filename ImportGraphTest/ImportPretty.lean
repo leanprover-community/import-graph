@@ -49,3 +49,30 @@ info:
 -/
 #guard_msgs in
 #pretty_current_imports without_public
+
+run_cmd do
+  let source := "module\n\nimport B -- trailing\npublic meta import C\nimport all D\n" ++
+    "-- leading\npublic import A\n\n#check Nat\n"
+  let expected := "module\n\npublic meta import C\n-- leading\npublic import A\n\n" ++
+    "import B -- trailing\nimport all D\n\n#check Nat\n"
+  let inputCtx := Parser.mkInputContext source "Test.lean"
+  let (header, _, log) ← liftIO <| Parser.parseHeader inputCtx
+  if log.hasErrors then
+    throwError "Test header failed to parse"
+  let sourceImports := headerToImportRefsWithWhitespace header
+  let imports := sourceImports.map fun (ref, whitespace) => (ref.toImport, whitespace)
+  let formatted := Import.prettyWithWhitespaceGroupedByVisibility imports
+  let some edit := Import.mkImportBlockEdit source sourceImports formatted
+    | throwError "Expected import formatting to produce an edit"
+  unless edit.apply source == expected do
+    throwError "Unexpected formatted source:\n{edit.apply source}"
+
+  let inputCtx := Parser.mkInputContext expected "Test.lean"
+  let (header, _, log) ← liftIO <| Parser.parseHeader inputCtx
+  if log.hasErrors then
+    throwError "Formatted test header failed to parse"
+  let sourceImports := headerToImportRefsWithWhitespace header
+  let imports := sourceImports.map fun (ref, whitespace) => (ref.toImport, whitespace)
+  let formatted := Import.prettyWithWhitespaceGroupedByVisibility imports
+  unless (Import.mkImportBlockEdit expected sourceImports formatted).isNone do
+    throwError "Correctly grouped imports should not produce an edit"
