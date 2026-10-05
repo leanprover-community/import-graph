@@ -4,6 +4,8 @@ import ImportGraph.Tools
 public import ImportGraph.Lean.Syntax
 meta import ImportGraph.Tools.MinImports
 
+open ImportGraph
+
 #min_imports
 
 -- Uses `ImportGraph.Lean.Syntax` only privately
@@ -19,12 +21,5 @@ warning: Imports can be reduced:
 -/
 #guard_msgs in
 run_cmd
-  let runLaterRequests := ImportGraph.runLaterReporter.ext.getState (← getEnv)
-  for request in runLaterRequests do
-    request.data #[← `(command| #min_imports)]
-    request.stopProgressIndicator
-
-/- Prevent the request from the original `#min_imports` from reaching the end of the file (which
-would be noisy) -/
-run_cmd
-  modifyEnv fun env => ImportGraph.runLaterReporter.ext.setState env #[]
+  runLaterReporter.fulfill #[← `(command| #min_imports)] (runLaterReporter.getRequests (← getEnv))
+  runLaterReporter.reset
