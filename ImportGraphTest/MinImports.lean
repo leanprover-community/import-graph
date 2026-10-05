@@ -11,7 +11,7 @@ open ImportGraph
 -- Uses `ImportGraph.Lean.Syntax` only privately
 def x := Lean.SourceInfo.getLeading
 
--- We simulate being at the end of the file by inspecting and running all of the `runReporter`'s individually:
+-- We simulate being at the end of the file by running the `runLaterReporter` manually:
 open Lean
 /--
 warning: Imports can be reduced:
