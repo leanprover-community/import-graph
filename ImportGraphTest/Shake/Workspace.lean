@@ -1,7 +1,7 @@
 module
 
 meta import ImportGraph.WorkspaceModel.Build
-import Lean.Elab.Command
+public meta import Lean.Elab.Command
 
 /-!
 The following tests assume that `ImportGraph.WorkspaceModel.Build` has
