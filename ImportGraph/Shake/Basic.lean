@@ -5,6 +5,7 @@ Authors: Thomas R. Murrills
 -/
 module
 
+public import Lean.Environment
 public import ImportGraph.Shake.Core
 
 /-!

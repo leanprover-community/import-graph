@@ -5,10 +5,9 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import Lean.Data.Json
 public import ImportGraph.WorkspaceModel.Base
 
-import ImportGraph.Lake
+import Lake.Util.FilePath
 
 /-!
 # Transporting a Lake workspace summary over Json

@@ -10,7 +10,6 @@ Authors of modifications: Thomas R. Murrills
 -/
 module
 
-public import Lean.Environment
 public import Lean.Setup
 
 /-!

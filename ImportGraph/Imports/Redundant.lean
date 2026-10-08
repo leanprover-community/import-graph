@@ -5,8 +5,6 @@ Authors: Kim Morrison, Paul Lezeau
 -/
 module
 
-public import Lean.Environment
-public import Lean.Data.NameMap.Basic
 public import Lean.CoreM
 import ImportGraph.Imports.ImportGraph
 

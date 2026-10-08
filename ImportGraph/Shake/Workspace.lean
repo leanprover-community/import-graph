@@ -5,14 +5,11 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Shake.Algebra
 public import ImportGraph.Shake.DeclNeeds
-public import ImportGraph.WorkspaceModel.Build
 public import ImportGraph.WorkspaceModel.Model
-public import Lean.Elab.Command
 
-import ImportGraph.Shake.EnvExtension
 import Std.Data.HashMap.AdditionalOperations
+import ImportGraph.WorkspaceModel.Build
 
 /-!
 # `WorkspaceModel` and shake

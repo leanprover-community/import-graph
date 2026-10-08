@@ -6,8 +6,8 @@ Authors: Kim Morrison, Paul Lezeau
 module
 
 public meta import Lean.Elab.Command
-public meta import Lean.Widget.UserWidget
 public meta import ImportGraph.Imports.Redundant
+import Lean.Message
 
 public meta section
 

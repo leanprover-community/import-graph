@@ -5,7 +5,7 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import Lean.Data.Json
+public import Lean.Data.Json.FromToJson.Basic
 
 /-! # Extra `ToJson` and `FromJson` instances -/
 

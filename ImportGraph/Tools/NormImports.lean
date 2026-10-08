@@ -8,7 +8,8 @@ module
 public meta import ImportGraph.Imports.FromSource
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Shake.Environment
-public meta import Lean.Elab.Command
+import ImportGraph.Imports.Pretty
+import Lean.Parser.Module
 
 /-!
 # `#norm_imports` for interactive normalization of import blocks

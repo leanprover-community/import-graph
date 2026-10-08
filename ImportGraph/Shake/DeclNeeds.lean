@@ -6,15 +6,14 @@ Authors: Thomas R. Murrills
 module
 
 public import Lean.Elab.Command
-public import ImportGraph.Shake.Basic
+public import ImportGraph.Shake.Core
 
 import Lean.Compiler.LCNF.Main
 import Lean.Compiler.LCNF.ToDecl
 import Lean.Compiler.NoncomputableAttr
-import ImportGraph.Shake.EnvExtension
 import ImportGraph.Lean.Syntax
-
-public meta import Lean.Elab.Term.TermElabM
+import ImportGraph.Shake.Basic
+import ImportGraph.Shake.EnvExtension
 
 import all Lean.Compiler.LCNF.Visibility -- for `collectUsedDecls`
 

@@ -3,7 +3,6 @@ module
 public import ImportGraph.Shake.Algebra
 public import ImportGraph.Shake.DeclNeeds
 
-import ImportGraph.Shake.Algebra
 import ImportGraph.Lean.Environment
 
 /-!
