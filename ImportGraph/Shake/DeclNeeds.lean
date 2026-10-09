@@ -257,6 +257,12 @@ def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs where
 def union (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) : ImportNeeds :=
   needs.modify k (· ∪ s)
 
+@[inline] def any (needs : ImportNeeds) (f : Bitset → Bool) : Bool :=
+  ImportNeedsKind.all.any (f <| needs.get ·)
+
+@[inline] def all (needs : ImportNeeds) (f : Bitset → Bool) : Bool :=
+  ImportNeedsKind.all.all (f <| needs.get ·)
+
 /-- A pair of braille cells depicting the import needs at index `i`.
 
 In the left cell, the left column denotes definite non-meta needs (due to runtime IR). The right
