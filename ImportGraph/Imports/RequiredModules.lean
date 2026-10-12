@@ -6,8 +6,6 @@ Authors: Kim Morrison
 module
 
 public import Lean.CoreM
-public import Lean.Data.NameMap.Basic
-public import Lean.Environment
 import ImportGraph.Lean.Environment
 
 public section

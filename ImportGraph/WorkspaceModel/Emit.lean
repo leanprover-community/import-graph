@@ -6,7 +6,6 @@ Authors: Thomas R. Murrills
 module
 
 import Lake.Load.Workspace
-import ImportGraph.Lake
 import ImportGraph.WorkspaceModel.Summary.Lake
 
 /-!
@@ -27,7 +26,7 @@ open Lean ImportGraph Lake
 
 -- TODO: explore making this a lake script or facet, since we're essentially loading the lake
 -- workspace twice by calling this with `lake exe`.
-public def main (args : List String) : IO UInt32 := do
+public def main' (args : List String) : IO UInt32 := do
   let wsDir : System.FilePath ← do
     match args with
     | [] => IO.currentDir

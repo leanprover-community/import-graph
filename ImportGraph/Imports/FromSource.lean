@@ -5,7 +5,8 @@ Authors: Kim Morrison, Thomas R. Murrills
 -/
 module
 
-public import Lean.Elab.ParseImportsFast
+public import Lean.Parser.Module
+import Lean.Elab.ParseImportsFast
 
 /-!
 # Source-File-Based Import Analysis

@@ -6,7 +6,6 @@ Authors: Kim Morrison, Paul Lezeau
 module
 
 public import Lean.Environment
-public import Lean.Data.NameMap.Basic
 
 namespace Lean.Environment
 

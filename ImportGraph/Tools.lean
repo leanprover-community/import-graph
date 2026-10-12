@@ -5,11 +5,11 @@ Authors: Kim Morrison, Paul Lezeau
 -/
 module
 
-public meta import ImportGraph.Tools.FindHome
-public meta import ImportGraph.Tools.ImportDiff
-public meta import ImportGraph.Tools.MinImports
-public meta import ImportGraph.Tools.NormImports
-public meta import ImportGraph.Tools.RedundantImports
+public import ImportGraph.Tools.FindHome
+public import ImportGraph.Tools.ImportDiff
+public import ImportGraph.Tools.MinImports
+public import ImportGraph.Tools.NormImports
+public import ImportGraph.Tools.RedundantImports
 
 /-!
 # Tools for analyzing imports.
