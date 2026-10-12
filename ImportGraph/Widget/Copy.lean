@@ -6,7 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public meta import Lean.Widget.UserWidget
-public import Lean.Data.Json.Basic
+public import Lean.Server.Rpc.Basic
 
 import Lean.Message
 
