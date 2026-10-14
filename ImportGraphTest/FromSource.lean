@@ -43,7 +43,7 @@ open Lean System ImportGraph
   return header.imports.map Import.module |>.filter
     fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
-/--
+/-
 info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
 -/
 #guard_msgs in
@@ -52,3 +52,38 @@ info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.Imp
   -- Filter to only ImportGraph modules
   let filtered := transitive.toArray.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
   return filtered.qsort Name.lt
+
+-- Test that `findModuleSource?` locates a toolchain module via the source search path
+/-- info: true -/
+#guard_msgs in
+#eval do
+  return (← findModuleSource? `Lean.Parser.Module).isSome
+
+-- Test that `findModuleSource?` returns `none` for a module with no source anywhere
+/-- info: true -/
+#guard_msgs in
+#eval do
+  return (← findModuleSource? `ThisModuleDoesNotExist).isNone
+
+-- Test that the transitive closure extends beyond a file's direct imports:
+-- `Lean.Parser.Module` is not a direct import of `FromSource.lean`, but is reachable
+-- by resolving its direct import `Lean.Elab.ParseImportsFast` via the source search path.
+/-- info: true -/
+#guard_msgs in
+#eval do
+  let transitive ← findTransitiveImportsFromSource "ImportGraph/Imports/FromSource.lean"
+  return transitive.contains `Lean.Parser.Module
+
+-- Test that unresolvable modules are reported rather than silently treated as leaves
+/-
+info: "findTransitiveImportsFromSource: could not find source files for the following modules: ThisModuleDoesNotExist"
+-/
+#guard_msgs in
+#eval do
+  let fixture : FilePath := ".lake" / "build" / "findTransitiveImportsFromSource-missing-fixture.lean"
+  IO.FS.writeFile fixture "import ThisModuleDoesNotExist\n"
+  try
+    let _ ← findTransitiveImportsFromSource fixture
+    return "no error raised!"
+  catch e =>
+    return e.toString
