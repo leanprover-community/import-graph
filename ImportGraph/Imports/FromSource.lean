@@ -42,7 +42,7 @@ def parseImports? (input : String) : Except (FileMap × Position × String) Modu
   let pos := fileMap.toPosition s.pos
   throw (fileMap, pos, err)
 
-/-
+/--
 Parse the header of the source file at `path`, returning its `ModuleHeader`.
 
 This is a thin wrapper around `Lean.parseImports'` which:
@@ -59,14 +59,14 @@ from a `ModuleHeader`. -/
 def Lean.ModuleHeader.filterInit (m : ModuleHeader) : ModuleHeader :=
   { m with imports := m.imports.filter fun imp => !(`Init).isPrefixOf imp.module }
 
-/-
+/--
 Parses the header of the current file via the source string present in the ambient `FileMap`.
 -/
 def parseCurrentHeader {m} [Monad m] [MonadLog m] [MonadLiftT IO m] :
     m (TSyntax `Lean.Parser.Module.header × Parser.ModuleParserState × MessageLog) := do
   Parser.parseHeader (Parser.mkInputContext (← getFileMap).source (← getFileName))
 
-/-
+/--
 Parse all imports in a source file at `path` and return their module names.
 
 This is a thin wrapper around `Lean.parseImports'` that:
@@ -97,7 +97,7 @@ where
   | Name.str p h => go p / h
   | _ => panic! "ill-formed import"
 
-/-
+/--
 Find the source file of the module `mod`, trying in order:
 
 1. the source search path (`Lean.getSrcSearchPath`), i.e. `LEAN_SRC_PATH` together with the
@@ -120,7 +120,7 @@ def findModuleSource? (mod : Name) : IO (Option FilePath) := do
   return none
 
 open ImportGraph in
-/-
+/--
 Compute the transitive closure of imports starting from a source file.
 
 Returns a `NameSet` of all modules that are transitively imported by the given file,
