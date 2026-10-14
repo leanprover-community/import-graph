@@ -43,7 +43,7 @@ open Lean System ImportGraph
   return header.imports.map Import.module |>.filter
     fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
-/-
+/--
 info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
 -/
 #guard_msgs in
@@ -75,7 +75,7 @@ info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.Imp
   return transitive.contains `Lean.Parser.Module
 
 -- Test that unresolvable modules are reported rather than silently treated as leaves
-/-
+/--
 info: "findTransitiveImportsFromSource: could not find source files for the following modules: ThisModuleDoesNotExist"
 -/
 #guard_msgs in
