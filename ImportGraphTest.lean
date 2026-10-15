@@ -1,6 +1,7 @@
 import ImportGraphTest.AnotherFileWithTransitiveImports
 import ImportGraphTest.Dot
 import ImportGraphTest.FileWithTransitiveImports
+import ImportGraphTest.FilterInit
 import ImportGraphTest.FindHome.Viewpoint
 import ImportGraphTest.FromSource
 import ImportGraphTest.Html
