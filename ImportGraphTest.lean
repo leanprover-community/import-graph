@@ -6,6 +6,8 @@ import ImportGraphTest.FromSource
 import ImportGraphTest.Html
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
+import ImportGraphTest.Lean.List
+import ImportGraphTest.Lean.PersistentHashSet
 import ImportGraphTest.NormImports
 import ImportGraphTest.NoLakeAxioms
 import ImportGraphTest.Shake.Algebra
