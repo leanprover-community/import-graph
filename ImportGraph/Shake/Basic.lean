@@ -6,6 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 public import ImportGraph.Shake.Core
+public import Lean.Environment
 
 /-!
 ## Utilities for Shake types

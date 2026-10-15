@@ -5,16 +5,16 @@ Authors: Thomas R. Murrills
 -/
 module
 
+public import ImportGraph.Shake.Core
 public import Lean.Elab.Command
-public import ImportGraph.Shake.Basic
 
+import ImportGraph.Shake.Basic
 import Lean.Compiler.LCNF.Main
 import Lean.Compiler.LCNF.ToDecl
 import Lean.Compiler.NoncomputableAttr
 import ImportGraph.Shake.EnvExtension
 import ImportGraph.Lean.Syntax
 
-public meta import Lean.Elab.Term.TermElabM
 
 import all Lean.Compiler.LCNF.Visibility -- for `collectUsedDecls`
 

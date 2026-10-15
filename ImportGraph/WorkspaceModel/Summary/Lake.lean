@@ -6,9 +6,10 @@ Authors: Thomas R. Murrills
 module
 
 public import Lake.Config.Workspace
-public import ImportGraph.WorkspaceModel.Summary.Cache
 
-import ImportGraph.Lake
+public import ImportGraph.WorkspaceModel.Summary.Core
+
+import ImportGraph.WorkspaceModel.Summary.Cache
 
 /-!
 # Extraction from a Lake workspace

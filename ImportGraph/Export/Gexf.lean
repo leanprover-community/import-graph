@@ -5,7 +5,6 @@ Authors: Jon Eugster
 -/
 module
 
-public import Lean.Data.NameMap.Basic
 public import Lean.Environment
 import Lean.Meta.Match.MatcherInfo
 

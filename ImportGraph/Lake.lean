@@ -5,7 +5,6 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Util.Modules
 public import Lake.Config.Workspace
 
 import Lake.Load.Workspace
