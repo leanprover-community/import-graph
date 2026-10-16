@@ -290,7 +290,8 @@ Does not show an indicator under any circumstances if `Elab.inServer` is `false`
 `false`, but still files the request, and the request will be processed.
 -/
 def sendRequest (b : Backreporter α) (data : α)
-    (progressIndication : ProgressIndication := .atCommand) :
+    (progressIndication : ProgressIndication := .atCommand)
+    (desc := s!"backreport from `{b.name}`") :
     CommandElabM Unit := do
   let opts ← getOptions
   let promise? ←
@@ -300,7 +301,7 @@ def sendRequest (b : Backreporter α) (data : α)
   modifyEnv fun env => b.ext.modifyState env (·.push { data, promise? })
   if let some promise := promise? then
     createProgressIndicator promise (ref? := progressIndication.toSyntax?.bind (·.getRange?))
-      (desc := s!"backreport from `{b.name}`")
+      (desc := desc)
 
 /-- Like `Backreporter.sendRequest`, but may be called outside of `CommandElabM`. This is "silent"
 only in the sense that it does not produce a progress bar indicator. However, note that if the
