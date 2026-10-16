@@ -182,21 +182,21 @@ structure Backreporter (α : Type) where
   /-- The handler: receives the syntax of every command in the file together with the requests
   filed during elaboration (in file order), and runs at the end of the file. Exposed here so
   that it can also be invoked directly, e.g. on requests built with `Request.mkPure`. -/
-  fulfill : Array Syntax → Array (Backreporter.Request α) → CommandElabM Unit
+  fulfill : Array Syntax → List (Backreporter.Request α) → CommandElabM Unit
   /-- Non-persistent extension which holds `Request`s (data & progress-bar promises). Assuming this
   `Backreporter` was created with `registerBackreporter`, this extension is `.mainOnly`. -/
-  ext : EnvExtension (Array (Backreporter.Request α))
+  ext : EnvExtension (List (Backreporter.Request α))
 deriving Nonempty
 
-/-- Gets the currently-filed `Request`s for the given `Backreporter`. -/
+/-- Gets the currently-filed `Request`s for the given `Backreporter`, with most recently filed at the front of the list. -/
 @[inline] def Backreporter.getRequests {α} (env : Environment) (b : Backreporter α) :
-    Array (Request α) :=
+    List (Request α) :=
   b.ext.getState env
 
 /-- Modifies the current requests filed with the given `Backreporter`. Note that requests should
 only be added with `Backreporter.sendRequest`. -/
 @[inline] def Backreporter.modify {α} (env : Environment) (b : Backreporter α)
-    (f : Array (Request α) → Array (Request α)) : Environment :=
+    (f : List (Request α) → List (Request α)) : Environment :=
   b.ext.modifyState env f
 
 /--
@@ -217,10 +217,10 @@ All progress bar indicators are cleared by the `ModuleLinter` this function regi
 does not need to do so.
 -/
 def registerBackreporter
-    (fulfill : Array Syntax → Array (Backreporter.Request α) → CommandElabM Unit)
+    (fulfill : Array Syntax → List (Backreporter.Request α) → CommandElabM Unit)
     (name : Name := by exact decl_name%) :
     IO (Backreporter α) := do
-  let ext ← registerEnvExtension (pure #[]) (asyncMode := .mainOnly)
+  let ext ← registerEnvExtension (pure []) (asyncMode := .mainOnly)
   addModuleLinter {
     name
     run cmds := do
@@ -298,7 +298,7 @@ def sendRequest (b : Backreporter α) (data : α)
     if !(Elab.inServer.get opts) || !(Elab.async.get opts) || progressIndication matches .quiet then
       pure none
     else some <$> IO.Promise.new
-  modifyEnv fun env => b.ext.modifyState env (·.push { data, promise? })
+  modifyEnv fun env => b.ext.modifyState env ({ data, promise? } :: ·)
   if let some promise := promise? then
     createProgressIndicator promise (ref? := progressIndication.toSyntax?.bind (·.getRange?))
       (desc := desc)
@@ -308,14 +308,14 @@ only in the sense that it does not produce a progress bar indicator. However, no
 backreporter's fulfillment involves logging messages, those messages will be unaffected. -/
 @[inline] def sendSilentRequest (env : Environment) (b : Backreporter α) (data : α)
     : Environment :=
-  b.ext.modifyState env (·.push (.mkPure data))
+  b.ext.modifyState env ((.mkPure data)  :: ·)
 
 /-- Erases all requests that have been sent from earlier in the file, making sure to stop their
 progress indicators if present. -/
 @[inline] def reset (b : Backreporter α) : CommandElabM Unit := do
   for request in b.getRequests (← getEnv) do
     request.stopProgressIndicator
-  modifyEnv fun env => b.ext.setState env #[]
+  modifyEnv fun env => b.ext.setState env []
 
 end Backreporter
 

@@ -28,7 +28,7 @@ public section
 module's syntax, in the same manner as a linter. -/
 initialize runLaterReporter : Backreporter (Array Syntax → CommandElabM Unit) ←
   registerBackreporter fun cmds requests => do
-    runLinterLikes `runLater requests
+    runLinterLikes `runLater requests.toArray.reverse
       (run := fun request => request.data cmds)
       (traceMsg := fun _ _ => pure m!"Running request")
       (failureMsgHeader := fun _ => m!"Request failed:")
