@@ -1,6 +1,6 @@
 module
 
-public import ImportGraph.Widget.Copy
+public meta import ImportGraph.Widget.Copy
 public import Lean.Elab.Command
 
 open ImportGraph Widget Lean Elab Command

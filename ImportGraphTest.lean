@@ -18,3 +18,6 @@ import ImportGraphTest.Widget.Collapsible
 import ImportGraphTest.Widget.Copy
 import ImportGraphTest.WithSorry.Def
 import ImportGraphTest.WithSorry.Thm
+import ImportGraphTest.PublicExports.Commands
+import ImportGraphTest.PublicExports.MathlibFootprint
+import ImportGraphTest.PublicExports.BucketAPI
