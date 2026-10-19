@@ -2,7 +2,7 @@ module
 
 public meta import ImportGraphTest.Widget.GoToModule.Decls
 public meta import Lean.Elab.Command
-public meta import ImportGraph.Widget.GoToModule
+public meta import ImportGraph.Widget.GoToModule.Declarations
 
 -- To load declaration ranges under `lake build` (usually only present in the server):
 import all ImportGraphTest.Widget.GoToModule.Decls
