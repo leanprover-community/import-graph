@@ -44,8 +44,7 @@ open Lean System ImportGraph
     fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
 /--
-info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff,
-  `ImportGraph.Tools.ImportDiff.Impl]
+info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
 -/
 #guard_msgs in
 #eval do

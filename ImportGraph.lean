@@ -32,7 +32,7 @@ public meta import ImportGraph.Tools.RedundantImports
 public import ImportGraph.Util.CurrentModule
 public import ImportGraph.Util.FindSorry
 public meta import ImportGraph.Widget.GoToModule
-public import ImportGraph.Widget.GoToModule.CoreImpl
+public import ImportGraph.Widget.GoToModule.Props
 public import ImportGraph.Widget.GoToModule.Declarations
 public meta import ImportGraph.Widget.Collapsible
 public meta import ImportGraph.Widget.Copy
