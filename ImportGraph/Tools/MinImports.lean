@@ -143,7 +143,8 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
       logWarning m!"`#min_imports` currently only produces modulized imports. Luckily, all \
         necessary imports are module files, so the following suggestion may assist in modulizing \
         this file.\n\n\
-        ⚠️ If you accept this suggestion, you will need to add the `module` keyword above the suggested import block to fix the file's imports, and (`@[expose]`) \
+        ⚠️ If you accept this suggestion, you will need to add the `module` keyword above the \
+        suggested import block to fix the file's imports, and (`@[expose]`) \
         `public section` below the block to fix the rest of the file.\n\n\
         Modulization may affect the declarations and which imports are necessary, so re-run \
         `#min_imports` after modulization.\
