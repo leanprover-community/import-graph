@@ -17,7 +17,11 @@ public meta import ImportGraph.Shake.Environment
 # `#min_imports`
 
 This module provides `#min_imports`, which minimizes the imports according to which are actually
-used in the declarations and syntax of the current file.
+used in the declarations and syntax of the current file. It respects module-system relevant
+dependencies.
+
+Note: testing `#min_imports` should not use `#guard_msgs`, as `#min_imports` reports back from the
+end of the file. Instead, this file exposes `logAllMinImports` and `resetMinImports` for testing.
 
 ## Future work
 
@@ -45,7 +49,7 @@ public meta def Lean.Environment.minimalRequiredModules (env : Environment) : Ar
 /-! ## Modern `#min_imports` -/
 
 /--
-Minimize the imports of the entire current module.
+Minimize the imports of the entire current module in the module system.
 
 This command may be written anywhere in the file. It will wait until the file is done elaborating,
 then minimize imports for the whole file, taking into account declarations that come after it as
@@ -54,9 +58,12 @@ well.
 Currently, it accounts for constants, syntax, shake records, and runtime IR (except for
 attributes like `@[inline]`), but not yet meta IR from new `meta def`s.
 
-To normalize imports without taking into account whether they are used or not, see `#norm_imports`.
+To eliminate redundancies among the current file's imports without taking into account whether they
+are actually used or not, see `#norm_imports`.
 
-This command is aware of the module system.
+This command currently only suggests module-system import blocks. It may still help with modulizing
+non-module files if all necessary imports are already modules, or by indicating which necessary
+imports are non-modules.
 -/
 syntax (name := minImportsStx) "#min_imports" : command
 
