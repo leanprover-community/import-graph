@@ -24,6 +24,7 @@ used in the declarations and syntax of the current file.
 - Improve the ergonomics around waiting for a message (loading widget, yellow bar)
 - Split out into API
 - Turn into an optional (expensive) linter
+- Account for non-persistent uses like `example`, `#check`, `#eval` under an option
 - `#min_imports so far`
 -/
 
