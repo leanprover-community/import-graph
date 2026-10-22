@@ -1,6 +1,6 @@
 module
 
-meta import ImportGraph.Tools.MinImports
+import ImportGraph.Tools.MinImports
 import ImportGraphTest.MinImports.NewSyntax
 
 open ImportGraph Shake Lean
