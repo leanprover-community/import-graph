@@ -716,7 +716,7 @@ where
           return declNeeds
 
 open Lean Elab Command in
-/-- Calcualte the syntax needs of some syntax, and attaches it as a comptime need for all `decls`.
+/-- Calculate the syntax needs of some syntax, and attaches it as a comptime need for all `decls`.
 This design will likely change in the future, and command needs will have a dedicated location
 instead of being duplicated across different declarations. -/
 def DeclNeeds.calcSyntaxNeeds (env : Environment) (decls : Array Name) (cmd : Syntax)
