@@ -51,9 +51,8 @@ public meta def Lean.Environment.minimalRequiredModules (env : Environment) : Ar
 /--
 Minimize the imports of the entire current module in the module system.
 
-This command may be written anywhere in the file. It will wait until the file is done elaborating,
-then minimize imports for the whole file, taking into account declarations that come after it as
-well.
+This command may be written anywhere in the file, and will still take into account the whole file.
+As such, the command will remain silent until the file finishes elaborating.
 
 Currently, it accounts for constants, syntax, shake records, and runtime IR (except for
 attributes like `@[inline]`), but not yet meta IR from new `meta def`s.
