@@ -8,6 +8,7 @@ import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.MinImports.Basic
 import ImportGraphTest.MinImports.NewSyntax
+import ImportGraphTest.MinImports.NoDecls
 import ImportGraphTest.MinImports.NonModule
 import ImportGraphTest.MinImports.NonModuleOfNonModule
 import ImportGraphTest.MinImports.ToolImport
