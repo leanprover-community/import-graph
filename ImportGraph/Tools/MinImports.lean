@@ -99,7 +99,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
 
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
-  let importNeeds := (← getEnv).importNeedsOfNewExtraModUses (init := importNeeds) extraModUses
+  let importNeeds := (← getEnv).importNeedsOfExtraModUses (init := importNeeds) extraModUses
   let mut reducedNeeds := importNeeds.toNeeds.reduce transDeps
   let mut reducedImps := (← getEnv).toRawImports reducedNeeds
 
