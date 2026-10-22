@@ -11,6 +11,7 @@ import ImportGraphTest.MinImports.NewSyntax
 import ImportGraphTest.MinImports.NonModule
 import ImportGraphTest.MinImports.NonModuleOfNonModule
 import ImportGraphTest.MinImports.ToolImport
+import ImportGraphTest.MinImports.ToolNormalize
 import ImportGraphTest.MinImports.ToolUse
 import ImportGraphTest.MinImports.UseSyntax
 import ImportGraphTest.NormImports
