@@ -3,7 +3,7 @@ module
 meta import ImportGraph.Tools.MinImports
 import ImportGraphTest.MinImports.NewSyntax
 
-open ImportGraph Lean
+open ImportGraph Shake Lean
 
 #foo
 
@@ -14,9 +14,9 @@ def x := true
 /-- info: Imports are minimal. -/
 #guard_msgs in
 run_cmd
-  runLaterReporter.fulfill #[
+  logMinImports (← getRef) #[
     ← `(command| open ImportGraph Lean),
     ← `(command| #foo),
     ← `(command| def x := true),
-    ← `(command| #min_imports)] (runLaterReporter.getRequests (← getEnv))
-  runLaterReporter.reset
+    ← `(command| #min_imports)]
+  resetMinImports
