@@ -63,8 +63,8 @@ Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the unimpo
 force non-meta. Note that a conservative choice would insist on non-meta, but extra mod uses are
 frequently from metaprograms which are already meta (and thus records a *non-meta* extra mod use)
 or from e.g. lemmas used in tactic proofs (which allow meta). So we accept unlikely possible
-breakage to avoid suggesting e.g. `meta import Foo; import Foo` or missing out on possible import
-locations in `#find_home`. -/
+breakage to avoid suggesting e.g. `meta import Foo; import Foo` or missing out on viable
+declaration locations in `#find_home`. -/
 def ImportNeeds.ofNewExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
     (init : ImportNeeds := ∅) : ImportNeeds :=
   uses.foldl (init := init) fun needs use => Id.run do
