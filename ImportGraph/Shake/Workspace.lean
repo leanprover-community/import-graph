@@ -57,13 +57,19 @@ def WorkspaceModel.implicitInitNeeds (w : WorkspaceModel) (base : Needs) : Needs
 
 namespace Shake
 
-/-- Convert extra mod uses into `ImportNeeds`. Unfortunately, `ExtraModUse` has no notion of
-`allowMeta`, so we make the opinionated choice to force non-meta. -/
+/-- Convert extra mod uses into `ImportNeeds`.
+
+Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the unimposing choice to
+force non-meta. Note that a conservative choice would insist on non-meta, but extra mod uses are
+frequently from metaprograms which are already meta (and thus records a *non-meta* extra mod use)
+or from e.g. lemmas used in tactic proofs (which allow meta). So we accept unlikely possible
+breakage to avoid suggesting e.g. `meta import Foo; import Foo` or missing out on possible import
+locations in `#find_home`. -/
 def ImportNeeds.ofNewExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
     (init : ImportNeeds := ∅) : ImportNeeds :=
   uses.foldl (init := init) fun needs use => Id.run do
     let some idx := w.getModIdx? use.module | needs
-    needs.union { use with } {idx}
+    needs.union { use with allowMeta := true } {idx}
 
 -- TODO: make this take in a monadic interface for the module index, so that we can use it both for
 -- an environment and more generally
