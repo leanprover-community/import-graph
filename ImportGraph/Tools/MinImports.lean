@@ -9,6 +9,7 @@ public meta import ImportGraph.Imports.FromSource
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Imports.Redundant -- for deprecated `minimalRequiredModules`
 public meta import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Lean.MessageData
 public meta import ImportGraph.Shake.EnvExtension
 public meta import ImportGraph.Shake.Environment
 
@@ -121,23 +122,43 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   let some (msg, errs) ← liftCoreM <| Import.mkImportSuggestionMessage tk reducedImps sourceImps
     | logInfo m!"Imports are minimal."
 
-  let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
-  let normalizationChangeAtMost :=
-    -- Whether the current imports are provided by the reduced imports
-    (← getEnv).currentTransNeeds transDeps |>.subsumedBy reducedNeeds transDeps
-  let errMsgOrConnector := if errs.isEmpty then ":" else
-    let disclaimer := s!"some comments could not be carried over. \
+  let disclaimer := s!"some comments could not be carried over. \
       Please review the source comment that will be inserted after the imports."
-    if formattingChangeAtMost || normalizationChangeAtMost then
-      s!".\n\nHowever, {disclaimer}\n"
+
+  let env ← getEnv
+  if !env.header.isModule then
+    let nonModuleImps := reducedImps.filter fun imp =>
+      !env.header.moduleData[env.getModuleIdx? imp.module |>.get!]!.isModule
+    if nonModuleImps.isEmpty then
+      -- TODO: allow suggesting the module keyword + section too in `ImportGraph.Imports.Pretty`
+      logWarning m!"`#min_imports` currently only produces modulized imports. Luckily, all \
+        necessary imports are module files, so the following suggestion may assist in modulizing \
+        this file.\n\n\
+        ⚠️ If you accept this suggestion, you will need to add the `module` keyword above the suggested import block to fix the file's imports, and (`@[expose]`) \
+        `public section` below the block to fix the rest of the file.\n\n\
+        Modulization may affect the declarations and which imports are necessary, so re-run \
+        `#min_imports` after modulization.\
+        {if errs.isEmpty then "" else s!"\n\nNote that {disclaimer}\n"}{msg}"
     else
-      s!", but {disclaimer}\n"
-  if formattingChangeAtMost then
-    logInfo m!"Imports are minimal, but can be reformatted{errMsgOrConnector}{msg}"
-  else if normalizationChangeAtMost then
-    logWarning m!"Imports are minimal, but can be normalized{errMsgOrConnector}{msg}"
+      logWarning m!"`#min_imports` currently only produces modulized imports, but some \
+        necessary imports are non-module files. These files would not be importable in a module \
+        file:\n{.bulletList <| nonModuleImps.toList.map (·.module)}"
   else
-    logWarning m!"Imports can be reduced{errMsgOrConnector}{msg}"
+    let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
+    let normalizationChangeAtMost :=
+      -- Whether the current imports are provided by the reduced imports
+      (← getEnv).currentTransNeeds transDeps |>.subsumedBy reducedNeeds transDeps
+    let errMsgOrConnector := if errs.isEmpty then ":" else
+      if formattingChangeAtMost || normalizationChangeAtMost then
+        s!".\n\nHowever, {disclaimer}\n"
+      else
+        s!", but {disclaimer}\n"
+    if formattingChangeAtMost then
+      logInfo m!"Imports are minimal, but can be reformatted{errMsgOrConnector}{msg}"
+    else if normalizationChangeAtMost then
+      logWarning m!"Imports are minimal, but can be normalized{errMsgOrConnector}{msg}"
+    else
+      logWarning m!"Imports can be reduced{errMsgOrConnector}{msg}"
 
 /-!
 ### Bespoke infrastructure
@@ -176,7 +197,4 @@ public meta def resetMinImports : CommandElabM Unit :=
 
 elab_rules : command
 | `(#min_imports%$tk) => do
-  unless (← getEnv).header.isModule do
-    -- Warn but still offer a replacement, in case it helps modulize
-    logWarning m!"`#min_imports` currently only works within the module system."
   modifyEnv fun env => minImportsRequests.modifyState env (tk :: ·)
