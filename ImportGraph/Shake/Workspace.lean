@@ -49,10 +49,18 @@ def WorkspaceModel.toRawImports (w : WorkspaceModel) (n : Needs) (skipInit := tr
 
 namespace Shake
 
+/-- Convert extra mod uses into `ImportNeeds`. Unfortunately, `ExtraModUse` has no notion of
+`allowMeta`, so we make the opinionated choice to force non-meta. -/
+def ImportNeeds.ofNewExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
+    (init : ImportNeeds := ∅) : ImportNeeds :=
+  uses.foldl (init := init) fun needs use => Id.run do
+    let some idx := w.getModIdx? use.module | needs
+    needs.union { use with } {idx}
+
 -- TODO: make this take in a monadic interface for the module index, so that we can use it both for
 -- an environment and more generally
 /-- Collapse the `ImportNeeds` of all declarations in `DeclNeeds`. This is incorrect for splitting
-up declarations, but adequate for moving them to a single place.  -/
+up declarations, but adequate for moving them to a single place. -/
 def DeclNeeds.toSimultaneousImportNeeds
     (w : WorkspaceModel)
     (declNeeds : DeclNeeds)
@@ -66,7 +74,7 @@ def DeclNeeds.toSimultaneousImportNeeds
     for (modName, usedDecls) in declNeeds.fixedDecls do
       withTraceNode `ImportGraph.Shake (collapsed := false)
         (fun _ => return m!"Uses module `{modName}`") do←
-      let some modIdx := w.idxOfMod[modName]? | continue
+      let some modIdx := w.getModIdx? modName | continue
       for (usedDecl, ks) in usedDecls do
         withTraceNode `ImportGraph.Shake
           (fun _ => return m!"Uses decl `{.ofConstName usedDecl}`") do←
@@ -75,7 +83,7 @@ def DeclNeeds.toSimultaneousImportNeeds
           trace[ImportGraph.Shake] "{k.pretty}"
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
-              let some modIdx := w.idxOfMod[modName]? | continue
+              let some modIdx := w.getModIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
                 { isExported := false, isMeta := false, allowMeta := true } {modIdx}

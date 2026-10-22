@@ -86,6 +86,17 @@ def toRawImports (env : Environment)
     out := out.push { k with module, importAll := k.isAll }
   return out
 
+/-- Like `ImportNeeds.ofExtraModUses`, but uses the environment's notion of `ModuleIdx` instead of
+the workspace model's.
+
+Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the opinionated choice to
+force non-meta. -/
+def importNeedsOfNewExtraModUses (env : Environment) (uses : List ExtraModUse)
+    (init : ImportNeeds := ∅) : ImportNeeds :=
+  uses.foldl (init := init) fun needs use => Id.run do
+    let some idx := env.getModuleIdx? use.module | needs
+    needs.union { use with } {idx}
+
 /-- Like `DeclNeeds.toSimultaneousImportNeeds`, but uses the environment's notion of `ModuleIdx`
 instead of a workspace model's. -/
 def toSimultaneousImportNeeds (env : Environment)

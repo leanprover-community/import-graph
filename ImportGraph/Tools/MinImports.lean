@@ -60,26 +60,31 @@ syntax (name := minImportsStx) "#min_imports" : command
 
 /-- Get the `DeclNeeds` of all new constants in the `Environment`, given the `Array Syntax` of all
 commands in the file. Ignores any syntax (at the top level) with kind in `ignoredKinds`. -/
-meta def getModuleDeclNeeds (cmds : Array Syntax) (ignoredKinds : NameSet := {}):
-    CommandElabM (DeclNeeds × Std.HashMap Name (Option Stance)) := do
+meta def getModuleDeclNeeds (cmds : Array Syntax) (ignoredKinds : NameSet := {}) :
+    CommandElabM (DeclNeeds × Std.HashMap Name (Option Stance) × List ExtraModUse) := do
   let mut declNeeds := ∅
-  -- TODO: extra mod uses. Should be at the command level and decls organized by command.
-  -- Currently they're just attached to all decls.
-  let extraModUses := getNewExtraModUses (← getEnv) |>.1
+  let env ← getEnv
   -- TODO: more accurate targeting of declarations and commands.
-  for (decl, _) in (← getEnv).constants.map₂ do
-    declNeeds := calcDeclConstInfoNeeds decl (← getEnv) declNeeds
-    declNeeds := declNeeds.insertExtraModUsesFor decl extraModUses
+  for (decl, _) in env.constants.map₂ do
+    declNeeds := calcDeclConstInfoNeeds decl env declNeeds
   for cmd in cmds do
     unless ignoredKinds.contains cmd.getKind do
-      declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
-  liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
+      declNeeds ← declNeeds.calcSyntaxNeeds env (declNeeds.keysArray) cmd
+  let (finalDeclNeeds, s) ← liftCoreM <| StanceM.run <| declNeeds.calcIRNeeds
+  -- Eagerly erases extra mod uses of the `ignoredKinds`. Technically this is overzealous, but
+  -- syntax records extra mod uses in a coarse fashion.
+  let ignoredMods := ignoredKinds.toArray.filterMap fun ignoredKind => do
+    let idx ← env.getModuleIdxFor? ignoredKind
+    return env.allImportedModuleNames[idx]!
+  let extraModUses := getNewExtraModUses env |>.1.filter fun use =>
+    !(ignoredMods.contains use.module)
+  return (finalDeclNeeds, s, extraModUses)
 
 /-- Log a `#min_imports` message at the given `tk`, looking at the provided `cmds` syntax and all
 constants in the environment. -/
 public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
     CommandElabM Unit := withRef tk do
-  let (declNeeds, s) ← getModuleDeclNeeds cmds (ignoredKinds := {``minImportsStx})
+  let (declNeeds, s, extraModUses) ← getModuleDeclNeeds cmds (ignoredKinds := {``minImportsStx})
   if let some warning := declNeeds.metaWarning? (← getEnv) "#min_imports" then
     logWarning warning
   let transDeps := (← getEnv).mkTransDeps
@@ -95,6 +100,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
 
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
+  let importNeeds := (← getEnv).importNeedsOfNewExtraModUses (init := importNeeds) extraModUses
   let reducedNeeds := importNeeds.toNeeds.reduce transDeps
   let reducedImps := (← getEnv).toRawImports reducedNeeds ++ ignoredReduced
 
