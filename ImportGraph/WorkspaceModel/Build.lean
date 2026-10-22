@@ -68,7 +68,7 @@ private structure InferredLibraryGlob where
   hasRoot_or_hasDir : hasRoot || hasDir := by grind
 
 -- TODO: just alter `parseImports'` to account for this.
-private def hasImplicitPrelude (header : Lean.ModuleHeader) : Bool :=
+private def hasImplicitInit (header : Lean.ModuleHeader) : Bool :=
   header.imports[0]?.isEqSome { module := `Init } &&
   header.imports[1]?.isEqSome { module := `Init, isMeta := true }
 
@@ -118,7 +118,7 @@ private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceMod
   transDeps := transDeps.linearize
   depthsPerLib := depthsPerLib.modify libIdx (· + 1)
   depthsPerPkg := depthsPerPkg.modify pkgIdx (· + 1)
-  let isPrelude := hasImplicitPrelude header
+  let isPrelude := !(hasImplicitInit header)
   let modData : WorkspaceModel.Module := { header with
     name := mod, srcFile, isPrelude, prevs, depthsPerLib, depthsPerPkg
     transDeps, transLibDeps, transPkgDeps, libIdx, pkgIdx }
