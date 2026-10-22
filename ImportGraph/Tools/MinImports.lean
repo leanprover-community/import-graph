@@ -93,7 +93,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   -- among themselves, and add them back in afterwards
   let ignoring : NameSet := {`ImportGraph.Tools.MinImports, `ImportGraph.Tools, `ImportGraph}
   let ignoredImports := (← getEnv).header.imports.filter (ignoring.contains ·.module)
-  let ignoredReduced ←
+  let mut ignoredReduced ←
     if ignoredImports.isEmpty then pure #[] else
       let ignoredTransNeeds := (← getEnv).transitiveClosureOf ignoredImports transDeps
       pure <| (← getEnv).toRawImports <| ignoredTransNeeds.reduce transDeps
@@ -101,6 +101,13 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
   let importNeeds := (← getEnv).importNeedsOfNewExtraModUses (init := importNeeds) extraModUses
+  -- If `#min_imports` is not provided, add it in.
+  -- (Note: the module index itself should always exist if we are able to use `#min_imports`.)
+  if ignoredReduced.isEmpty then
+    if let some minImportsModuleIdx := (← getEnv).getModuleIdx? `ImportGraph.Tools.MinImports then
+      unless transDeps⟦importNeeds.toNeeds⟧.any (·.has minImportsModuleIdx) do
+        ignoredReduced := ignoredReduced.push
+          { module := `ImportGraph.Tools.MinImports, isExported := false, isMeta := false }
   let reducedNeeds := importNeeds.toNeeds.reduce transDeps
   let reducedImps := (← getEnv).toRawImports reducedNeeds ++ ignoredReduced
 
