@@ -59,10 +59,10 @@ namespace Shake
 
 /-- Convert extra mod uses into `ImportNeeds`.
 
-Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the unimposing choice to
-force non-meta. Note that a conservative choice would insist on non-meta, but extra mod uses are
-frequently from metaprograms which are already meta (and thus records a *non-meta* extra mod use)
-or from e.g. lemmas used in tactic proofs (which allow meta). So we accept unlikely possible
+Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the unimposing choice to set
+`allowMeta := true`. Note that a conservative choice would insist on non-meta, but extra mod uses
+are frequently from metaprograms which are already meta (and thus records a *non-meta* extra mod
+use) or from e.g. lemmas used in tactic proofs (which allow meta). So we accept unlikely possible
 breakage to avoid suggesting e.g. `meta import Foo; import Foo` or missing out on viable
 declaration locations in `#find_home`. -/
 def ImportNeeds.ofExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
