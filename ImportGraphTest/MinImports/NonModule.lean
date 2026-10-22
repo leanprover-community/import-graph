@@ -23,5 +23,5 @@ Modulization may affect the declarations and which imports are necessary, so re-
 -/
 #guard_msgs in
 run_cmd
-  logMinImports (← getRef) #[]
+  logAllMinImports #[]
   resetMinImports

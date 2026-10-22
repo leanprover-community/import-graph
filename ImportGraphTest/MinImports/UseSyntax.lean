@@ -14,7 +14,7 @@ def x := true
 /-- info: Imports are minimal. -/
 #guard_msgs in
 run_cmd
-  logMinImports (← getRef) #[
+  logAllMinImports #[
     ← `(command| open ImportGraph Lean),
     ← `(command| #foo),
     ← `(command| def x := true),

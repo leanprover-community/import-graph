@@ -14,5 +14,5 @@ warning: `#min_imports` currently only produces modulized imports, but some nece
 -/
 #guard_msgs in
 run_cmd
-  logMinImports (← getRef) #[]
+  logAllMinImports #[]
   resetMinImports
