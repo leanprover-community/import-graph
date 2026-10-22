@@ -58,13 +58,17 @@ lake exe graph --to MyProject --doc-url https://example.org/docs/ my_graph.html
 
 ## Commands
 
-There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Tools` to your lean file.
+There are a few commands implemented, which help you analysing the imports of a file. These are accessible by adding `import ImportGraph.Tools` to your lean file. Some commands respect the module system, and some do not.
+
+**Module-system aware commands:**
+
+* `#norm_imports`: removes transitively redundant imports from the current file and suggests the normalized result.
+* `#min_imports`: attempts to construct a minimal set of imports for the commands in the current file, and suggests the result. This may be run at any point in the file, and will still take the whole file into account.
+* `#find_home for <cmd>`: suggests files higher up in the import hierarchy to which the command and any dependencies from the same file could be moved.
+
+**Commands not yet aware of the module system:**
 
 * `#redundant_imports`: lists any transitively redundant imports in the current module.
-* `#min_imports`: attempts to construct a minimal set of imports for the declarations
-  in the current file.
-  (Must be run at the end of the file. Tactics and macros may result in incorrect output.)
-* `#find_home decl`: suggests files higher up the import hierarchy to which `decl` could be moved.
 * `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
   modules `foo, bar, ...` are added to the set of imports of the file.
 
