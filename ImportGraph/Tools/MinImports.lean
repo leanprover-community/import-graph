@@ -9,6 +9,7 @@ public meta import ImportGraph.Imports.FromSource
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Imports.Redundant -- for deprecated `minimalRequiredModules`
 public meta import ImportGraph.Imports.RequiredModules -- for deprecated `minimalRequiredModules`
+public meta import ImportGraph.Shake.EnvExtension
 public meta import ImportGraph.Shake.Environment
 
 /-!
@@ -62,9 +63,13 @@ commands in the file. Ignores any syntax (at the top level) with kind in `ignore
 meta def getModuleDeclNeeds (cmds : Array Syntax) (ignoredKinds : NameSet := {}):
     CommandElabM (DeclNeeds × Std.HashMap Name (Option Stance)) := do
   let mut declNeeds := ∅
+  -- TODO: extra mod uses. Should be at the command level and decls organized by command.
+  -- Currently they're just attached to all decls.
+  let extraModUses := getNewExtraModUses (← getEnv) |>.1
   -- TODO: more accurate targeting of declarations and commands.
   for (decl, _) in (← getEnv).constants.map₂ do
     declNeeds := calcDeclConstInfoNeeds decl (← getEnv) declNeeds
+    declNeeds := declNeeds.insertExtraModUsesFor decl extraModUses
   for cmd in cmds do
     unless ignoredKinds.contains cmd.getKind do
       declNeeds ← declNeeds.calcSyntaxNeeds (← getEnv) (declNeeds.keysArray) cmd
