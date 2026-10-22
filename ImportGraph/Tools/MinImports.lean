@@ -142,7 +142,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
     else
       logWarning m!"`#min_imports` currently only produces modulized imports, but some \
         necessary imports are non-module files. These files would not be importable in a module \
-        file:\n{.bulletList <| nonModuleImps.toList.map (·.module)}"
+        file:\n\n{.bulletList <| nonModuleImps.toList.map (·.module)}"
   else
     let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
     let normalizationChangeAtMost :=
