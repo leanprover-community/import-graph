@@ -90,27 +90,26 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
     logWarning warning
   let transDeps := (← getEnv).mkTransDeps
 
-  -- ignore direct imports of `#min_imports` for the transitive import calculation, reduce them
-  -- among themselves, and add them back in afterwards
-  let ignoring : NameSet := {`ImportGraph.Tools.MinImports, `ImportGraph.Tools, `ImportGraph}
-  let ignoredImports := (← getEnv).header.imports.filter (ignoring.contains ·.module)
-  let mut ignoredReduced ←
-    if ignoredImports.isEmpty then pure #[] else
-      let ignoredTransNeeds := (← getEnv).transitiveClosureOf ignoredImports transDeps
-      pure <| (← getEnv).toRawImports <| ignoredTransNeeds.reduce transDeps
-
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
   let importNeeds := (← getEnv).importNeedsOfNewExtraModUses (init := importNeeds) extraModUses
-  -- If `#min_imports` is not provided, add it in.
-  -- (Note: the module index itself should always exist if we are able to use `#min_imports`.)
-  if ignoredReduced.isEmpty then
-    if let some minImportsModuleIdx := (← getEnv).getModuleIdx? `ImportGraph.Tools.MinImports then
-      unless transDeps⟦importNeeds.toNeeds⟧.any (·.has minImportsModuleIdx) do
-        ignoredReduced := ignoredReduced.push
-          { module := `ImportGraph.Tools.MinImports, isExported := false, isMeta := false }
   let reducedNeeds := importNeeds.toNeeds.reduce transDeps
-  let reducedImps := (← getEnv).toRawImports reducedNeeds ++ ignoredReduced
+  let mut reducedImps := (← getEnv).toRawImports reducedNeeds
+
+  /- If `#min_imports` is not provided, preserve the largest direct import of tooling from
+  ImportGraph, or else add it in. (Note: the module index itself should always exist if we are able
+  to use `#min_imports`.) -/
+  if let some minImportsModuleIdx := (← getEnv).getModuleIdx? `ImportGraph.Tools.MinImports then
+    unless transDeps⟦importNeeds.toNeeds⟧.any (·.has minImportsModuleIdx) do
+      let env ← getEnv
+      -- In order from broadest to narrowest
+      let possibleDirectImports :=
+        #[`ImportGraph, `ImportGraph.Tools, `ImportGraph.Tools.MinImports]
+      let preservedToolImport :=
+        (possibleDirectImports.find? fun mod => env.header.imports.any (·.module == mod)).getD
+          `ImportGraph.Tools.MinImports
+      reducedImps := reducedImps.push
+        { module := preservedToolImport, isExported := false, isMeta := false }
 
   let (header, _, log) ← parseCurrentHeader
   if log.hasErrors then
