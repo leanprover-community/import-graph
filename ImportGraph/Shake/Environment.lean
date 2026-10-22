@@ -34,6 +34,14 @@ namespace ImportGraph.Shake.Lean.Environment
 
 public section
 
+/-- Every non-`prelude` file adds `public import Init` and `public meta import Init` to every file
+behind the scenes. This repesents (exactly) those two files. This should be added to any
+`base : Needs` which should represent what a typical file actually gets. If `Init` is not present,
+returns `base` unchanged. -/
+def implicitInitNeeds (env : Environment) (base : Needs) : Needs := Id.run do
+  let some initIdx := env.getModuleIdx? `Init | base
+  return base.union .pub {initIdx} |>.union .metaPub {initIdx}
+
 /-- Computes the transitive closure of a set of imports with respect to an import hierarchy
 `transDeps`, as far as the environment allows. -/
 def transitiveClosureOf (env : Environment)

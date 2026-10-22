@@ -47,6 +47,14 @@ def WorkspaceModel.toRawImports (w : WorkspaceModel) (n : Needs) (skipInit := tr
     out := out.push { k with module, importAll := k.isAll }
   return out
 
+/-- Every non-`prelude` file adds `public import Init` and `public meta import Init` to every file
+behind the scenes. This repesents (exactly) those two files. This should be added to any
+`base : Needs` which should represent what a typical file actually gets. Returns `base` unchanged
+if `Init` is not in the workspace model (this should be impossible). -/
+def WorkspaceModel.implicitInitNeeds (w : WorkspaceModel) (base : Needs) : Needs := Id.run do
+  let some initIdx := w.getModIdx? `Init | base
+  return base.union .pub {initIdx} |>.union .metaPub {initIdx}
+
 namespace Shake
 
 /-- Convert extra mod uses into `ImportNeeds`. Unfortunately, `ExtraModUse` has no notion of
