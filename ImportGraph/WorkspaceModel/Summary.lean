@@ -9,14 +9,15 @@ public import ImportGraph.WorkspaceModel.Summary.Core
 public import ImportGraph.WorkspaceModel.Summary.Get
 
 /-!
-Importing this file downstream is "safe", and only transitively introduces the following small Lake
-dependencies:
+Importing this file downstream is "safe", and introduces the following small Lake dependencies
+for its public field types:
 ```
 public import Lake.Config.Glob
 public import Lake.Util.Version
 ```
-Both of these files do not transitively import any further Lake dependencies. They are necessary
-for the types `Glob` and `ToolchainVer` in `WorkspaceSummary` field types.
+These provide `Glob` and `ToolchainVer` in `WorkspaceSummary` field types. Cache validation also
+uses `Lake.Build.Trace` for hashing. None of these imports brings in Lake workspace loading or
+the build type-family axioms.
 
 For Lake interaction with `WorkspaceSummary`, import `ImportGraph.WorkspaceModel.Summary.Lake`.
 -/

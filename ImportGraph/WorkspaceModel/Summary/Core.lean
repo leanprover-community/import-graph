@@ -8,7 +8,7 @@ module
 public import Lean.Data.Json
 public import ImportGraph.WorkspaceModel.Base
 
-import ImportGraph.Lake
+import ImportGraph.Util.Modules
 
 /-!
 # Transporting a Lake workspace summary over Json
