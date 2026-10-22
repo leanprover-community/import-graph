@@ -823,17 +823,8 @@ def withElabCommandCapturingNeeds (cmd : Syntax.Command) :
     trace[ImportGraph.Shake] "New constants captured from command:\
       {indentD (newDecls.toList.map MessageData.ofConstName)}"
     let mut declNeeds := {}
-    let mut autoDecls := #[] -- Save auto decls, and ensure we found them
-    -- TODO-TAG: auto decl handling
     for new in newDecls do
-      if isDeclNeedsAutoDecl env new then
-        autoDecls := autoDecls.push new
-      else
-        declNeeds := calcDeclConstInfoNeeds new env declNeeds
-    for autoDecl in autoDecls do
-      -- TODO: this should recurse into autodecls of autodecls. Not entirely happy with handling
-      unless declNeeds.contains autoDecl do
-        declNeeds := calcDeclConstInfoNeeds autoDecl env declNeeds
+      declNeeds := calcDeclConstInfoNeeds new env declNeeds
     -- TODO: extra mod uses. Should be at the command level and decls organized by command
     let extraModUses := getNewExtraModUses env |>.1
     for new in newDecls do
