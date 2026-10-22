@@ -97,8 +97,9 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   let mut reducedImps := (← getEnv).toRawImports reducedNeeds
 
   /- If `#min_imports` is not provided, preserve the largest direct import of tooling from
-  ImportGraph, or else add it in. (Note: the module index itself should always exist if we are able
-  to use `#min_imports`.) -/
+  ImportGraph (but demote it to private), or else add it in. (Note: the module index itself should
+  always exist if we are able to use `#min_imports`.) In the future, `#min_imports` should delete
+  itself. -/
   if let some minImportsModuleIdx := (← getEnv).getModuleIdx? `ImportGraph.Tools.MinImports then
     unless transDeps⟦importNeeds.toNeeds⟧.any (·.has minImportsModuleIdx) do
       let env ← getEnv
