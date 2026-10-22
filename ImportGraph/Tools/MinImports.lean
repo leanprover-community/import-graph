@@ -33,7 +33,7 @@ end of the file. Instead, this file exposes `logAllMinImports` and `resetMinImpo
 - `#min_imports so far`
 -/
 
-open ImportGraph Lean Elab Command Shake
+open ImportGraph Shake Lean Elab Command
 
 namespace ImportGraph.Shake
 
@@ -100,7 +100,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
   let importNeeds := (← getEnv).importNeedsOfNewExtraModUses (init := importNeeds) extraModUses
-  let reducedNeeds := importNeeds.toNeeds.reduce transDeps
+  let mut reducedNeeds := importNeeds.toNeeds.reduce transDeps
   let mut reducedImps := (← getEnv).toRawImports reducedNeeds
 
   /- If `#min_imports` is not provided, preserve the largest direct import of tooling from
@@ -112,12 +112,15 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
       let env ← getEnv
       -- In order from broadest to narrowest
       let possibleDirectImports :=
-        #[`ImportGraph, `ImportGraph.Tools, `ImportGraph.Tools.MinImports]
-      let preservedToolImport :=
-        (possibleDirectImports.find? fun mod => env.header.imports.any (·.module == mod)).getD
-          `ImportGraph.Tools.MinImports
-      reducedImps := reducedImps.push
-        { module := preservedToolImport, isExported := false, isMeta := false }
+        #[`ImportGraph, `ImportGraph.Tools, `ImportGraph.Tools.MinImports].filterMap fun modName =>
+          return (← env.getModuleIdx? modName, modName)
+      let (toolImportIdx, module) :=
+        (possibleDirectImports.find? fun (_, mod) => env.header.imports.any (·.module == mod)).getD
+          (minImportsModuleIdx, `ImportGraph.Tools.MinImports)
+      let toolImport := { module, isExported := false, isMeta := false }
+      -- We use this later for checking if the modification is just a normalization.
+      reducedNeeds := reducedNeeds.union { toolImport with } {toolImportIdx}
+      reducedImps := reducedImps.push toolImport
 
   let (header, _, log) ← parseCurrentHeader
   if log.hasErrors then
@@ -153,6 +156,8 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
     let formattingChangeAtMost := Import.beqUpToOrder (sourceImps.map (·.1.toImport)) reducedImps
     let normalizationChangeAtMost :=
       -- Whether the current imports are provided by the reduced imports
+      -- Need to add `Init` to emulate it being a real file:
+      let reducedNeeds := env.implicitInitNeeds reducedNeeds
       (← getEnv).currentTransNeeds transDeps |>.subsumedBy reducedNeeds transDeps
     let errMsgOrConnector := if errs.isEmpty then ":" else
       if formattingChangeAtMost || normalizationChangeAtMost then
