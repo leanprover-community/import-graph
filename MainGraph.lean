@@ -7,7 +7,7 @@ import ImportGraph.Graph.Filter
 import ImportGraph.Imports.ImportGraph
 import ImportGraph.Imports.RequiredModules
 import ImportGraph.Lean.Name
-import ImportGraph.Util.CurrentModule
+import ImportGraph.Lake.CurrentModule
 import ImportGraph.Util.FindSorry
 import Lean.Data.NameMap.AdditionalOperations
 

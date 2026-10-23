@@ -8,7 +8,7 @@ module
 public import Lake.Build.Trace
 public import ImportGraph.WorkspaceModel.Summary.Core
 
-import ImportGraph.Util.Modules
+import ImportGraph.Lake.Modules
 
 /-!
 # Workspace summary cache validation

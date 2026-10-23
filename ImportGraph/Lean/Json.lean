@@ -11,14 +11,12 @@ public import Lean.Data.Json
 
 open Lean
 
-public section
-
 namespace ImportGraph.Lean.Json
 
-scoped instance : ToJson UInt32 where
+private scoped instance : ToJson UInt32 where
   toJson uint := uint.toNat
 
-scoped instance : FromJson UInt32 where
+private scoped instance : FromJson UInt32 where
   fromJson? uint := fromJson? (α := Nat) uint |>.map .ofNat
 
 deriving instance ToJson, FromJson, Repr for IO.Error

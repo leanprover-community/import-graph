@@ -5,7 +5,7 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Lean.Json
+import ImportGraph.Lean.Json
 public import ImportGraph.Shake.Basic
 public import ImportGraph.WorkspaceModel.Base
 public import Lean.Message -- only for `ToMessageData` on `WorkspaceModel.Error`

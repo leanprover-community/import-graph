@@ -23,5 +23,3 @@ public def Environment.getModuleFor? (env : Environment) (declName : Name) (skip
 @[inline]
 public def Environment.getModuleIdx! (env : Environment) (moduleName : Name) : ModuleIdx :=
   env.getModuleIdx? moduleName |>.get!
-
-end Lean

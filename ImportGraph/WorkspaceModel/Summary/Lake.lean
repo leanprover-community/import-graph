@@ -8,7 +8,7 @@ module
 public import Lake.Config.Workspace
 public import ImportGraph.WorkspaceModel.Summary.Cache
 
-import ImportGraph.Lake
+import ImportGraph.Lake.Workspace
 
 /-!
 # Extraction from a Lake workspace

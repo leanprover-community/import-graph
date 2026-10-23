@@ -5,7 +5,7 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Util.Modules
+public import ImportGraph.Lake.Modules
 public import Lake.Config.Workspace
 
 import Lake.Load.Workspace
@@ -14,7 +14,7 @@ import Lake.Load.Workspace
 # Lake workspace loading
 
 Workspace loading is intended for executables. Library consumers needing only module traversal
-and the associated instances should import `ImportGraph.Util.Modules` instead.
+and the associated instances should import `ImportGraph.Lake.Modules` instead.
 
 This file must not be imported by modules reachable from `ImportGraph` or `ImportGraph.Tools`;
 see `ImportGraphTest.NoLakeAxioms`. The workspace-summary executable imports it separately.

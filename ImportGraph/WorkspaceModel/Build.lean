@@ -10,7 +10,7 @@ public import ImportGraph.WorkspaceModel.Summary
 public import ImportGraph.Shake.Algebra
 
 import Lean.Elab.ParseImportsFast
-import ImportGraph.Util.Modules
+import ImportGraph.Lake.Modules
 
 /-!
 # Building a `WorkspaceModel`

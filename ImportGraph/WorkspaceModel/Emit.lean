@@ -6,7 +6,7 @@ Authors: Thomas R. Murrills
 module
 
 import Lake.Load.Workspace
-import ImportGraph.Lake
+import ImportGraph.Lake.Workspace
 import ImportGraph.WorkspaceModel.Summary.Lake
 
 /-!
