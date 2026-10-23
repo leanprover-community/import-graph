@@ -51,8 +51,9 @@ elab tk:"#show_imports" ppSpace &"for" ppLine cmd:command : command => do
     logWarningAt tk "Note: `#show_imports` does not yet handle `example`s. Please create a
       temporary declaration."
   let transDeps := (← getEnv).mkTransDeps
-  let (declNeeds, newDecls) ← withElabCommandCapturingNeeds cmd
+  let (declNeeds, newDecls, newExtraModUses) ← withElabCommandCapturingNeeds cmd
   let importNeeds ← liftCoreM ((← getEnv).toSimultaneousImportNeeds declNeeds).run'
+  let importNeeds := (← getEnv).importNeedsOfExtraModUses (init := importNeeds) newExtraModUses
   let reduced := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce transDeps
   let prettyImports := Import.pretty reduced
   let copyIcon ← liftCoreM <| copyToClipboard s!"{prettyImports}"
