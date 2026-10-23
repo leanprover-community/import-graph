@@ -17,7 +17,7 @@ name = "ImportGraph"
 # `lake exe graph` constructs import graphs in `.dot` or graphical formats.
 [[lean_exe]]
 name = "graph"
-root = "MainGraph"
+root = "executables.Graph"
 # Enables the use of the Lean interpreter by the executable (e.g., `runFrontend`)
 # at the expense of increased binary size on Linux.
 # Remove this line if you do not need such functionality.
@@ -26,7 +26,7 @@ supportInterpreter = true
 # `lake exe unused_transitive_imports` prints unused transitive imports from amongst a given list of modules.
 [[lean_exe]]
 name = "unused_transitive_imports"
-root = "MainUnusedTransitiveImports"
+root = "executables.UnusedTransitiveImports"
 supportInterpreter = true
 
 [[lean_lib]]
@@ -37,5 +37,5 @@ name = "ImportGraphTest"
 # Works around the fact that loading the lake workspace in the language server crashes it.
 [[lean_exe]]
 name = "import-graph-workspace-summary"
-root = "ImportGraph.WorkspaceModel.Emit"
+root = "executables.WorkspaceSummary"
 supportInterpreter = true

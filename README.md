@@ -128,6 +128,10 @@ Then, you might need to call `lake update -R importGraph` in your project.
 
 Please open PRs/Issues if you have troubles or would like to contribute new features!
 
+Available documentation:
+
+- [Repository Structure](./doc/REPO_STRUCTURE.md)
+
 ## Credits
 
 The main tool has been extracted from [mathlib](https://github.com/leanprover-community/mathlib4),
