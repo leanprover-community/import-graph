@@ -201,3 +201,12 @@ public def withFreshShakeRecords [Monad m] [MonadEnv m] [MonadFinally m] {α} (x
   let oldEnv ← getEnv
   modifyEnv resetShakeRecords
   try x finally modifyEnv fun newEnv => copyShakeRecords oldEnv newEnv
+
+/-- Renders an `ExtraModUse` as an import statement, e.g. `public meta import Foo`. -/
+public def Lean.ExtraModUse.toString : ExtraModUse → String
+  | { isExported, isMeta, module } => s!"\
+    {if isExported then "public " else ""}\
+    {if isMeta then "meta " else ""}\
+    import {module}"
+
+public instance : ToString ExtraModUse := ⟨(·.toString)⟩
