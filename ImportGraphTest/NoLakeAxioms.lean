@@ -10,6 +10,8 @@ run_cmd do
       `Lake.Build.Data, `Lake.Build.Facets, `Lake.Build.Infos, `Lake.DSL.Targets] do
     if modules.contains moduleName then
       throwError "Unexpected workspace/build import: {moduleName}"
+  if modules.any (·.getRoot == `ImportGraphLake) then
+    throwError "ImportGraphLake must not be imported in ImportGraph"
   unless modules.contains `ImportGraph.WorkspaceModel.Summary.Cache &&
       (env.find? ``ImportGraph.Lake.WorkspaceSummary.isUpToDate).isSome do
     throwError "Workspace summary cache validation was not imported"
