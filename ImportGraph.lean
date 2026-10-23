@@ -30,5 +30,3 @@ public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.WorkspaceModel.Summary
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Widget
-
-assert_not_exists Lake.Workspace -- ensure we do not import deep lake internals

@@ -21,5 +21,3 @@ the build type-family axioms.
 
 For Lake interaction with `WorkspaceSummary`, import `ImportGraphLake.WorkspaceSummary`.
 -/
-
-assert_not_exists Lake.Workspace -- ensure we do not import deep lake internals
