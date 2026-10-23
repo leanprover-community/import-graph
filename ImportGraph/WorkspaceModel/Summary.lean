@@ -19,7 +19,5 @@ These provide `Glob` and `ToolchainVer` in `WorkspaceSummary` field types. Cache
 uses `Lake.Build.Trace` for hashing. None of these imports brings in Lake workspace loading or
 the build type-family axioms.
 
-For Lake interaction with `WorkspaceSummary`, import `ImportGraph.WorkspaceModel.Summary.Lake`.
+For Lake interaction with `WorkspaceSummary`, import `ImportGraphLake.WorkspaceSummary`.
 -/
-
-assert_not_exists Lake.Workspace -- ensure we do not import deep lake internals

@@ -23,19 +23,13 @@ public import ImportGraph.Shake.DeclNeeds
 public import ImportGraph.Shake.EnvExtension
 public import ImportGraph.Shake.Environment
 public import ImportGraph.Shake.Workspace
-public meta import ImportGraph.Tools
-public meta import ImportGraph.Tools.FindHome
-public meta import ImportGraph.Tools.ImportDiff
-public meta import ImportGraph.Tools.MinImports
-public meta import ImportGraph.Tools.NormImports
-public meta import ImportGraph.Tools.RedundantImports
-public meta import ImportGraph.Tools.ShowImports
-public import ImportGraph.Util.CurrentModule
 public import ImportGraph.Util.FindSorry
-public meta import ImportGraph.Widget.GoToModule
-public meta import ImportGraph.Widget.Collapsible
-public meta import ImportGraph.Widget.Copy
 public import ImportGraph.WorkspaceModel.Base
 public import ImportGraph.WorkspaceModel.Build
 public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.WorkspaceModel.Summary
+public meta import ImportGraph.Tools
+public meta import ImportGraph.Widget
+
+import ImportGraph.Lean.List
+import ImportGraph.Lean.PHashSet

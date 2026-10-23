@@ -7,7 +7,7 @@ import ImportGraph.Graph.Filter
 import ImportGraph.Imports.ImportGraph
 import ImportGraph.Imports.RequiredModules
 import ImportGraph.Lean.Name
-import ImportGraph.Util.CurrentModule
+import ImportGraphLake.CurrentModule
 import ImportGraph.Util.FindSorry
 import Lean.Data.NameMap.AdditionalOperations
 
@@ -202,7 +202,6 @@ def graph : Cmd := `[Cli|
       Currently supported formats are `.dot`, `.gexf`, `.html`, \
       and if you have `graphviz` installed then any supported output format is allowed."
 ]
-
 
 /-- `lake exe graph` -/
 public def main (args : List String) : IO UInt32 :=

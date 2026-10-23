@@ -43,7 +43,7 @@ lake exe graph my_graph.xdot_json
 
 ### HTML
 
-```
+```bash
 lake exe graph my_graph.html
 ```
 
@@ -52,7 +52,7 @@ creates a stand-alone HTML file visualising the import structure.
 Clicking a node opens its page in the Mathlib documentation. For another project, pass the base URL
 of its documentation:
 
-```
+```bash
 lake exe graph --to MyProject --doc-url https://example.org/docs/ my_graph.html
 ```
 
@@ -72,6 +72,31 @@ There are a few commands implemented, which help you analysing the imports of a 
 * `#redundant_imports`: lists any transitively redundant imports in the current module.
 * `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
   modules `foo, bar, ...` are added to the set of imports of the file.
+
+## Widgets
+
+There are a few widget for the infoview available under `ImportGraph.Widget`:
+
+- `collapsible summary body` renders a dropdown `<details>` element.
+- `copyToClipboard copyText` adds a click-action which copies `copyText` into clipboard.
+- `goToModule name` displays the name of the module with a click-action to jump to said module.
+- `goToModuleOfDecl decl` displays the name of the module where the decl live and jumps to the decl on click
+- `goToModuleOfDecls decls` displays the name of the module where the decls live and jumps to the decls on click
+
+These can be used in anywhere where `MessageData` is used:
+
+```lean
+open Lean ImportGraph.Widget in
+#eval show CoreM _ from do
+  logInfo <| ← collapsible "summary" "body"
+```
+
+which renders a message
+
+```
+▼ summary
+  body
+```
 
 ## Source-File-Based Import Analysis
 
@@ -128,6 +153,10 @@ Then, you might need to call `lake update -R importGraph` in your project.
 ## Contribution
 
 Please open PRs/Issues if you have troubles or would like to contribute new features!
+
+Available documentation:
+
+- [Repository Structure](./doc/REPO_STRUCTURE.md)
 
 ## Credits
 
