@@ -8,6 +8,9 @@ module
 public import Lean.ExtraModUses
 public import ImportGraph.Lean.EnvExtension
 
+import ImportGraph.Lean.List
+import ImportGraph.Lean.PHashSet
+
 import all Lean.ExtraModUses
 
 /-!
@@ -136,24 +139,6 @@ public def resetShakeRecords (env : Environment) (asyncMode : EnvExtension.Async
   letI env := resetNewIndirectModUses env asyncMode asyncDecl
   letI env := resetNewExtraModUses env
   resetNewExtraRevModUse env asyncMode asyncDecl
-
-/-- Essentially `(as ++ bs).deleteDuplicatesRev`, keeping later-occurring elements. -/
-private def List.prependWithoutDuplicating [BEq α] (as bs : List α) : List α :=
-  match as with
-  | [] => bs
-  | a :: as =>
-    let new := List.prependWithoutDuplicating as bs
-    if new.contains a then new else a :: new
-
-/-- Iterates through the first set, inserting elements into the second set unless they exist
-already. -/
-private def Lean.PHashSet.union {α} [BEq α] [Hashable α] (as bs : PHashSet α) :
-    PHashSet α := Id.run do
-  let mut bs := bs
-  for a in as do
-    unless bs.contains a do
-      bs := bs.insert a
-  return bs
 
 open EnvExtension
 
