@@ -78,12 +78,14 @@ There are a few widget for the infoview available under `ImportGraph.Widget`:
 
 - `collapsible summary body` renders a dropdown `<details>` element.
 - `copyToClipboard copyText` adds a click-action which copies `copyText` into clipboard.
-- `goToModuleOfDecls decls` displays the name of the module where the decls live and jumps to the decl on click
+- `goToModule name` displays the name of the module with a click-action to jump to said module.
+- `goToModuleOfDecl decl` displays the name of the module where the decl live and jumps to the decl on click
+- `goToModuleOfDecls decls` displays the name of the module where the decls live and jumps to the decls on click
 
 These can be used in anywhere where `MessageData` is used:
 
 ```lean
-open Lean ImportGraph.Widget
+open Lean ImportGraph.Widget in
 #eval show CoreM _ from do
   logInfo <| ← collapsible "summary" "body"
 ```
