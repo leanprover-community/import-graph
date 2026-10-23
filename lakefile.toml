@@ -15,6 +15,9 @@ rev = "v4.36.0-rc1"
 name = "ImportGraph"
 
 [[lean_lib]]
+name = "ImportGraphLake"
+
+[[lean_lib]]
 name = "ImportGraphTest"
 
 # `lake exe graph` constructs import graphs in `.dot` or graphical formats.
