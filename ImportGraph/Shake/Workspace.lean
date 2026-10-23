@@ -47,12 +47,34 @@ def WorkspaceModel.toRawImports (w : WorkspaceModel) (n : Needs) (skipInit := tr
     out := out.push { k with module, importAll := k.isAll }
   return out
 
+/-- Every non-`prelude` file adds `public import Init` and `public meta import Init` to every file
+behind the scenes. This repesents (exactly) those two files. This should be added to any
+`base : Needs` which should represent what a typical file actually gets. Returns `base` unchanged
+if `Init` is not in the workspace model (this should be impossible). -/
+def WorkspaceModel.implicitInitNeeds (w : WorkspaceModel) (base : Needs) : Needs := Id.run do
+  let some initIdx := w.getModIdx? `Init | base
+  return base.union .pub {initIdx} |>.union .metaPub {initIdx}
+
 namespace Shake
+
+/-- Convert extra mod uses into `ImportNeeds`.
+
+Unfortunately, `ExtraModUse` has no notion of `allowMeta`, so we make the unimposing choice to set
+`allowMeta := true`. Note that a conservative choice would insist on non-meta, but extra mod uses
+are frequently from metaprograms which are already meta (and thus records a *non-meta* extra mod
+use) or from e.g. lemmas used in tactic proofs (which allow meta). So we accept unlikely possible
+breakage to avoid suggesting e.g. `meta import Foo; import Foo` or missing out on viable
+declaration locations in `#find_home`. -/
+def ImportNeeds.ofExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
+    (init : ImportNeeds := ∅) : ImportNeeds :=
+  uses.foldl (init := init) fun needs use => Id.run do
+    let some idx := w.getModIdx? use.module | needs
+    needs.union { use with allowMeta := true } {idx}
 
 -- TODO: make this take in a monadic interface for the module index, so that we can use it both for
 -- an environment and more generally
 /-- Collapse the `ImportNeeds` of all declarations in `DeclNeeds`. This is incorrect for splitting
-up declarations, but adequate for moving them to a single place.  -/
+up declarations, but adequate for moving them to a single place. -/
 def DeclNeeds.toSimultaneousImportNeeds
     (w : WorkspaceModel)
     (declNeeds : DeclNeeds)
@@ -66,7 +88,7 @@ def DeclNeeds.toSimultaneousImportNeeds
     for (modName, usedDecls) in declNeeds.fixedDecls do
       withTraceNode `ImportGraph.Shake (collapsed := false)
         (fun _ => return m!"Uses module `{modName}`") do←
-      let some modIdx := w.idxOfMod[modName]? | continue
+      let some modIdx := w.getModIdx? modName | continue
       for (usedDecl, ks) in usedDecls do
         withTraceNode `ImportGraph.Shake
           (fun _ => return m!"Uses decl `{.ofConstName usedDecl}`") do←
@@ -75,7 +97,7 @@ def DeclNeeds.toSimultaneousImportNeeds
           trace[ImportGraph.Shake] "{k}"
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
-              let some modIdx := w.idxOfMod[modName]? | continue
+              let some modIdx := w.getModIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
                 { isExported := false, isMeta := false, allowMeta := true } {modIdx}

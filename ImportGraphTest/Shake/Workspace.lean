@@ -1,7 +1,8 @@
 module
 
 meta import ImportGraph.WorkspaceModel.Build
-import Lean.Elab.Command
+meta import ImportGraph.WorkspaceModel.Summary.Cache
+meta import Lean.Elab.Command
 
 /-!
 The following tests assume that `ImportGraph.WorkspaceModel.Build` has
@@ -110,6 +111,8 @@ run_cmd
 -- The following test checks that we've found the correct toolchain data.
 run_cmd do
   let s ← getWorkspaceSummary
+  unless ← s.isUpToDate (wsDir? := ← IO.currentDir) do
+    throwError "Workspace summary cache not considered up to date"
   let lakeSrc := s.lakeSrcDir / "Lake.lean"
   unless ← lakeSrc.pathExists do
     throwError "Lake.lean not at {lakeSrc}"

@@ -6,30 +6,24 @@ Authors: Thomas R. Murrills
 module
 
 public import Lake.Config.Workspace
-public import ImportGraph.WorkspaceModel.Summary.Core
+public import ImportGraph.WorkspaceModel.Summary.Cache
 
 import ImportGraph.Lake
+
+/-!
+# Extraction from a Lake workspace
+
+This file must not be imported by modules reachable from `ImportGraph` or `ImportGraph.Tools`;
+see `ImportGraphTest.NoLakeAxioms`. Library consumers needing cache validation should import
+`ImportGraph.WorkspaceModel.Summary.Cache` instead. The workspace-summary executable uses this
+file to extract a summary from a loaded workspace.
+-/
 
 public section
 
 open ImportGraph Lean Lake System
 
 namespace ImportGraph.Lake
-
-private def computeInputHash (leanGitHash : String) (ver : Option ToolchainVer)
-    (manifestFile packageOverridesFile : FilePath)
-    (packageConfigs : Array FilePath) : IO Hash := do
-  let mut hash := Hash.ofHashable ver
-  hash := hash.mix <| Hash.ofText leanGitHash
-  hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile manifestFile
-  if ← packageOverridesFile.pathExists then
-    try
-      hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile packageOverridesFile
-    catch _ => pure () -- ignore it if something went wrong
-  -- Note: `packageConfigs` should (and by default does) include the root package's config as well.
-  for configFile in packageConfigs do
-    hash := hash.mix <|← Hash.ofText <$> IO.FS.readFile configFile
-  return hash
 
 /-- Computes the hash for the given workspace to persist in the summary. This should agree with the
 recomputed hash from the workspace summary if no changes are made to the package configuration. -/
@@ -40,30 +34,6 @@ nonrec def Workspace.computeInputHash (ws : Lake.Workspace) : IO Hash := do
     (manifestFile := ws.manifestFile)
     (packageOverridesFile := ws.packageOverridesFile)
     (packageConfigs := ws.packages.map (·.configFile))
-
-/-- Recomputes the input hash for the `WorkspaceSummary` by re-hashing the files at the given
-paths. Also mixes in the hash for the given lean version. -/
-def WorkspaceSummary.recomputedInputHash (leanGitHash : String) (ws : WorkspaceSummary) :
-    IO Hash := do
-  computeInputHash leanGitHash (← ToolchainVer.ofDir? ws.dir)
-    (manifestFile := ws.manifestFile)
-    (packageOverridesFile := ws.packageOverridesFile)
-    (packageConfigs := ws.packages.map (·.configFile))
-
-/-- Recomputes the hash of the data referred to by the paths in `WorkspaceSummary` and compares it
-to the hash in `WorkspaceSummary`, using the current lean process's git hash.
-
-If `wsDir?` is provided, ensures that the workspace directory provided in the summary is the same
-as the given `wsDir`, else considers it not up-to-date. -/
-def WorkspaceSummary.isUpToDate (ws : WorkspaceSummary) (wsDir? : Option FilePath := none) :
-    IO Bool := do
-  try
-    if let some wsDir := wsDir? then
-      unless (← IO.FS.realPath ws.dir).normalize == (← IO.FS.realPath wsDir).normalize do
-        return false
-    return (← ws.recomputedInputHash Lean.githash).val == ws.inputHash
-  catch _ =>
-    return false
 
 /-- Summarize a loaded `Lake.Workspace` for transport over Json. -/
 def WorkspaceSummary.ofWorkspace (ws : Lake.Workspace)

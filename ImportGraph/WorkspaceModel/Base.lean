@@ -8,7 +8,7 @@ module
 public import Lake.Config.Glob
 public import Lake.Util.Version
 
-import ImportGraph.Lake
+import ImportGraph.Util.Modules
 
 /-!
 # Basic Lake workspace data
