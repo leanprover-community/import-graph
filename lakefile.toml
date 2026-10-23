@@ -14,6 +14,9 @@ rev = "v4.36.0-rc1"
 [[lean_lib]]
 name = "ImportGraph"
 
+[[lean_lib]]
+name = "ImportGraphTest"
+
 # `lake exe graph` constructs import graphs in `.dot` or graphical formats.
 [[lean_exe]]
 name = "graph"
@@ -28,9 +31,6 @@ supportInterpreter = true
 name = "unused_transitive_imports"
 root = "executables.UnusedTransitiveImports"
 supportInterpreter = true
-
-[[lean_lib]]
-name = "ImportGraphTest"
 
 # Emits the packages and lean libraries of a lake workspace as json in a manner suitable for
 # inspecting the import hierarchy of modules via source. (Does not emit module data per se.)
