@@ -30,3 +30,6 @@ public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.WorkspaceModel.Summary
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Widget
+
+import ImportGraph.Lean.List
+import ImportGraph.Lean.PHashSet
