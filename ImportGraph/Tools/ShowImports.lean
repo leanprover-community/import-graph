@@ -34,10 +34,12 @@ namespace ImportGraph.Shake
 /--
 `#show_imports for <cmd>` shows a minimal set of imports needed by `<cmd>`. This includes
 
-- The import needs of the declarations produced during elaboration
-- The import needs of any previously-defined declarations from the same file used in those
+- The import needs of any declarations elaborated in the command
+- The import needs of any previously-defined constants from the same file used in those
   declarations
-- The syntax needs of the current command (but not of its dependencies)
+- The syntax needs of the current command (but not the syntax needs of same-file dependencies of
+  constants produced in the command, which we do not have access to)
+- Any extra shake records produced by the command. (These may be due to syntax, tactics, etc.)
 
 The imports may be copied by clicking the "copy" icon.
 -/
