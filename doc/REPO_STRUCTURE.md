@@ -18,7 +18,7 @@ Thus the files importing parts of `Lake` are located under a separate library `I
 ## namespaces and `Lean` extensions
 
 Every declaration should be in the namespace `ImportGraph` to avoid
-pollution other namespaces.
+pollution of other namespaces.
 
-Extensions to existing types from `Lean` can still be in the namespace `ImportGraph.___`. For example, consider `ImportGraph.Lean.Name.allNames`
+Extensions to existing types from `Lean` can still be in the namespace `ImportGraph.___`. For example, consider `ImportGraph.Lean.Name.allNames`.
 After the user added `open ImportGraph`, they can then use dot-notation `myName.allNames` as expected.
