@@ -65,6 +65,7 @@ There are a few commands implemented, which help you analysing the imports of a 
 * `#norm_imports`: removes transitively redundant imports from the current file and suggests the normalized result.
 * `#min_imports`: attempts to construct a minimal set of imports for the commands in the current file, and suggests the result. This may be run at any point in the file, and will still take the whole file into account.
 * `#find_home for <cmd>`: suggests files higher up in the import hierarchy to which the command and any dependencies from the same file could be moved.
+* `#show_imports for <cmd>`: shows the minimal imports needed for a given command, and allows clicking to copy the imports. Also shows new constants produced by the command and shake records.
 
 **Commands not yet aware of the module system:**
 
