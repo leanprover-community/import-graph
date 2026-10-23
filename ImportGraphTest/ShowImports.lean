@@ -15,8 +15,8 @@ info: [click-to-copy] (Will copy:
 import ImportGraph.Imports.FromSource
 import ImportGraph.Lean.Syntax
 
-▼ New declarations produced by this command:
-  • x
+▼ New constants produced by this command:
+  • x (private)
 -/
 #guard_msgs in
 #show_imports for
@@ -28,9 +28,30 @@ info: [click-to-copy] (Will copy:
 
 public import ImportGraph.Lean.Syntax
 
-▼ New declarations produced by this command:
+▼ New constants produced by this command:
   • y
 -/
 #guard_msgs in
 #show_imports for
 @[expose] public def y := Lean.Syntax.unsetLeading
+
+/--
+info: [click-to-copy] (Will copy:
+  import ImportGraph.Imports.FromSource
+  import ImportGraph.Lean.Syntax) Imports needed:
+
+import ImportGraph.Imports.FromSource
+import ImportGraph.Lean.Syntax
+
+▼ New constants produced by this command:
+  • z
+▼ Constants from the current file needed by this command:
+  • x (private)
+▼ Extra shake import needs recorded by this command:
+  • import Init.Tactics
+-/
+#guard_msgs in
+#show_imports for
+public theorem z : True := by
+  let _ := x
+  trivial
