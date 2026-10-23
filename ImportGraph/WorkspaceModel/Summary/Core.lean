@@ -69,7 +69,7 @@ structure WorkspaceSummary extends BaseWorkspace where
   packageOverridesFile : FilePath
 deriving ToJson, FromJson, Repr, Inhabited
 
-/-- The name of the executable with root `ImportGraph.WorkspaceModel.Emit`.
+/-- The name of the executable with root `ImportGraphLake.WorkspaceSummary`.
 Should be synchronized with the lakefile. -/
 def WorkspaceSummary.exeName : String := "import-graph-workspace-summary"
 

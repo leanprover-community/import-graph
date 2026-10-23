@@ -6,8 +6,8 @@ Authors: Thomas R. Murrills
 module
 
 import Lake.Load.Workspace
-import ImportGraph.Lake
-import ImportGraph.WorkspaceModel.Summary.Lake
+import ImportGraphLake.Workspace
+import ImportGraphLake.WorkspaceSummary
 
 /-!
 # Root of `lake exe import-graph-workspace-summary`
