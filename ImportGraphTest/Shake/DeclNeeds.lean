@@ -1,5 +1,7 @@
 module
 
+public meta import ImportGraph.Lean.MessageData
+public meta import ImportGraph.Shake.EnvExtension
 public meta import ImportGraph.Shake.Workspace
 public import Lean.Elab.Command
 
@@ -8,7 +10,7 @@ import ImportGraphTest.Shake.Algebra
 open ImportGraph Shake Lean Elab Command
 
 elab "#show_decl_needs" colGe cmd:command : command => do
-  let (declNeeds, newDecls) ← withElabCommandCapturingNeeds cmd
+  let (declNeeds, newDecls, newExtraModUses) ← withElabCommandCapturingNeeds cmd
   let w ← getWorkspaceModel (extraMods := #[← getMainModule])
   let (importNeeds, stances) ← liftCoreM <| declNeeds.toSimultaneousImportNeeds w |>.run
   let stanceMsg : MessageData := .bracket (l := "{") (r := "}") <|
@@ -19,7 +21,8 @@ elab "#show_decl_needs" colGe cmd:command : command => do
     New decls:{indentD (newDecls.toList.map MessageData.ofConstName)}\
     \nNeeds:{indentD declNeeds.toMessageData}\
     \nStances:{indentD stanceMsg}\
-    \nImportNeeds:{indentD <| importNeeds.toString}"
+    \nImportNeeds:{indentD <| importNeeds.toString}\
+    \nExtraModUses:{indentD <| newExtraModUses.map (m!"{·.toString}")}"
 
 /--
 info: New decls:
@@ -30,6 +33,8 @@ Stances:
   {Bool ↦ @[no_expose] public, x ↦ private runtime, true ↦ @[no_expose] public}
 ImportNeeds:
   │⠒⠀│
+ExtraModUses:
+  []
 -/
 #guard_msgs in
 #show_decl_needs def x : Bool := true
@@ -43,6 +48,8 @@ Stances:
   {Bool ↦ @[no_expose] public, x' ↦ public runtime, true ↦ @[no_expose] public}
 ImportNeeds:
   │⠚⠀│
+ExtraModUses:
+  []
 -/
 #guard_msgs in
 #show_decl_needs public def x' : Bool := true
@@ -56,6 +63,8 @@ Stances:
   {Bool ↦ @[no_expose] public, x'' ↦ @[expose] public runtime, true ↦ @[no_expose] public}
 ImportNeeds:
   │⠊⠀│
+ExtraModUses:
+  []
 -/
 #guard_msgs in
 #show_decl_needs @[expose] public def x'' : Bool := true
@@ -69,6 +78,8 @@ Stances:
   {Bool ↦ @[no_expose] public, x''' ↦ @[expose] public, true ↦ @[no_expose] public}
 ImportNeeds:
   │⠈⠀│
+ExtraModUses:
+  []
 -/
 #guard_msgs in
 #show_decl_needs @[expose] public noncomputable def x''' : Bool := true

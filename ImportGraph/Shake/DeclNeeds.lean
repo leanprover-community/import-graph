@@ -494,7 +494,7 @@ private def NameMap.toMessageData (n : NameMap α) (f : α → MessageData)
     .bracket "{" ((m!"," ++ Format.line).joinSep ns) "}"
 
 def DeclNeed.toMessageData : DeclNeed → MessageData
-  | { freeDecls, fixedDecls, extraModUses, parentDecls, childDecls } => Id.run do
+  | { freeDecls, fixedDecls, parentDecls, childDecls } => Id.run do
     let mut msgs := #[]
     unless freeDecls.isEmpty do
       msgs := msgs.push m!"freeDecls := \
@@ -503,10 +503,6 @@ def DeclNeed.toMessageData : DeclNeed → MessageData
       msgs := msgs.push m!"fixedDecls := \
         {NameMap.toMessageData fixedDecls fun n =>
           NameMap.toMessageData n (m!"{·.toList.map (·.toMessageData)}") (isConst := true)}"
-    unless extraModUses.isEmpty do
-      msgs := msgs.push m!"extraModUses := \
-        {NameMap.toMessageData extraModUses fun ks =>
-          m!"{ks.toList.map toString}"}"
     unless parentDecls.isEmpty do
       msgs := msgs.push m!"parentDecls := {parentDecls.map MessageData.ofConstName}"
     unless childDecls.isEmpty do
