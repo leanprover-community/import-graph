@@ -95,14 +95,16 @@ def DeclNeeds.toSimultaneousImportNeeds
         let some usedStance ← getStance? usedDecl | continue
         for k in ks do
           trace[ImportGraph.Shake] "{k}"
+          -- TODO: split out indirect mod uses to the command level when refactoring
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := w.getModIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
                 { isExported := false, isMeta := false, allowMeta := true } {modIdx}
-          let k := stance.toImportNeedsKind k usedStance
-          declImportNeeds := declImportNeeds.union k {modIdx}
+          else
+            let k := stance.toImportNeedsKind k usedStance
+            declImportNeeds := declImportNeeds.union k {modIdx}
   return declImportNeeds
 
 /-- Computes a mapping `LibIdx → Array ModIdx` assigning to each library in the workspace model an

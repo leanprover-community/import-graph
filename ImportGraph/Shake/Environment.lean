@@ -125,12 +125,14 @@ def toSimultaneousImportNeeds (env : Environment)
           trace[ImportGraph.Shake] "{k}"
           if usedKs.contains k then continue
           usedKs := usedKs.insert k
+          -- TODO: split out indirect mod uses to the command level when refactoring
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := env.getModuleIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
                 { isExported := false, isMeta := false, allowMeta := true } {modIdx}
-          let k := stance.toImportNeedsKind k usedStance
-          declImportNeeds := declImportNeeds.union k {modIdx}
+          else
+            let k := stance.toImportNeedsKind k usedStance
+            declImportNeeds := declImportNeeds.union k {modIdx}
   return declImportNeeds
