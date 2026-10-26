@@ -7,6 +7,9 @@ import ImportGraphTest.Html
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.MinImports.Basic
+import ImportGraphTest.MinImports.Indirect.Attr
+import ImportGraphTest.MinImports.Indirect.Defs
+import ImportGraphTest.MinImports.IndirectNotMeta
 import ImportGraphTest.MinImports.NewSyntax
 import ImportGraphTest.MinImports.NoDecls
 import ImportGraphTest.MinImports.NonModule
