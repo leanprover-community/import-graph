@@ -98,131 +98,164 @@ end fromShake
 public section
 
 /-- A way in which a declaration might demand an imported module. Note that there may be multiple
-demands on the same module from the same declaration, which thus may require multiple of these. -/
-structure ImportNeedsKind extends NeedsKind where
-  /-- A flag for the case where the ambient declaration needs a meta declaration from the needed
-  module. In that case, the import is allowed to be meta, but does not have to be. Note that
-  ordinary expression uses also `allowMeta`; it is only usage in the computational content (LCNF)
-  that will *disallow* meta and set this to false.
+demands on the same module from the same declaration, which thus may require multiple of these.
 
-  However, to allow `NeedsKinds` constructors to not conflict with `.allowMetaPub`, we set this to
-  `isMeta` by default. -/
-  allowMeta : Bool := isMeta
-  /-- Needing a meta import implies `allowMeta = true`. -/
-  allowMeta_if_isMeta : !isMeta || allowMeta := by grind
+The fiels overlap with `NeedsKind`, except for `meta?`, as import needs may not specify a phase. -/
+structure ImportNeedsKind where
+  /-- Represents a need for `public (meta)? import`: an import of the public scope of the source
+  into the public scope of the target. `false` means that the public scope of the source is instead
+  imported into the private scope of the target. -/
+  isExported : Bool
+  /- Optionally expresses a need for a certain phase. If `some isMeta := isMeta?`, then `isMeta` is
+  `true` when we need a `meta` import and `false` when we specifically need a non-meta import. If
+  `none`, either phase is permissible (such as for type-theoretic terms and shake
+  generalizations).  -/
+  meta? : Option Bool
+  /-- Represents a need for `(meta)? import all`: an import of the private scope into the private
+  scope. `false` means the private scope of the source is not accessed. -/
+  isAll : Bool := false
+  not_isExported_and_isAll : ¬(isExported ∧ isAll) := by grind
 
 namespace ImportNeedsKind
 
 @[expose] section matchers
 
 -- We give these distinct names to avoid ambiguity.
-@[match_pattern] def pubNoMeta : ImportNeedsKind :=
-  { NeedsKind.pub with allowMeta := false }
-@[match_pattern] def privNoMeta : ImportNeedsKind :=
-  { NeedsKind.priv with allowMeta := false }
-@[match_pattern] def privOfPrivNoMeta : ImportNeedsKind :=
-  { NeedsKind.privOfPriv with allowMeta := false }
+@[match_pattern] def pubRuntime: ImportNeedsKind :=
+  { NeedsKind.pub with meta? := false }
+@[match_pattern] def privRuntime : ImportNeedsKind :=
+  { NeedsKind.priv with meta? := false }
+@[match_pattern] def privOfPrivRuntime : ImportNeedsKind :=
+  { NeedsKind.privOfPriv with meta? := false }
 @[match_pattern] def metaPub : ImportNeedsKind :=
-  { NeedsKind.metaPub with }
+  { NeedsKind.metaPub with meta? := true }
 @[match_pattern] def metaPriv : ImportNeedsKind :=
-  { NeedsKind.metaPriv with }
+  { NeedsKind.metaPriv with meta? := true }
 @[match_pattern] def metaPrivOfPriv : ImportNeedsKind :=
-  { NeedsKind.metaPrivOfPriv with }
-@[match_pattern] def pubAllowMeta : ImportNeedsKind :=
-  { NeedsKind.pub with allowMeta := true }
-@[match_pattern] def privAllowMeta : ImportNeedsKind :=
-  { NeedsKind.priv with allowMeta := true }
-@[match_pattern] def privOfPrivAllowMeta : ImportNeedsKind :=
-  { NeedsKind.privOfPriv with allowMeta := true }
+  { NeedsKind.metaPrivOfPriv with meta? := true }
+@[match_pattern] def pubPhaseless : ImportNeedsKind :=
+  { NeedsKind.pub with meta? := none }
+@[match_pattern] def privPhaseless : ImportNeedsKind :=
+  { NeedsKind.priv with meta? := none }
+@[match_pattern] def privOfPrivPhaseless : ImportNeedsKind :=
+  { NeedsKind.privOfPriv with meta? := none }
 
 end matchers
 
 /-- Every possible `ImportNeedsKind`. -/
 def all : Array ImportNeedsKind := #[
-  .pubNoMeta,
-  .privNoMeta,
-  .privOfPrivNoMeta,
+  .pubRuntime,
+  .privRuntime,
+  .privOfPrivRuntime,
   .metaPub,
   .metaPriv,
   .metaPrivOfPriv,
-  .pubAllowMeta,
-  .privAllowMeta,
-  .privOfPrivAllowMeta,
+  .pubPhaseless,
+  .privPhaseless,
+  .privOfPrivPhaseless,
 ]
 
 instance : ToString ImportNeedsKind where
   toString k := Id.run do
     let mut tks := #[]
     if k.isExported then tks := tks.push "public"
-    if k.isMeta then tks := tks.push "meta" else if k.allowMeta then tks := tks.push "(meta)"
+    if k.meta? matches some true then tks := tks.push "meta" else
+      if k.meta?.isNone then tks := tks.push "(meta)"
     tks := tks.push "import"
     if k.isAll then tks := tks.push "all"
     " ".intercalate tks.toList
 
-end ImportNeedsKind
+def erasePhase (k : ImportNeedsKind) : ImportNeedsKind :=
+  { k with meta? := none }
 
-def NeedsKind.toImportNeedsKind (k : NeedsKind) (allowMeta : Bool) :
-    ImportNeedsKind :=
-  { k with allowMeta := k.isMeta || allowMeta }
+end ImportNeedsKind
 
 /-- Like `Needs`, but preserves `allowMeta`. We interpret `pub`/`priv`/`privOfPriv` from
 `NeedsKind` as having `allowMeta := false`, i.e. as specifically *disallowing* a meta import.  -/
-structure ImportNeeds extends toSubNeeds : Needs where
-  /-- The modules which may be imported as meta or non-meta which are needed in the public scope. -/
-  allowMetaPub : Bitset
-  /--
-  The modules which may be imported as meta or non-meta whose public scopes must be available in
-  the current private scope.
-  -/
-  allowMetaPriv : Bitset
-  /--
-  The modules which may be imported as meta or non-meta whose private scopes must be available in
-  the current private scope.
-  -/
-  allowMetaPrivOfPriv : Bitset
+structure ImportNeeds where
+  pubRuntime : Bitset
+  privRuntime : Bitset
+  privOfPrivRuntime : Bitset
+  metaPub : Bitset
+  metaPriv : Bitset
+  metaPrivOfPriv : Bitset
+  /-- The modules which are needed publicly at either the meta or non-meta phase. -/
+  pubPhaseless : Bitset
+  /-- The modules which are needed privately at either the meta or non-meta phase. -/
+  privPhaseless : Bitset
+  /-- The modules whose private scopes are needed at either the meta or non-meta phase. -/
+  privOfPrivPhaseless : Bitset
 deriving Inhabited, BEq, Repr
 
 namespace ImportNeeds
 
-def empty : ImportNeeds :=
-  { Needs.empty with allowMetaPub := ∅, allowMetaPriv := ∅, allowMetaPrivOfPriv := ∅ }
+def empty : ImportNeeds := ⟨∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅⟩
 
 instance : EmptyCollection ImportNeeds := ⟨.empty⟩
 
+/-- Takes into account `public` ⊆ `private`, uniformly for every -/
+def linearize (needs : ImportNeeds) : ImportNeeds := { needs with
+  privRuntime         := needs.privRuntime ∪ needs.pubRuntime
+  privOfPrivRuntime   := needs.privRuntime ∪ needs.pubRuntime ∪ needs.privOfPrivRuntime
+  metaPriv            := needs.metaPriv ∪ needs.metaPub
+  metaPrivOfPriv      := needs.metaPriv ∪ needs.metaPub ∪ needs.metaPrivOfPriv
+  privPhaseless       := needs.privPhaseless ∪ needs.pubPhaseless
+  privOfPrivPhaseless := needs.privPhaseless ∪ needs.pubPhaseless ∪ needs.privOfPrivPhaseless
+}
+
+/-- Ensures that we only keep "phaseless" set bits when no other phase is specified.
+Does **not** take into account phase specifications due to linearization. Depending on the
+application, consider linearizing first. -/
+def narrowPhase (needs : ImportNeeds) : ImportNeeds := { needs with
+  pubPhaseless := (needs.pubPhaseless \ needs.pubRuntime) \ needs.metaPub
+  privPhaseless := (needs.privPhaseless \ needs.privRuntime) \ needs.metaPriv
+  privOfPrivPhaseless :=
+    (needs.privOfPrivPhaseless \ needs.privOfPrivRuntime) \ needs.metaPrivOfPriv
+}
+
 -- TODO: "relaxed := false" flag that, when true, first tries to use any existing imports for
 -- allowMeta
-/-- Turns `ImportNeeds` into a concrete `Needs` with an opinionated choice of whether `allowMeta`
-should revert to public imports (`useMeta := false`) or be regarded as meta imports
-(`useMeta := true`) -/
-def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs where
-  pub := if useMeta then imp.pub else imp.pub ∪ imp.allowMetaPub
-  priv := if useMeta then imp.priv else imp.priv ∪ imp.allowMetaPriv
-  privOfPriv := if useMeta then imp.privOfPriv else imp.privOfPriv ∪ imp.allowMetaPrivOfPriv
-  metaPub := if !useMeta then imp.metaPub else imp.metaPub ∪ imp.allowMetaPub
-  metaPriv := if !useMeta then imp.metaPriv else imp.metaPriv ∪ imp.allowMetaPriv
-  metaPrivOfPriv :=
-    if !useMeta then imp.metaPrivOfPriv else imp.metaPrivOfPriv ∪ imp.allowMetaPrivOfPriv
+/-- Turns `ImportNeeds` into a concrete `Needs`. -/
+@[inline] def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs :=
+  let imp := imp.narrowPhase
+  if useMeta then
+    { pub := imp.pubRuntime
+      priv := imp.privRuntime
+      privOfPriv := imp.privOfPrivRuntime
+      metaPub := imp.metaPub ∪ imp.pubPhaseless
+      metaPriv := imp.metaPriv ∪ imp.privPhaseless
+      metaPrivOfPriv := imp.metaPrivOfPriv ∪ imp.privOfPrivPhaseless }
+  else
+    { pub := imp.pubRuntime ∪ imp.pubPhaseless
+      priv := imp.privRuntime ∪ imp.privPhaseless
+      privOfPriv := imp.privOfPrivRuntime ∪ imp.privOfPrivPhaseless
+      metaPub := imp.metaPub
+      metaPriv := imp.metaPriv
+      metaPrivOfPriv := imp.metaPrivOfPriv }
 
 /-- Assumes that `Provides` is well-formed, i.e. is linearized and transitively closed. -/
 @[inline] def isProvidedBy (n : ImportNeeds) (p : Provides) :=
   n.metaPub ⊆ p.metaPub
     && n.metaPriv ⊆ p.metaPriv
     && n.metaPrivOfPriv ⊆ p.metaPrivOfPriv
-    && n.pub ⊆ p.pub && n.allowMetaPub ⊆ p.pub ∪ p.metaPub
-    && n.priv ⊆ p.priv && n.allowMetaPriv ⊆ p.priv ∪ p.metaPriv
-    && n.privOfPriv ⊆ p.privOfPriv && n.allowMetaPrivOfPriv ⊆ p.privOfPriv ∪ p.metaPrivOfPriv
+    && n.pubRuntime ⊆ p.pub
+    && n.privRuntime ⊆ p.priv
+    && n.privOfPrivRuntime ⊆ p.privOfPriv
+    && n.pubPhaseless ⊆ p.pub ∪ p.metaPub
+    && n.privPhaseless ⊆ p.priv ∪ p.metaPriv
+    && n.privOfPrivPhaseless ⊆ p.privOfPriv ∪ p.metaPrivOfPriv
 
 @[inline, expose] def get (needs : ImportNeeds) (k : ImportNeedsKind) : Bitset :=
   match k with
-  | .pubNoMeta => needs.pub
-  | .privNoMeta => needs.priv
+  | .pubRuntime => needs.pubRuntime
+  | .privRuntime => needs.privRuntime
+  | .privOfPrivRuntime => needs.privOfPrivRuntime
   | .metaPub => needs.metaPub
   | .metaPriv => needs.metaPriv
-  | .privOfPrivNoMeta => needs.privOfPriv
   | .metaPrivOfPriv => needs.metaPrivOfPriv
-  | .pubAllowMeta => needs.allowMetaPub
-  | .privAllowMeta => needs.allowMetaPriv
-  | .privOfPrivAllowMeta => needs.allowMetaPrivOfPriv
+  | .pubPhaseless => needs.pubPhaseless
+  | .privPhaseless => needs.privPhaseless
+  | .privOfPrivPhaseless => needs.privOfPrivPhaseless
 
 @[inline, expose] def has (needs : ImportNeeds) (k : ImportNeedsKind) (i : ModuleIdx) :
     Bool :=
@@ -231,29 +264,29 @@ def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs where
 @[inline, expose] def set (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) :
     ImportNeeds :=
   match k with
-  | .pubNoMeta   => { needs with pub := s }
-  | .privNoMeta  => { needs with priv := s }
+  | .pubRuntime   => { needs with pubRuntime := s }
+  | .privRuntime  => { needs with privRuntime := s }
+  | .privOfPrivRuntime => { needs with privOfPrivRuntime := s }
   | .metaPub => { needs with metaPub := s }
   | .metaPriv => { needs with metaPriv := s }
-  | .privOfPrivNoMeta => { needs with privOfPriv := s }
   | .metaPrivOfPriv => { needs with metaPrivOfPriv := s }
-  | .pubAllowMeta => { needs with allowMetaPub := s }
-  | .privAllowMeta => { needs with allowMetaPriv := s }
-  | .privOfPrivAllowMeta => { needs with allowMetaPrivOfPriv := s }
+  | .pubPhaseless => { needs with pubPhaseless := s }
+  | .privPhaseless => { needs with privPhaseless := s }
+  | .privOfPrivPhaseless => { needs with privOfPrivPhaseless := s }
 
 -- TODO: check if this successfully ekes out a little extra performance by having an explicit match
 @[specialize] def modify (needs : ImportNeeds) (k : ImportNeedsKind) (f : Bitset → Bitset) :
     ImportNeeds :=
   match k with
-  | .pubNoMeta   => { needs with pub := f needs.pub }
-  | .privNoMeta  => { needs with priv := f needs.priv }
+  | .pubRuntime   => { needs with pubRuntime := f needs.pubRuntime }
+  | .privRuntime  => { needs with privRuntime := f needs.privRuntime }
+  | .privOfPrivRuntime => { needs with privOfPrivRuntime := f needs.privOfPrivRuntime }
   | .metaPub => { needs with metaPub := f needs.metaPub }
   | .metaPriv => { needs with metaPriv := f needs.metaPriv }
-  | .privOfPrivNoMeta => { needs with privOfPriv := f needs.privOfPriv }
   | .metaPrivOfPriv => { needs with metaPrivOfPriv := f needs.metaPrivOfPriv }
-  | .pubAllowMeta => { needs with allowMetaPub := f needs.allowMetaPub }
-  | .privAllowMeta => { needs with allowMetaPriv := f needs.allowMetaPriv }
-  | .privOfPrivAllowMeta => { needs with allowMetaPrivOfPriv := f needs.allowMetaPrivOfPriv }
+  | .pubPhaseless => { needs with pubPhaseless := f needs.pubPhaseless }
+  | .privPhaseless => { needs with privPhaseless := f needs.privPhaseless }
+  | .privOfPrivPhaseless => { needs with privOfPrivPhaseless := f needs.privOfPrivPhaseless }
 
 def union (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) : ImportNeeds :=
   needs.modify k (· ∪ s)
@@ -263,6 +296,9 @@ def union (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) : ImportNeeds
 
 @[inline] def all (needs : ImportNeeds) (f : Bitset → Bool) : Bool :=
   ImportNeedsKind.all.all (f <| needs.get ·)
+
+def flatten (needs : ImportNeeds) : Bitset :=
+  ImportNeedsKind.all.foldl (init := ∅) (· ∪ needs.get ·)
 
 /-- A pair of braille cells depicting the import needs at index `i`.
 
@@ -283,10 +319,10 @@ def brailleCellAt (i : Nat) (n : ImportNeeds) : Char × Char := Id.run do
   for k in ImportNeedsKind.all do
     if n.has k i then
       let row := if k.isExported then 0 else if k.isAll then 2 else 1
-      if k.isMeta then
+      if k.meta? matches some true then
         dotsRight := dotsRight ||| (1 <<< row)
       else
-        let col := if k.allowMeta then 1 else 0
+        let col := if k.meta?.isNone then 1 else 0
         dotsLeft := dotsLeft ||| (1 <<< (3 * col + row))
   return (.ofNat (0x2800 + dotsLeft), .ofNat (0x2800 + dotsRight))
 
@@ -320,7 +356,7 @@ indices, and will either truncate (even if higher indices are set) or pad with e
 appropriate. -/
 def toString (n : ImportNeeds) (univSize? : Option Nat := none) (dividers : Bool := true) :
     String := Id.run do
-  let size := univSize?.getD n.univSize
+  let size := univSize?.getD n.flatten.univSize
   -- Show a single empty cell rather than no cells at all, unless `0` cells were asked for
   let size := if size == 0 && !univSize?.isEqSome 0 then 1 else size
   let mut s := if size == 0 || !dividers then "" else "│"
@@ -672,11 +708,11 @@ def Stance.toImportNeedsKind
     let isExported := isReExported.getD <| downstreamStance.isPublicAt downstreamLoc
     { isExported
       isAll := !isExported && upstreamStance.isPrivateAt upstreamLoc
-      isMeta := false, allowMeta := true }
+      meta? := none }
   | .runtimeIR =>
     { isExported := false
       isAll := upstreamStance.isPrivate
-      isMeta := false, allowMeta := false } -- Note: can't mix phases, hence `allowMeta := false`
+      meta? := some false } -- Note: can't mix phases, hence `allowMeta := false`
   | .metaIR isReExported _ =>
     let isExported := isReExported.getD <| downstreamStance.isPublic
     -- Meta upstream definitions do not need to be imported as meta.
@@ -684,14 +720,14 @@ def Stance.toImportNeedsKind
     let isMeta := !(upstreamStance.isMeta.getD false)
     { isExported
       isAll := !isExported && upstreamStance.isPrivate
-      isMeta, allowMeta := true }
+      meta? := if isMeta then true else none }
   | .comptime _ =>
     -- We could assume all code that ends up recording a compile time usage is intrinsically meta,
     -- but we don't just in case. If all is well, we never hit the `none` case.
     let isMeta := !(upstreamStance.isMeta.getD false)
     { isExported := false -- There is no re-export demand on compile-time code.
       isAll := upstreamStance.isPrivate
-      isMeta, allowMeta := true }
+      meta? := if isMeta then true else none }
 
 -- TODO: make this monad-generic instead of just `CoreM`.
 /-- `CoreM` together with a cache for `Stance`s. -/
