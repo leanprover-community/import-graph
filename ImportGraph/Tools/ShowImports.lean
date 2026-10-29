@@ -54,7 +54,7 @@ elab tk:"#show_imports" ppSpace &"for" ppLine cmd:command : command => do
   let (declNeeds, newDecls, newExtraModUses) ← withElabCommandCapturingNeeds cmd
   let importNeeds ← liftCoreM ((← getEnv).toSimultaneousImportNeeds declNeeds).run'
   let importNeeds := (← getEnv).importNeedsOfExtraModUses (init := importNeeds) newExtraModUses
-  let reduced := (← getEnv).toRawImports <| importNeeds.toNeeds.reduce transDeps
+  let reduced := (← getEnv).toRawImports <| importNeeds.reduceSimple transDeps
 
   let importsNeeded ← if reduced.isEmpty then pure m!"This command does not need any imports." else
     let prettyImports := Import.pretty reduced
