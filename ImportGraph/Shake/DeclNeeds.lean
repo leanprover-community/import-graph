@@ -156,34 +156,41 @@ instance : ToString ImportNeedsKind where
     if k.isAll then tks := tks.push "all"
     " ".intercalate tks.toList
 
-@[inline] def erasePhase (k : ImportNeedsKind) : ImportNeedsKind :=
-  { k with meta? := none }
-
 end ImportNeedsKind
 
-def NeedsKind.toPhasedImportNeedsKind (k : NeedsKind) : ImportNeedsKind :=
+/-- Turns a `k : NeedsKind` into a phased `ImportNeeds`, interpreting the `isMeta` flag as
+specifying a runtime need when `false` and a meta need when true. Note that while this makes sense
+under certain interpretations of a `NeedsKind`, it should be used with care, as shake's
+`ExtraModUse`s may record `isMeta := false` even when the import needed may optionally be meta. -/
+@[inline] def NeedsKind.toPhasedImportNeedsKind (k : NeedsKind) : ImportNeedsKind :=
   { k with meta? := k.isMeta }
 
-def VisibilityKind.toPhaselessImportNeedsKind (v : VisibilityKind) : ImportNeedsKind :=
+/-- Turns a visibility kind into the corresponding `ImportNeedsKind` that accepts either phase. -/
+@[inline] def VisibilityKind.toPhaselessImportNeedsKind (v : VisibilityKind) : ImportNeedsKind :=
   { v with meta? := none }
 
--- `extends phaseNeeds : Needs`?
-/-- Like `Needs`, but splits apart needs by actual phase requirements instead of import
-specification:
-- `runtime`: needs a non-meta import
-- `meta`: needs a meta import
-- `phaseless`: either a non-meta or meta import will do
+/-- Like `Needs`, but splits apart needs by actual phase requirements for the import instead of
+import specification:
+- `<vis>Runtime`: needs a non-meta import
+- `meta<vis>`: needs a meta import
+- `<vis>Phaseless`: either a non-meta or meta import will do
 -/
 structure ImportNeeds where
+  /-- The modules whose public scopes are needed publicly at specifically the non-meta phase. -/
   pubRuntime : Bitset
+  /-- The modules whose public scopes are needed privately at specifically the non-meta phase. -/
   privRuntime : Bitset
+  /-- The modules whose private scopes are needed at specifically the non-meta phase. -/
   privOfPrivRuntime : Bitset
+  /-- The modules whose public scopes are needed publicly at the meta phase. -/
   metaPub : Bitset
+  /-- The modules whose public scopes are needed privately at the meta phase. -/
   metaPriv : Bitset
+  /-- The modules whose private scopes are needed at the meta phase. -/
   metaPrivOfPriv : Bitset
-  /-- The modules which are needed publicly at either the meta or non-meta phase. -/
+  /-- The modules whose public scopes are needed publicly at either the meta or non-meta phase. -/
   pubPhaseless : Bitset
-  /-- The modules which are needed privately at either the meta or non-meta phase. -/
+  /-- The modules whose public scopes are needed privately at either the meta or non-meta phase. -/
   privPhaseless : Bitset
   /-- The modules whose private scopes are needed at either the meta or non-meta phase. -/
   privOfPrivPhaseless : Bitset
@@ -195,7 +202,7 @@ def empty : ImportNeeds := ⟨∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅⟩
 
 instance : EmptyCollection ImportNeeds := ⟨.empty⟩
 
-/-- Takes into account `public` ⊆ `private`, uniformly for unambiguous phase specifications. -/
+/-- Takes into account `public` ⊆ `private` for unambiguous phase specifications. -/
 def linearizePhased (needs : ImportNeeds) : ImportNeeds := { needs with
   privRuntime         := needs.privRuntime ∪ needs.pubRuntime ∪ needs.privOfPrivRuntime
   metaPriv            := needs.metaPriv ∪ needs.metaPub ∪ needs.metaPrivOfPriv
@@ -218,7 +225,7 @@ def narrowPhase (needs : ImportNeeds) : ImportNeeds := { needs with
 }
 
 /-- The phased needs of an `ImportNeeds`. Completely ignores the phaseless needs. -/
-def toPhaseNeeds (needs : ImportNeeds) : Needs := { needs with
+def toPhasedNeeds (needs : ImportNeeds) : Needs := { needs with
   pub := needs.pubRuntime
   priv := needs.privRuntime
   privOfPriv := needs.privOfPrivRuntime }
@@ -308,7 +315,7 @@ Does not assume `needs` is linearized or narrowed.
 @[specialize] def reduceBy [Hierarchy H] (needs : ImportNeeds) (transDeps : H)
     (metaBy : Nat → VisibilityKind → Needs → Bool) : Needs := Id.run do
   let needs := needs.linearizePhased
-  let mut reduced := needs.toPhaseNeeds -- ignore phaseless for now
+  let mut reduced := needs.toPhasedNeeds -- ignore phaseless for now
   let needs := needs.narrowPhase.antilinearizePhased -- avoids unnecessary checks
   -- first handle the phased needs (we may reduce these further later)
   -- ensure we handle runtime first, since these may reduce meta via transitive deps

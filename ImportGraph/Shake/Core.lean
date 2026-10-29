@@ -181,8 +181,8 @@ instance : EmptyCollection Needs := ⟨.empty⟩
   needs.get k |>.has i
 
 /-- Whether `needs` has the given `VisibilityKind` at either phase. -/
-@[inline, expose] def Needs.hasPhaseless (needs : Needs) (k : VisibilityKind) (i : Nat) : Bool :=
-  (needs.get { k with isMeta := false } |>.has i) || (needs.get { k with isMeta := true } |>.has i)
+@[inline, expose] def Needs.hasPhaseless (needs : Needs) (v : VisibilityKind) (i : Nat) : Bool :=
+  (needs.get { v with isMeta := false } |>.has i) || (needs.get { v with isMeta := true } |>.has i)
 
 @[inline, expose] def Needs.set (needs : Needs) (k : NeedsKind) (s : Bitset) : Needs :=
   match k with
