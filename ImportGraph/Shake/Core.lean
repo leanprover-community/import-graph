@@ -73,21 +73,37 @@ This section is modified from shake's version to allow us to reason about `impor
 import hierarchy instead of dynamically.
 -/
 
+-- TODO: factor the rest of the file in terms of `VisibilityKind` API where possible.
+/-- An "atomic" visibility dependency. Note that we consider an inclusion of the public scope and an
+inclusion of the private scope to be two separate dependencies. Modules may be related by multiple
+`VisibilityKind`s; the presence of any `VisibilityKind` implies some dependency between the
+modules.  -/
+structure VisibilityKind where
+  /-- Represents a need for `public (meta)? import`: an import of the public scope of the source
+  into the public scope of the target. `false` means that the public scope of the source is instead
+  imported into the private scope of the target. -/
+  isExported : Bool
+  /-- Represents a need for `(meta)? import all`: an import of the private scope into the private
+  scope. `false` means the private scope of the source is not accessed. -/
+  isAll : Bool := false
+  not_isExported_and_isAll : ¬(isExported ∧ isAll) := by grind
+deriving Inhabited, BEq, Repr, Hashable, Ord
+
+namespace VisibilityKind
+
+@[match_pattern] abbrev priv : VisibilityKind := { isExported := false }
+@[match_pattern] abbrev pub  : VisibilityKind := { isExported := true }
+@[match_pattern] abbrev privOfPriv  : VisibilityKind := { isExported := false, isAll := true }
+
+end VisibilityKind
+
 /-- An "atomic" module dependency. Note that we consider an inclusion of the public scope and an
 inclusion of the private scope to be two separate dependencies. Modules may be related by multiple
 `NeedsKind`s; the presence of any `NeedsKind` implies some dependency between the modules.  -/
-structure NeedsKind where
-  /-- Represents `public (meta)? import`: an import of the public scope of the source into the
-  public scope of the target. `false` means that the public scope of the source is instead imported
-  into the private scope of the target. -/
-  isExported : Bool
+structure NeedsKind extends VisibilityKind where
   /-- Represents `(public)? meta import (all)?`: a lifting of non-meta declarations to the meta
   phase. -/
   isMeta : Bool
-  /-- Represents `(meta)? import all`: an import of the private scope into the private scope.
-  `false` means the private scope of the source is not accessed. -/
-  isAll : Bool := false
-  not_isExported_and_isAll : ¬(isExported ∧ isAll) := by grind
 deriving Inhabited, BEq, Repr, Hashable, Ord
 
 namespace NeedsKind
@@ -163,6 +179,10 @@ instance : EmptyCollection Needs := ⟨.empty⟩
 
 @[inline, expose] def Needs.has (needs : Needs) (k : NeedsKind) (i : Nat) : Bool :=
   needs.get k |>.has i
+
+/-- Whether `needs` has the given `VisibilityKind` at either phase. -/
+@[inline, expose] def Needs.hasPhaseless (needs : Needs) (k : VisibilityKind) (i : Nat) : Bool :=
+  (needs.get { k with isMeta := false } |>.has i) || (needs.get { k with isMeta := true } |>.has i)
 
 @[inline, expose] def Needs.set (needs : Needs) (k : NeedsKind) (s : Bitset) : Needs :=
   match k with
