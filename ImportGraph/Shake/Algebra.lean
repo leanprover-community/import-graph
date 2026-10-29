@@ -238,7 +238,7 @@ def Needs.reduce {H} [Hierarchy H] (a : Needs) (transDeps : H) : Needs := Id.run
   let mut reduced := a.linearize
   let a := a.antilinearize -- avoids unnecessary checks
   -- ensure we handle public/private first, since these may reduce meta
-  for k in #[NeedsKind.pub, .priv, .privOfPriv, .metaPub, .metaPriv, .metaPrivOfPriv] do
+  for k in #[NeedsKind.pub, .privOfPriv, .priv, .metaPub, .metaPrivOfPriv, .metaPriv] do
     for i in a.get k |>.highToLow do
       if reduced.has k i then -- `(k, i)` may have been eliminated already
         reduced := (reduced \ transDeps⟦(i, k)⟧.linearize).union k {i}
