@@ -169,8 +169,8 @@ under certain interpretations of a `NeedsKind`, it should be used with care, as 
 @[inline] def VisibilityKind.toPhaselessImportNeedsKind (v : VisibilityKind) : ImportNeedsKind :=
   { v with meta? := none }
 
-/-- Like `Needs`, but splits apart needs by actual phase requirements for the import instead of
-import specification:
+/-- Like `Needs`, but splits apart by phase in order to express an actual import requirement (which
+may or may not need a certain phase) instead of expressing an import specification per se:
 - `<vis>Runtime`: needs a non-meta import
 - `meta<vis>`: needs a meta import
 - `<vis>Phaseless`: either a non-meta or meta import will do
