@@ -7,6 +7,7 @@ module
 
 public import Lean.Elab.Command
 public import ImportGraph.Shake.Basic
+public import ImportGraph.Shake.Algebra
 
 import Lean.Compiler.LCNF.Main
 import Lean.Compiler.LCNF.ToDecl
@@ -14,8 +15,6 @@ import Lean.Compiler.NoncomputableAttr
 import ImportGraph.Shake.EnvExtension
 import ImportGraph.Lean.MessageData
 import ImportGraph.Lean.Syntax
-
-public meta import Lean.Elab.Term.TermElabM
 
 import all Lean.Compiler.LCNF.Visibility -- for `collectUsedDecls`
 
@@ -100,21 +99,13 @@ public section
 /-- A way in which a declaration might demand an imported module. Note that there may be multiple
 demands on the same module from the same declaration, which thus may require multiple of these.
 
-The fiels overlap with `NeedsKind`, except for `meta?`, as import needs may not specify a phase. -/
-structure ImportNeedsKind where
-  /-- Represents a need for `public (meta)? import`: an import of the public scope of the source
-  into the public scope of the target. `false` means that the public scope of the source is instead
-  imported into the private scope of the target. -/
-  isExported : Bool
+The fields overlap with `NeedsKind`, except for `meta?`, as import needs may not specify a phase. -/
+structure ImportNeedsKind extends VisibilityKind where
   /- Optionally expresses a need for a certain phase. If `some isMeta := isMeta?`, then `isMeta` is
   `true` when we need a `meta` import and `false` when we specifically need a non-meta import. If
   `none`, either phase is permissible (such as for type-theoretic terms and shake
   generalizations).  -/
   meta? : Option Bool
-  /-- Represents a need for `(meta)? import all`: an import of the private scope into the private
-  scope. `false` means the private scope of the source is not accessed. -/
-  isAll : Bool := false
-  not_isExported_and_isAll : ¬(isExported ∧ isAll) := by grind
 
 namespace ImportNeedsKind
 
@@ -143,7 +134,7 @@ namespace ImportNeedsKind
 end matchers
 
 /-- Every possible `ImportNeedsKind`. -/
-def all : Array ImportNeedsKind := #[
+@[inline] def all : Array ImportNeedsKind := #[
   .pubRuntime,
   .privRuntime,
   .privOfPrivRuntime,
@@ -165,13 +156,24 @@ instance : ToString ImportNeedsKind where
     if k.isAll then tks := tks.push "all"
     " ".intercalate tks.toList
 
-def erasePhase (k : ImportNeedsKind) : ImportNeedsKind :=
+@[inline] def erasePhase (k : ImportNeedsKind) : ImportNeedsKind :=
   { k with meta? := none }
 
 end ImportNeedsKind
 
-/-- Like `Needs`, but preserves `allowMeta`. We interpret `pub`/`priv`/`privOfPriv` from
-`NeedsKind` as having `allowMeta := false`, i.e. as specifically *disallowing* a meta import.  -/
+def NeedsKind.toPhasedImportNeedsKind (k : NeedsKind) : ImportNeedsKind :=
+  { k with meta? := k.isMeta }
+
+def VisibilityKind.toPhaselessImportNeedsKind (v : VisibilityKind) : ImportNeedsKind :=
+  { v with meta? := none }
+
+-- `extends phaseNeeds : Needs`?
+/-- Like `Needs`, but splits apart needs by actual phase requirements instead of import
+specification:
+- `runtime`: needs a non-meta import
+- `meta`: needs a meta import
+- `phaseless`: either a non-meta or meta import will do
+-/
 structure ImportNeeds where
   pubRuntime : Bitset
   privRuntime : Bitset
@@ -193,19 +195,21 @@ def empty : ImportNeeds := ⟨∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅, ∅⟩
 
 instance : EmptyCollection ImportNeeds := ⟨.empty⟩
 
-/-- Takes into account `public` ⊆ `private`, uniformly for every -/
-def linearize (needs : ImportNeeds) : ImportNeeds := { needs with
-  privRuntime         := needs.privRuntime ∪ needs.pubRuntime
-  privOfPrivRuntime   := needs.privRuntime ∪ needs.pubRuntime ∪ needs.privOfPrivRuntime
-  metaPriv            := needs.metaPriv ∪ needs.metaPub
-  metaPrivOfPriv      := needs.metaPriv ∪ needs.metaPub ∪ needs.metaPrivOfPriv
-  privPhaseless       := needs.privPhaseless ∪ needs.pubPhaseless
-  privOfPrivPhaseless := needs.privPhaseless ∪ needs.pubPhaseless ∪ needs.privOfPrivPhaseless
+/-- Takes into account `public` ⊆ `private`, uniformly for unambiguous phase specifications. -/
+def linearizePhased (needs : ImportNeeds) : ImportNeeds := { needs with
+  privRuntime         := needs.privRuntime ∪ needs.pubRuntime ∪ needs.privOfPrivRuntime
+  metaPriv            := needs.metaPriv ∪ needs.metaPub ∪ needs.metaPrivOfPriv
 }
 
-/-- Ensures that we only keep "phaseless" set bits when no other phase is specified.
+/-- Removes `private` when implied by `public` or `all` for unambiguous phase specifications. -/
+def antilinearizePhased (needs : ImportNeeds) : ImportNeeds := { needs with
+  privRuntime         := (needs.privRuntime \ needs.pubRuntime) \ needs.privOfPrivRuntime
+  metaPriv            := (needs.metaPriv \ needs.metaPub) \ needs.metaPrivOfPriv
+}
+
+/-- Ensures that we only keep phaseless entries when no other phase is specified for that index.
 Does **not** take into account phase specifications due to linearization. Depending on the
-application, consider linearizing first. -/
+application, consider linearizing the phased needs first. -/
 def narrowPhase (needs : ImportNeeds) : ImportNeeds := { needs with
   pubPhaseless := (needs.pubPhaseless \ needs.pubRuntime) \ needs.metaPub
   privPhaseless := (needs.privPhaseless \ needs.privRuntime) \ needs.metaPriv
@@ -213,25 +217,11 @@ def narrowPhase (needs : ImportNeeds) : ImportNeeds := { needs with
     (needs.privOfPrivPhaseless \ needs.privOfPrivRuntime) \ needs.metaPrivOfPriv
 }
 
--- TODO: "relaxed := false" flag that, when true, first tries to use any existing imports for
--- allowMeta
-/-- Turns `ImportNeeds` into a concrete `Needs`. -/
-@[inline] def toNeeds (useMeta : Bool := false) (imp : ImportNeeds) : Needs :=
-  let imp := imp.narrowPhase
-  if useMeta then
-    { pub := imp.pubRuntime
-      priv := imp.privRuntime
-      privOfPriv := imp.privOfPrivRuntime
-      metaPub := imp.metaPub ∪ imp.pubPhaseless
-      metaPriv := imp.metaPriv ∪ imp.privPhaseless
-      metaPrivOfPriv := imp.metaPrivOfPriv ∪ imp.privOfPrivPhaseless }
-  else
-    { pub := imp.pubRuntime ∪ imp.pubPhaseless
-      priv := imp.privRuntime ∪ imp.privPhaseless
-      privOfPriv := imp.privOfPrivRuntime ∪ imp.privOfPrivPhaseless
-      metaPub := imp.metaPub
-      metaPriv := imp.metaPriv
-      metaPrivOfPriv := imp.metaPrivOfPriv }
+/-- The phased needs of an `ImportNeeds`. Completely ignores the phaseless needs. -/
+def toPhaseNeeds (needs : ImportNeeds) : Needs := { needs with
+  pub := needs.pubRuntime
+  priv := needs.privRuntime
+  privOfPriv := needs.privOfPrivRuntime }
 
 /-- Assumes that `Provides` is well-formed, i.e. is linearized and transitively closed. -/
 @[inline] def isProvidedBy (n : ImportNeeds) (p : Provides) :=
@@ -299,6 +289,69 @@ def union (needs : ImportNeeds) (k : ImportNeedsKind) (s : Bitset) : ImportNeeds
 
 def flatten (needs : ImportNeeds) : Bitset :=
   ImportNeedsKind.all.foldl (init := ∅) (· ∪ needs.get ·)
+
+/--
+Returns an antilinearized `reduced : Needs` such that
+```
+needs.isProvidedBy transDeps⟦reduced.linearize⟧
+```
+and `reduced` is minimal (perhaps non-uniquely) among such `Needs`.
+
+`metaBy modIdx v reducedSoFar : Bool` specifies how to turn phaseless needs into phased needs. This
+may be useful if we want to try preserving some phases from existing externally-provided imports,
+for instance.
+
+The returned `reduced` is antilinearized, and thus suitable for converting to imports.
+
+Does not assume `needs` is linearized or narrowed.
+-/
+@[specialize] def reduceBy [Hierarchy H] (needs : ImportNeeds) (transDeps : H)
+    (metaBy : Nat → VisibilityKind → Needs → Bool) : Needs := Id.run do
+  let needs := needs.linearizePhased
+  let mut reduced := needs.toPhaseNeeds -- ignore phaseless for now
+  let needs := needs.narrowPhase.antilinearizePhased -- avoids unnecessary checks
+  -- first handle the phased needs (we may reduce these further later)
+  -- ensure we handle runtime first, since these may reduce meta via transitive deps
+  for k in #[
+    NeedsKind.pub,
+    .privOfPriv,
+    .priv,
+    .metaPub,
+    .metaPrivOfPriv,
+    .metaPriv]
+  do
+    -- same as `Needs.reduce` (TODO: worth abstracting?)
+    for i in needs.get k.toPhasedImportNeedsKind |>.highToLow do -- we assume topological order
+      if reduced.has k i then -- `(k, i)` may have been transitively eliminated already
+        reduced := (reduced \ transDeps⟦(i, k)⟧.linearize).union k {i}
+  -- Now add the phaseless needs
+  let mut covered := transDeps⟦reduced.linearize⟧
+  for v in #[VisibilityKind.pub, .privOfPriv, .priv] do
+    for i in needs.get v.toPhaselessImportNeedsKind |>.highToLow do
+      unless covered.hasPhaseless v i do
+        let k := { v with isMeta := metaBy i v reduced : NeedsKind }
+        let iTransDeps := transDeps⟦(i, k)⟧.linearize
+        covered := covered ∪ iTransDeps
+        reduced := (reduced \ iTransDeps).union k {i}
+  return reduced.antilinearize
+
+/--
+Returns an antilinearized `reduced : Needs` such that
+```
+needs.isProvidedBy transDeps⟦reduced.linearize⟧
+```
+and `reduced` is minimal (perhaps non-uniquely) among such `Needs`.
+
+If `useMeta` is false, then any phaseless needs not covered by phased needs are interpreted as run
+time needs, and otherwise as meta needs.
+
+The returned `reduced` is antilinearized, and thus suitable for converting to imports.
+
+Does not assume `needs` is linearized or narrowed.
+-/
+def reduceSimple [Hierarchy H] (needs : ImportNeeds) (transDeps : H) (useMeta := false) :
+    Needs :=
+  reduceBy needs transDeps fun _ _ _ => useMeta
 
 /-- A pair of braille cells depicting the import needs at index `i`.
 
