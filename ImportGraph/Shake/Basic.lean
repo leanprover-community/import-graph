@@ -301,6 +301,9 @@ Rephrasing of `f (n.get k)` for readability. -/
 @[inline] def foldWithKind (n : Needs) (f : α → NeedsKind → Bitset → α) (init : α) : α :=
   NeedsKind.all.foldl (init := init) fun a k => n.applyAt k (f a k)
 
+/-- The union of all bitsets in a `Needs`-/
+def flatten (n : Needs) : Bitset := n.fold (· ∪ ·) (init := ∅)
+
 /-- Applies `f` to all component `Bitset`s of the given `Needs`. -/
 @[specialize f] def map (n : Needs) (f : Bitset → Bitset) : Needs where
   pub      := f n.pub

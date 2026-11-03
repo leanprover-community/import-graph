@@ -43,28 +43,13 @@ syntax "#import_diff " (diffAbsolute <|> diffCurrent) : command
 
 open Shake Elab Command
 
-def WorkspaceModel.modInfoOfImport (w : WorkspaceModel) :
-    TSyntax ``Parser.Module.import → CommandElabM (NeedsKind × Name × ModIdx)
-  | `(Parser.Module.import|
-      $[public%$pubTk]? $[meta%$metaTk]? import $[all%$allTk]? $mod) => do
-    if h : pubTk.isSome && allTk.isSome then
-      throwErrorAt (mkNullNode #[pubTk.get!, allTk.get!]) m!"Cannot use `public` with `all`."
-    else
-      if mod.getId.isAnonymous then
-        throwUnsupportedSyntax
-      let some idx := w.getModIdx? mod.getId
-        | throwErrorAt mod "Could not find module `{mod}` in the workspace."
-      let k : NeedsKind :=
-        { isExported := pubTk.isSome, isMeta := metaTk.isSome, isAll := allTk.isSome }
-      pure (k, mod.getId, idx)
-  | _ => throwUnsupportedSyntax
-
 def WorkspaceModel.modInfoOfSyntax (w : WorkspaceModel) :
     TSyntax ``Parser.Module.import → CommandElabM (NeedsKind × Name × ModIdx)
   | `(Parser.Module.import|
       $[public%$pubTk]? $[meta%$metaTk]? import $[all%$allTk]? $mod) => do
     if h : pubTk.isSome && allTk.isSome then
-      throwErrorAt (mkNullNode #[pubTk.get!, allTk.get!]) m!"Cannot use `public` with `all`."
+      let ref := mkNullNode #[pubTk.get (by grind), allTk.get (by grind)]
+      throwErrorAt ref m!"Cannot use `public` with `all`."
     else
       if mod.getId.isAnonymous then
         throwUnsupportedSyntax
@@ -86,16 +71,46 @@ def WorkspaceModel.irNeeds (w : WorkspaceModel) (n : Needs) : Bitset := Id.run d
 
 namespace ImportDiff
 
+/-- If an integer is (strictly) greater than 0, display it with `+`. -/
+def Int.toStringWithSign (i : Int) := if i > 0 then s!"+{i}" else s!"{i}"
+
+/-- A bundle of measurements characterizing the difference between some initial and final state.
+This models set-like differences where increases may not be commensurate with decreases, and so
+keeps track of them separately. -/
 structure Tally where
+  /-- A measurement of what the final state has gained that was not present in the initial state. -/
   plus   : Nat := 0
+  /-- A measurement of what the initial state has lost that is no longer present in the final
+  state. -/
   minus  : Nat := 0
+  /-- A measurement of what the initial and final state still have in common. -/
   shared : Nat := 0
+  /-- The net difference between the initial and final state, collapsing the differences between
+  what is lost and what is gained. By default, the delta is the increases minus the decreases, but
+  sometimes this is more subtle.-/
+  delta  : Int := (plus : Int) - minus
 
 namespace Tally
 
+def ofBitset (final initial : Bitset) (ignoredShared : Bitset := ∅) : Tally where
+  plus := (final \ initial).size
+  minus := (initial \ final).size
+  shared := (initial ∩ final) \ ignoredShared |>.size
+
+def ofNeedsAt (k : NeedsKind) (final initial : Needs) (ignoredShared : Needs := ∅) : Tally where
+  plus := (fina.get k \ initial.get k).size
+  minus := (initial \ final).size
+  shared := (initial ∩ final) \ ignoredShared |>.size
+
+open ImportDiff
+
 def header := #v["", "Δ", "+", "-", "∩"]
-def toRow (rowHeader : String) (t : Tally) : Vector String 5 := #v[rowHeader,
-    s!"{(t.plus : Int) - t.minus}", s!"+{t.plus}", s!"-{t.minus}", s!"={t.shared}"]
+def toRow (rowHeader : String) (t : Tally) : Vector String 5 := #v[
+  rowHeader,
+  s!"{t.delta.toStringWithSign}",
+  s!"+{t.plus}",
+  s!"-{t.minus}",
+  s!"{t.shared}"]
 
 /-- Whether either `t.plus` or `t.minus` is nonzero. They may be equal. -/
 @[inline] def hasShifted (t : Tally) := t.plus != 0 || t.minus != 0
@@ -129,16 +144,21 @@ elab_rules : command
         match item with
         | `(diffCurrentItem| +$imp:import) => do
           let info ← w.modInfoOfSyntax imp
+          if added.contains info then
+            throwErrorAt item "`{imp}` has already been added to the import set."
+          if inits.contains info then
+            throwErrorAt item "The current file's imports already include `{imp}`."
           if removed.contains info then
-            throwErrorAt item "The import `{imp}` has also been removed from the set."
+            throwErrorAt item "`{imp}` has also been removed from the import set."
           added := added.push info
         | `(diffCurrentItem| -$imp:import) => do
           let info ← w.modInfoOfSyntax imp
-          -- Don't error if we've already erased it (e.g. the user wrote it twice)
+          if removed.contains info then
+            throwErrorAt item "`{imp}` has already been removed from the import set."
           unless inits.contains info do
-            throwErrorAt item "The current imports do not include `{imp}`."
+            throwErrorAt item "The current file's imports do not include `{imp}`."
           if added.contains info then
-            throwErrorAt item "The import `{imp}` has also been added to the set."
+            throwErrorAt item "`{imp}` has also been added to the import set."
           removed := removed.push info
         | `(diffCurrentItem| -%$dangling) =>
           let removable := (← getEnv).header.imports.filter fun imp =>
@@ -167,8 +187,8 @@ elab_rules : command
     pure w⟦w.implicitInitNeeds needs |>.linearize⟧
   let initNeeds := transNeedsOfMods initMods
   let finalNeeds := transNeedsOfMods finalMods
-  let plus := (finalNeeds \ initNeeds).linearize
-  let minus := (initNeeds \ finalNeeds).linearize
+  let plus := finalNeeds \ initNeeds
+  let minus := initNeeds \ finalNeeds
   -- NOTE: should we really omit init like this?
   let shared := (finalNeeds.map₂ initNeeds (· ∩ ·) \ w.transInitNeeds).linearize
   -- let splitImps (needs : Needs) :=
@@ -186,16 +206,22 @@ elab_rules : command
   let irTally := { plus := irPlus.size, minus := irMinus.size, shared := irShared.size : Tally }
   let irLabel := "ir"
 
-  let initDepth := initMods.map (w.mods[·.2.2]!.depth) |>.max?.getD 0
-  let finalDepth := finalMods.map (w.mods[·.2.2]!.depth) |>.max?.getD 0
-  let depthMsgs := #v["depth",
-    s!"{finalDepth}", s!"{initDepth}", "", s!"{(finalDepth : Int) - (initDepth : Int)}"]
-  -- TODO: prevs?
-  let initPrevs := initMods.foldl (init := ∅) (fun acc (_,_,idx) => acc ∪ w.mods[idx]!.prevs)
-  let finalPrevs := finalMods.foldl (init := ∅) (fun acc (_,_,idx) => acc ∪ w.mods[idx]!.prevs)
-  let prevTally := { plus := (finalPrevs \ initPrevs).size, minus := (initPrevs \ finalPrevs).size, shared := (initPrevs ∩ finalPrevs).size : Tally }
-  let prevMsgs :=
-    prevTally.toRow "prevs"
+  let initDepth := initMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
+  let finalDepth := finalMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
+  let depthTally : Tally := {
+    -- `Nat` subtraction intentional, one of these should always be 0
+    plus := initDepth - finalDepth
+    minus := finalDepth - initDepth
+    shared := min initDepth finalDepth
+  }
+  let initPrevs := initMods.foldl (init := ∅) fun acc (_,_,idx) =>
+    acc ∪ w.mods[idx]!.prevs ∪ {idx}
+  let finalPrevs := finalMods.foldl (init := ∅) fun acc (_,_,idx) =>
+    acc ∪ w.mods[idx]!.prevs ∪ {idx}
+  let prevTally : Tally := {
+      plus := (finalPrevs \ initPrevs).size
+      minus := (initPrevs \ finalPrevs).size
+      shared := (initPrevs ∩ finalPrevs).size }
 
   let basicNeeds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
   let privOfPrivNeeds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
@@ -204,18 +230,21 @@ elab_rules : command
     minus := minus.get k |>.size
     shared := shared.get k |>.size }
 
-  let mut tableMsgs := #[Tally.header] ++ basicNeeds.map fun k => (ofNeedsKind k).toRow s!"{k}"
+  let mods : Tally := {
+    -- Must compute these afresh, as flattening `plus` and `minus` would count changes to the
+    -- *kind* of import as different.
+    plus := (finalNeeds.flatten \ initNeeds.flatten).size
+    minus := (initNeeds.flatten \ finalNeeds.flatten).size
+    shared := (initNeeds.flatten ∩ finalNeeds.flatten) \ w.transInitNeeds.flatten |>.size }
+  let mut tableMsgs := #[Tally.header, mods.toRow "modules imported", Table.emptyRow]
+    ++ basicNeeds.map fun k => (ofNeedsKind k).toRow s!"{k}"
   if privOfPrivNeeds.any (ofNeedsKind · |>.hasShifted) then
     tableMsgs := tableMsgs ++ privOfPrivNeeds.map fun k =>
       -- We use `import all` and `meta import all`, since `all` is unclear.
       (ofNeedsKind k).toRow s!"{k.toImportString}"
-  tableMsgs := tableMsgs.push #v[]
   tableMsgs := tableMsgs ++ #[
       Table.emptyRow,
-      irTally.toRow irLabel, prevMsgs,
-      Table.emptyRow,
-      #v["", "Δ", "initial", "final", ""],
-      depthMsgs]
+      irTally.toRow irLabel, prevTally.toRow "previous mods", depthTally.toRow "build depth"]
   let header := match !plus.isEmpty, !minus.isEmpty with
     | true,  true  => s!""
     | true,  false => s!"Imports strictly increased.\n\n"
@@ -244,8 +273,23 @@ elab_rules : command
 
 
 
+/--
+info: Imports strictly increased.
 
-#import_diff +public import Std; -import all Lean
+                 Δ    +    -  ∩   ⏎
+modules imported +265 +265 -0 1434
+                                  ⏎
+public           0    +0   -0 3   ⏎
+private          0    +0   -0 1414
+public meta      0    +0   -0 340 ⏎
+private meta     +454 +454 -0 403 ⏎
+                                  ⏎
+ir               +386 +386 -0 644 ⏎
+previous mods    0    +0   -0 2447
+build depth      0    +0   -0 180
+-/
+#guard_msgs in
+#import_diff +meta import Std
 
 
 
