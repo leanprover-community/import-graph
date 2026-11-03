@@ -429,6 +429,17 @@ instance : ToString NeedsKind where
     | .privOfPriv     => "all"
     | .metaPrivOfPriv => "meta all"
 
+/-- The prefix to the import command corresponding to the import. If `clarifyPriv` is `true`,
+(default `false`), we include "`private`" in front of private imports. This is useful in display
+situations, even though it is not a valid form of `import`. -/
+def toImportString (clarifyPriv := false) : NeedsKind → String
+  | .pub      => "public import"
+  | .metaPub  => "public meta import"
+  | .priv     => s!"{if clarifyPriv then "private " else ""}import"
+  | .metaPriv => s!"{if clarifyPriv then "private " else ""}meta import"
+  | .privOfPriv     => "import all"
+  | .metaPrivOfPriv => "meta import all"
+
 /-- The `NeedsKind`s which land (directly) in the private scope. -/
 @[inline, expose, grind] def toPrivate   : Array NeedsKind :=
   #[.priv, .privOfPriv, .metaPriv, .metaPrivOfPriv]

@@ -11,6 +11,7 @@ public meta import ImportGraph.Imports.ImportGraph
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Lean.MessageData
 public meta import ImportGraph.Shake.Workspace
+public meta import ImportGraph.Util.TableMessage
 public meta import Lean.Meta.Tactic.TryThis
 public import ImportGraph.Widget.Collapsible
 public import ImportGraph.Widget.Copy
@@ -41,8 +42,6 @@ syntax diffCurrent := sepByIndentSemicolon(diffCurrentItem)
 syntax "#import_diff " (diffAbsolute <|> diffCurrent) : command
 
 open Shake Elab Command
-
-#check Shake.NeedsKind
 
 def WorkspaceModel.modInfoOfImport (w : WorkspaceModel) :
     TSyntax ``Parser.Module.import → CommandElabM (NeedsKind × Name × ModIdx)
@@ -85,33 +84,6 @@ def WorkspaceModel.irNeeds (w : WorkspaceModel) (n : Needs) : Bitset := Id.run d
     irs := irs ∪ w.mods[idx]!.prevs
   return irs
 
-@[inline] def String.padRightTo (s : String) (n : Nat) (c : Char := ' ') :=
-  s.pushn c (n - s.length)
-
-@[inline] def String.padLeftTo (s : String) (n : Nat) (c : Char := ' ') :=
-  "".pushn c (n - s.length) ++ s
-
-open ImportGraph
-/--
-Given a matrix (row-major) of strings, arranges them in tabular form.
-Single space as column separator.
-
-Assumes the array is non-empty and all rows are the same size (panics otherwise).
--/
-def formatTable! (rows : Array (Array String)) : String := Id.run do
-  let mut colWidths := rows[0]!.map (·.length)
-  for h : i in 1...rows.size do
-    colWidths := colWidths.zipWith (max · ·.length) rows[i]
-  let mut table := ""
-  for h : rowIdx in 0...rows.size do
-    for h : i in 0...rows[rowIdx].size do
-      unless i == 0 do
-        table := table.push ' '
-      table := table ++ rows[rowIdx][i].padRightTo colWidths[i]!
-    unless rowIdx + 1 == rows.size do
-      table := table.push '\n'
-  return table
-
 namespace ImportDiff
 
 structure Tally where
@@ -121,9 +93,12 @@ structure Tally where
 
 namespace Tally
 
-def toString (t : Tally) : String := s!"+{t.plus} -{t.minus} ={t.shared}"
-def toStrings (header : String) (t : Tally) : Array String :=
-  #[header, s!"+{t.plus}", s!"-{t.minus}", s!"={t.shared}"]
+def header := #v["", "Δ", "+", "-", "∩"]
+def toRow (rowHeader : String) (t : Tally) : Vector String 5 := #v[rowHeader,
+    s!"{(t.plus : Int) - t.minus}", s!"+{t.plus}", s!"-{t.minus}", s!"={t.shared}"]
+
+/-- Whether either `t.plus` or `t.minus` is nonzero. They may be equal. -/
+@[inline] def hasShifted (t : Tally) := t.plus != 0 || t.minus != 0
 
 open Meta.Tactic.TryThis in
 elab_rules : command
@@ -192,9 +167,10 @@ elab_rules : command
     pure w⟦w.implicitInitNeeds needs |>.linearize⟧
   let initNeeds := transNeedsOfMods initMods
   let finalNeeds := transNeedsOfMods finalMods
-  let plus := (finalNeeds \ initNeeds).antilinearize
-  let minus := (initNeeds \ finalNeeds).antilinearize
-  let shared := (finalNeeds.map₂ initNeeds (· ∩ ·) \ w.transInitNeeds).antilinearize
+  let plus := (finalNeeds \ initNeeds).linearize
+  let minus := (initNeeds \ finalNeeds).linearize
+  -- NOTE: should we really omit init like this?
+  let shared := (finalNeeds.map₂ initNeeds (· ∩ ·) \ w.transInitNeeds).linearize
   -- let splitImps (needs : Needs) :=
   --   let reducedImps := w.toRawImports <| needs.reduce w
   --   let nonReducedImps := w.toRawImports needs |>.filter (!reducedImps.contains ·)
@@ -212,27 +188,40 @@ elab_rules : command
 
   let initDepth := initMods.map (w.mods[·.2.2]!.depth) |>.max?.getD 0
   let finalDepth := finalMods.map (w.mods[·.2.2]!.depth) |>.max?.getD 0
-  let depthMsgs :=
-    #["depth", s!"{finalDepth}", s!"{initDepth}", s!"(Δ = {(finalDepth : Int) - (initDepth : Int)})"]
+  let depthMsgs := #v["depth",
+    s!"{finalDepth}", s!"{initDepth}", "", s!"{(finalDepth : Int) - (initDepth : Int)}"]
   -- TODO: prevs?
   let initPrevs := initMods.foldl (init := ∅) (fun acc (_,_,idx) => acc ∪ w.mods[idx]!.prevs)
   let finalPrevs := finalMods.foldl (init := ∅) (fun acc (_,_,idx) => acc ∪ w.mods[idx]!.prevs)
   let prevTally := { plus := (finalPrevs \ initPrevs).size, minus := (initPrevs \ finalPrevs).size, shared := (initPrevs ∩ finalPrevs).size : Tally }
   let prevMsgs :=
-    prevTally.toStrings "prevs"
+    prevTally.toRow "prevs"
 
-  let tallies := NeedsKind.all.map fun k => (k, {
+  let basicNeeds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
+  let privOfPrivNeeds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
+  let ofNeedsKind (k : NeedsKind) : Tally := {
     plus := plus.get k |>.size
     minus := minus.get k |>.size
-    shared := shared.get k |>.size : Tally})
-  let tableMsgs := (tallies.map fun (k, t) => t.toStrings s!"{k}")
-    |>.push (irTally.toStrings irLabel) |>.push prevMsgs |>.push depthMsgs
+    shared := shared.get k |>.size }
+
+  let mut tableMsgs := #[Tally.header] ++ basicNeeds.map fun k => (ofNeedsKind k).toRow s!"{k}"
+  if privOfPrivNeeds.any (ofNeedsKind · |>.hasShifted) then
+    tableMsgs := tableMsgs ++ privOfPrivNeeds.map fun k =>
+      -- We use `import all` and `meta import all`, since `all` is unclear.
+      (ofNeedsKind k).toRow s!"{k.toImportString}"
+  tableMsgs := tableMsgs.push #v[]
+  tableMsgs := tableMsgs ++ #[
+      Table.emptyRow,
+      irTally.toRow irLabel, prevMsgs,
+      Table.emptyRow,
+      #v["", "Δ", "initial", "final", ""],
+      depthMsgs]
   let header := match !plus.isEmpty, !minus.isEmpty with
     | true,  true  => s!""
     | true,  false => s!"Imports strictly increased.\n\n"
     | false, true  => s!"Imports strictly decreased.\n\n"
     | false, false => s!"No changes to imports.\n\n"
-  logInfo <| s!"{header}{formatTable! tableMsgs}"
+  logInfo <| s!"{header}{Table.formatSimple tableMsgs}"
   -- TODO: show each import. Should exclude "obvious" user-specified imports, right? No, no, the entire point is to see the other ones. So we should show the user-specified ones but just annotate.
   -- TODO: should also allow removing imports that "can't" really be removed, and just say that this is virtual?
   -- TODO: With no arguments, show current stats in a nicer table? Maybe with totals?
@@ -256,7 +245,7 @@ elab_rules : command
 
 
 
-#import_diff
+#import_diff +public import Std; -import all Lean
 
 
 

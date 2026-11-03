@@ -1,0 +1,56 @@
+/-
+Copyright (c) 2026 Thomas R. Murrills. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Thomas R. Murrills
+-/
+module
+
+
+import Lean.Elab.Command
+
+/-!
+# Formatting tables
+
+This module provides basic utilities for formatting tables with aligned columns.
+We only supports tables of strings.
+-/
+
+namespace ImportGraph
+
+open ImportGraph
+
+public section
+
+/-- Pad a string on the right with `c : Char` (by default `' '`), until it reaches length `n`. Does
+not trim strings already over length `n` down to length `n`. -/
+@[inline] def String.rightPad (n : Nat) (s : String) (char : Char := ' ') :=
+  s.pushn char (n - s.positions.length)
+
+/-- Pad a string on the left with `c : Char` (by default `' '`), until it reaches length `n`. Does
+not trim strings already over length `n` down to length `n`. -/
+@[inline] def String.leftPad (n : Nat) (s : String) (char : Char := ' ') :=
+  "".pushn char (n - s.positions.length) ++ s
+
+namespace Table
+
+/--
+Given an array of table row entries, arranges them in tabular form, left-aligning each cell.
+-/
+protected def formatSimple (rows : Array (Vector String n)) : String := Id.run do
+  if h : rows.size > 0 then
+    let mut colWidths := rows[0].map (·.positions.length)
+    for h : i in 1...rows.size do
+      colWidths := colWidths.zipWith (max · ·.positions.length) rows[i]
+    let mut table := ""
+    for hRow : rowIdx in 0...rows.size do
+      for hCol : i in 0...n do
+        table := table ++ rows[rowIdx][i].rightPad colWidths[i]
+        if h : i + 1 < n then
+          table := table.push ' '
+      unless rowIdx + 1 == rows.size do
+        table := table.push '\n'
+    return table
+  else return ""
+
+/-- An empty row in a table. -/
+def emptyRow {n} : Vector String n := Vector.replicate n ""
