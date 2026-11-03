@@ -97,10 +97,10 @@ def ofBitset (final initial : Bitset) (ignoredShared : Bitset := ∅) : Tally wh
   minus := (initial \ final).size
   shared := (initial ∩ final) \ ignoredShared |>.size
 
-def ofNeedsAt (k : NeedsKind) (final initial : Needs) (ignoredShared : Needs := ∅) : Tally where
-  plus := (fina.get k \ initial.get k).size
-  minus := (initial \ final).size
-  shared := (initial ∩ final) \ ignoredShared |>.size
+-- def ofNeedsAt (k : NeedsKind) (final initial : Needs) (ignoredShared : Needs := ∅) : Tally where
+--   plus := (fina.get k \ initial.get k).size
+--   minus := (initial \ final).size
+--   shared := (initial ∩ final) \ ignoredShared |>.size
 
 open ImportDiff
 
@@ -244,7 +244,11 @@ elab_rules : command
       (ofNeedsKind k).toRow s!"{k.toImportString}"
   tableMsgs := tableMsgs ++ #[
       Table.emptyRow,
-      irTally.toRow irLabel, prevTally.toRow "previous modules", depthTally.toRow "build depth"]
+      prevTally.toRow "previous modules",
+      irTally.toRow irLabel,
+      Table.emptyRow,
+      #v["", "Δ", "new", "old", ""],
+      #v["build depth", (finalDepth : Int) - initDepth |>.toStringWithSign, toString finalDepth, toString initDepth, ""]]
   let header := match !plus.isEmpty, !minus.isEmpty with
     | true,  true  => s!""
     | true,  false => s!"Imports strictly increased.\n\n"
@@ -274,7 +278,11 @@ elab_rules : command
 
 
 
-#import_diff +meta import Std
+#import_diff
+  +meta import Std
+  -import Lean
+  -import all Lean
+  -public meta import ImportGraph.Lean.MessageData
 
 
 
