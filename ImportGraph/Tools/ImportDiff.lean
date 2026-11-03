@@ -204,7 +204,7 @@ elab_rules : command
   let irMinus := initIrNeeds \ finalIrNeeds
   let irShared := (finalIrNeeds ∩ initIrNeeds) \ w.irNeeds w.transInitNeeds
   let irTally := { plus := irPlus.size, minus := irMinus.size, shared := irShared.size : Tally }
-  let irLabel := "ir"
+  let irLabel := "loaded IR"
 
   let initDepth := initMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
   let finalDepth := finalMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
@@ -244,7 +244,7 @@ elab_rules : command
       (ofNeedsKind k).toRow s!"{k.toImportString}"
   tableMsgs := tableMsgs ++ #[
       Table.emptyRow,
-      irTally.toRow irLabel, prevTally.toRow "previous mods", depthTally.toRow "build depth"]
+      irTally.toRow irLabel, prevTally.toRow "previous modules", depthTally.toRow "build depth"]
   let header := match !plus.isEmpty, !minus.isEmpty with
     | true,  true  => s!""
     | true,  false => s!"Imports strictly increased.\n\n"
@@ -273,22 +273,7 @@ elab_rules : command
 
 
 
-/--
-info: Imports strictly increased.
 
-                 Δ    +    -  ∩   ⏎
-modules imported +265 +265 -0 1434
-                                  ⏎
-public           0    +0   -0 3   ⏎
-private          0    +0   -0 1414
-public meta      0    +0   -0 340 ⏎
-private meta     +454 +454 -0 403 ⏎
-                                  ⏎
-ir               +386 +386 -0 644 ⏎
-previous mods    0    +0   -0 2447
-build depth      0    +0   -0 180
--/
-#guard_msgs in
 #import_diff +meta import Std
 
 
