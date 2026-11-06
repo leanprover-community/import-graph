@@ -70,4 +70,4 @@ def emptyRow {n} : Table.Row n := Vector.replicate n ""
 
 /-- Increase the size of a row by padding it on the right with empty cells. -/
 def Row.rightPad (row : Table.Row n) (h : n ≤ m := by grind) : Table.Row m :=
-  (show n + (m - n) = m by grind) ▸ row.append (Vector.replicate (m - n) "")
+  (show max m n = m by grind) ▸ row.rightpad m ""
