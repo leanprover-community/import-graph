@@ -233,7 +233,7 @@ elab_rules : command
         and may be upstreamed."
         m!"{m!"".joinSep upstreamTo.toList}"
   -- "More information" message:
-  let reducedImps := w.toRawImports <| importNeeds.toNeeds.reduce w
+  let reducedImps := w.toRawImports <| importNeeds.reduceSimple w
   let moreInfo ← liftCoreM do
     -- TODO: more information from declNeeds.
     let minImports ← do

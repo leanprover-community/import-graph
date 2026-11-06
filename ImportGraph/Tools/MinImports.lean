@@ -100,7 +100,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   let importNeeds ← liftCoreM do StanceM.run' (s := s) do
     (← getEnv).toSimultaneousImportNeeds declNeeds
   let importNeeds := (← getEnv).importNeedsOfExtraModUses (init := importNeeds) extraModUses
-  let mut reducedNeeds := importNeeds.toNeeds.reduce transDeps
+  let mut reducedNeeds := importNeeds.reduceSimple transDeps
   let mut reducedImps := (← getEnv).toRawImports reducedNeeds
 
   /- If `#min_imports` is not provided, preserve the largest direct import of tooling from
@@ -108,7 +108,7 @@ public meta def logMinImports (tk : Syntax) (cmds : Array Syntax) :
   always exist if we are able to use `#min_imports`.) In the future, `#min_imports` should delete
   itself. -/
   if let some minImportsModuleIdx := (← getEnv).getModuleIdx? `ImportGraph.Tools.MinImports then
-    unless transDeps⟦importNeeds.toNeeds⟧.any (·.has minImportsModuleIdx) do
+    unless transDeps⟦reducedNeeds⟧.any (·.has minImportsModuleIdx) do
       let env ← getEnv
       -- In order from broadest to narrowest
       let possibleDirectImports :=

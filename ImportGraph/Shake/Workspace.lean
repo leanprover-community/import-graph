@@ -69,7 +69,7 @@ def ImportNeeds.ofExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
     (init : ImportNeeds := ∅) : ImportNeeds :=
   uses.foldl (init := init) fun needs use => Id.run do
     let some idx := w.getModIdx? use.module | needs
-    needs.union { use with allowMeta := true } {idx}
+    needs.union { use with meta? := if use.isMeta then true else none } {idx}
 
 -- TODO: make this take in a monadic interface for the module index, so that we can use it both for
 -- an environment and more generally
@@ -101,7 +101,7 @@ def DeclNeeds.toSimultaneousImportNeeds
               let some modIdx := w.getModIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
-                { isExported := false, isMeta := false, allowMeta := true } {modIdx}
+                { isExported := false, meta? := none } {modIdx}
           else
             let k := stance.toImportNeedsKind k usedStance
             declImportNeeds := declImportNeeds.union k {modIdx}
