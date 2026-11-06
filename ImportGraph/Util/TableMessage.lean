@@ -33,10 +33,12 @@ not trim strings already over length `n` down to length `n`. -/
 
 namespace Table
 
+protected abbrev Row (n : Nat) := Vector String n
+
 /--
 Given an array of table row entries, arranges them in tabular form, left-aligning each cell.
 -/
-protected def formatSimple (rows : Array (Vector String n)) : String := Id.run do
+protected def formatSimple (rows : Array (Table.Row n)) : String := Id.run do
   if h : rows.size > 0 then
     let mut colWidths := rows[0].map (·.positions.length)
     for h : i in 1...rows.size do
@@ -53,4 +55,7 @@ protected def formatSimple (rows : Array (Vector String n)) : String := Id.run d
   else return ""
 
 /-- An empty row in a table. -/
-def emptyRow {n} : Vector String n := Vector.replicate n ""
+def emptyRow {n} : Table.Row n := Vector.replicate n ""
+
+def Row.rightPad (row : Table.Row n) (h : n ≤ m := by grind) : Table.Row m :=
+  (show n + (m - n) = m by grind) ▸ row.append (Vector.replicate (m - n) "")

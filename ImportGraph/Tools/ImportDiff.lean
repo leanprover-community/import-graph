@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2023 Kim Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Kim Morrison, Paul Lezeau
+Authors: Kim Morrison, Paul Lezeau, Thomas R. Murrills
 -/
 module
 
@@ -16,8 +16,6 @@ public meta import Lean.Meta.Tactic.TryThis
 public import ImportGraph.Widget.Collapsible
 public import ImportGraph.Widget.Copy
 public import ImportGraph.Widget.GoToModule
-import Lean
-import all Lean
 
 public meta section
 
@@ -43,8 +41,24 @@ syntax "#import_diff " (diffAbsolute <|> diffCurrent) : command
 
 open Shake Elab Command
 
-def WorkspaceModel.modInfoOfSyntax (w : WorkspaceModel) :
-    TSyntax ``Parser.Module.import → CommandElabM (NeedsKind × Name × ModIdx)
+structure WorkspaceModel.ImportWithIdx extends kind : NeedsKind where
+  module : Name
+  modIdx : ModIdx
+deriving BEq, Inhabited, Repr
+
+def WorkspaceModel.ImportWithIdx.ofImport (imp : Import) (modIdx : ModIdx) :
+    WorkspaceModel.ImportWithIdx where
+  kind := .ofImport imp
+  module := imp.module
+  modIdx
+
+@[inline] def WorkspaceModel.ImportWithIdx.toImport (i : ImportWithIdx) : Import :=
+  { i with }
+
+/-- Converts syntax for an import into a `NeedsKind`, `Name`, and `ModIdx` in the given workspace
+model representing that import, throwing if the module name cannot be found. -/
+def WorkspaceModel.importWithIdxOfSyntax (w : WorkspaceModel) :
+    TSyntax ``Parser.Module.import → CommandElabM WorkspaceModel.ImportWithIdx
   | `(Parser.Module.import|
       $[public%$pubTk]? $[meta%$metaTk]? import $[all%$allTk]? $mod) => do
     if h : pubTk.isSome && allTk.isSome then
@@ -53,109 +67,257 @@ def WorkspaceModel.modInfoOfSyntax (w : WorkspaceModel) :
     else
       if mod.getId.isAnonymous then
         throwUnsupportedSyntax
-      let some idx := w.getModIdx? mod.getId
+      let some modIdx := w.getModIdx? mod.getId
         | throwErrorAt mod "Could not find module `{mod}` in the workspace."
-      let k : NeedsKind :=
+      let kind : NeedsKind :=
         { isExported := pubTk.isSome, isMeta := metaTk.isSome, isAll := allTk.isSome }
-      pure (k, mod.getId, idx)
+      pure { kind, module := mod.getId, modIdx }
   | _ => throwUnsupportedSyntax
 
-def WorkspaceModel.irNeeds (w : WorkspaceModel) (n : Needs) : Bitset := Id.run do
-  let n := w⟦n.linearize⟧
-  let irTrans := n.get .metaPriv ∪ n.get .metaPub
-  -- not perfect `all` handling but uncommon anyway
-  let mut irs := irTrans ∪ n.get .privOfPriv ∪ n.get .metaPrivOfPriv
-  for idx in irTrans.highToLow do
-    irs := irs ∪ w.mods[idx]!.prevs
-  return irs
-
 namespace ImportDiff
+
+open ImportDiff
 
 /-- If an integer is (strictly) greater than 0, display it with `+`. -/
 def Int.toStringWithSign (i : Int) := if i > 0 then s!"+{i}" else s!"{i}"
 
-/-- A bundle of measurements characterizing the difference between some initial and final state.
-This models set-like differences where increases may not be commensurate with decreases, and so
-keeps track of them separately. -/
-structure Tally where
-  /-- A measurement of what the final state has gained that was not present in the initial state. -/
-  plus   : Nat := 0
-  /-- A measurement of what the initial state has lost that is no longer present in the final
-  state. -/
-  minus  : Nat := 0
-  /-- A measurement of what the initial and final state still have in common. -/
-  shared : Nat := 0
-  /-- The net difference between the initial and final state, collapsing the differences between
-  what is lost and what is gained. By default, the delta is the increases minus the decreases, but
-  sometimes this is more subtle.-/
-  delta  : Int := (plus : Int) - minus
+/-- A simple structure with two states, `initial : α` and `final : α`, which models a transition. -/
+structure Transition α where
+  /-- The state before `final`. -/
+  initial : α
+  /-- The state after `initial`. -/
+  final : α
 
-namespace Tally
+namespace Transition
 
-def ofBitset (final initial : Bitset) (ignoredShared : Bitset := ∅) : Tally where
-  plus := (final \ initial).size
-  minus := (initial \ final).size
-  shared := (initial ∩ final) \ ignoredShared |>.size
+@[inline] def map (t : Transition α) (f : α → β) : Transition β where
+  initial := f t.initial
+  final := f t.final
 
--- def ofNeedsAt (k : NeedsKind) (final initial : Needs) (ignoredShared : Needs := ∅) : Tally where
---   plus := (fina.get k \ initial.get k).size
---   minus := (initial \ final).size
---   shared := (initial ∩ final) \ ignoredShared |>.size
+end Transition
 
-open ImportDiff
+/-- A `Transistion` with an `initial : Nat` and a `final : Nat`. -/
+abbrev TransitionMeasure := Transition Nat
 
-def header := #v["", "Δ", "+", "-", "∩"]
-def toRow (rowHeader : String) (t : Tally) : Vector String 5 := #v[
+namespace TransitionMeasure
+
+@[inline] def delta (t : TransitionMeasure) : Int := (t.final : Int) - t.initial
+
+def header : Table.Row 4 := #v["", "Δ", "new", "old"]
+
+def toRow (t : TransitionMeasure) (rowHeader : String) : Table.Row 4 :=
+  #v[rowHeader, t.delta.toStringWithSign, s!"{t.final}", s!"{t.initial}"]
+
+end TransitionMeasure
+
+/-- A Venn diagram characterizing the changes between some (implicit, unspecified) initial and
+final state. -/
+structure Venn α where
+  /-- What the final state has gained that was not present in the initial state. -/
+  plus   : α
+  /-- What the initial state has lost that is no longer present in the final state. -/
+  minus  : α
+  /-- What the initial and final state have in common. -/
+  shared : α
+
+def Transition.toVennBy (t : Transition α) (sdiff : α → α → β) (inter : α → α → β) :
+    Venn β where
+  plus := sdiff t.final t.initial
+  minus := sdiff t.initial t.final
+  shared := (inter t.initial t.final)
+
+namespace Venn
+
+@[inline] def map (v : Venn α) (f : α → β) : Venn β where
+  plus := f v.plus
+  minus := f v.minus
+  shared := f v.shared
+
+def ofBitsetTransition (t : Transition Bitset) (ignoredShared : Bitset := ∅) : Venn Bitset :=
+  t.toVennBy (sdiff := (· \ ·)) (inter := fun a b => (a ∩ b) \ ignoredShared)
+
+def ofProvidesTransition (t : Transition Provides) (ignoredShared : Provides := ∅) :
+    Venn Provides :=
+  t.toVennBy
+    (sdiff := (· \ ·))
+    (inter := fun a b => (a.map₂ b (· ∩ ·)) \ ignoredShared |>.linearize)
+
+/-- A `v : VennMeasure` represents no change iff `v.plus = v.minus = 0`. -/
+@[inline] def isUnchanged (v : Venn α) (isZero : α → Bool) := isZero v.plus && isZero v.minus
+/-- A `v : VennMeasure` represents a change of some kind iff `v.plus` is nonzero or `v.minus` is
+nonzero. -/
+@[inline] def isChanged (v : Venn α) (isZero : α → Bool) := !(v.isUnchanged isZero)
+/-- Whether the `Venn` diagram implicitly represents a strict increase (`.gt`), a strict decrease
+(`.lt`), no change (`.eq`), or incomparable final and initial states.  -/
+@[inline] def compare? (v : Venn α) (isZero : α → Bool) : Option Ordering :=
+  match isZero v.plus, isZero v.minus with
+  | true, true => some .eq
+  | true, false => some .lt
+  | false, true => some .gt
+  | false, false => none
+
+end Venn
+
+/-- Measurements of the parts of a Venn diagram comparing an (implicit, unspecified) initial state
+and final state. -/
+abbrev VennMeasure := Venn Nat
+
+namespace VennMeasure
+
+/-- The net difference between the implicit initial and final state, collapsing the independent
+measurements of `plus` and `minus` together. -/
+@[inline] def delta (v : VennMeasure) : Int := (v.plus : Int) - v.minus
+
+open ImportGraph ImportDiff
+
+/-- A header row for a table consisting of rows created by `VennMeasure.toRow`. -/
+def header : Table.Row 5 := #v["", "Δ", "+", "-", "∩"]
+
+/-- A row in a table for a single `VennMeasure` which follows the order in `VennMeasure.header`. -/
+def toRow (rowHeader : String) (t : VennMeasure) : Table.Row 5 := #v[
   rowHeader,
-  s!"{t.delta.toStringWithSign}",
+  t.delta.toStringWithSign,
   s!"+{t.plus}",
   s!"-{t.minus}",
   s!"{t.shared}"]
 
-/-- Whether either `t.plus` or `t.minus` is nonzero. They may be equal. -/
-@[inline] def hasShifted (t : Tally) := t.plus != 0 || t.minus != 0
+-- kind of internal, delete?
+def toTable (rows : Array <| Option (String × VennMeasure)) : Array (Table.Row 5) :=
+  #[header] ++ rows.map fun
+    | none => Table.emptyRow
+    | some (rowHeader, v) => v.toRow rowHeader
 
-open Meta.Tactic.TryThis in
+/-- A `v : VennMeasure` represents no change iff `v.plus = v.minus = 0`. -/
+@[inline] nonrec def isUnchanged (v : VennMeasure) := v.isUnchanged (· = 0)
+/-- A `v : VennMeasure` represents a change of some kind iff `v.plus` is nonzero or `v.minus` is
+nonzero. -/
+@[inline] nonrec def isChanged (v : VennMeasure) := !v.isUnchanged
+/-- Whether the `VennMeasure` represents -/
+@[inline] nonrec def compare? (v : VennMeasure) : Option Ordering :=
+  v.compare? (· = 0)
+
+end VennMeasure
+
+@[inline] def Venn.measureBitset (v : Venn Bitset) : VennMeasure := v.map (·.size)
+
+def Venn.measureNeedsAt (k : NeedsKind) (needs : Venn Needs) : VennMeasure :=
+  needs.map (·.get k |>.size)
+
+end ImportDiff
+
+open ImportDiff
+
+structure ImportTransition where
+  directImportsTransition : Transition (Array WorkspaceModel.ImportWithIdx)
+  importedTransition : Transition ModuleBitset
+  providesTransition : Transition Provides
+  prevsTransition    : Transition ModuleBitset
+  irLoadedTransition : Transition ModuleBitset
+  depthTransition    : TransitionMeasure
+  -- TODO: prevsCurrentPackage, depthCurrentPackage?
+
+structure ImportVenn where
+  importedVenn : Venn ModuleBitset
+  providesVenn : Venn Provides
+  prevsVenn    : Venn ModuleBitset
+  irLoadedVenn : Venn ModuleBitset
+
+structure ImportDiff extends transitions : ImportTransition, venns : ImportVenn
+
+def WorkspaceModel.providesOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx)
+    : Provides :=
+  let needs := mods.foldl (init := ∅) fun needs { kind, modIdx .. } =>
+    needs.union kind {modIdx}
+  w⟦w.implicitInitNeeds needs |>.linearize⟧
+
+def WorkspaceModel.prevsOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx)
+    : ModuleBitset :=
+  mods.foldl (init := ∅) fun acc i => acc ∪ w.mods[i.modIdx]!.prevs ∪ {i.modIdx}
+
+def WorkspaceModel.depthOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx) : Nat :=
+  mods.map (fun i => w.mods[i.modIdx]!.depth) |>.max?.getD 0
+
+def WorkspaceModel.toImportDiff (w : WorkspaceModel)
+    (mods : Transition (Array WorkspaceModel.ImportWithIdx)) : ImportDiff :=
+  let providesTransition := mods.map w.providesOfImportWithIdxs
+  let prevsTransition    := mods.map w.prevsOfImportWithIdxs
+  let irLoadedTransition       := providesTransition.map w.irNeeds
+  let importedTransition := providesTransition.map (·.flatten)
+  {
+    directImportsTransition := mods
+    importedTransition, providesTransition, prevsTransition, irLoadedTransition
+    depthTransition := mods.map w.depthOfImportWithIdxs
+    importedVenn := .ofBitsetTransition importedTransition
+      (ignoredShared := w.initProvides.flatten)
+    providesVenn := .ofProvidesTransition providesTransition
+      (ignoredShared := w.initProvides)
+    prevsVenn    := .ofBitsetTransition prevsTransition -- should we exclude init from build graph?
+    irLoadedVenn := .ofBitsetTransition irLoadedTransition
+      (ignoredShared := w.irNeeds w.initProvides)
+  }
+
+def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) := Id.run do
+  let basicNeedsKinds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
+  let privOfPrivNeedsKinds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
+  let mut rows : Array (Table.Row 5) := #[
+    VennMeasure.header,
+    "modules imported" |> diff.importedVenn.measureBitset.toRow,
+    Table.emptyRow]
+  -- Add rows for each basic `NeedsKind` always, but only add `all`'s if nontrivial
+  rows := rows ++ basicNeedsKinds.map fun k => s!"{k}" |> (diff.providesVenn.measureNeedsAt k).toRow
+  if privOfPrivNeedsKinds.any (diff.providesVenn.measureNeedsAt · |>.isChanged) then
+    rows := rows ++ privOfPrivNeedsKinds.map fun k =>
+      -- display as `import all` instead of `all` to avoid ambiguity
+      k.toImportString |> (diff.providesVenn.measureNeedsAt k).toRow
+  rows := rows ++ #[
+    Table.emptyRow,
+    "previous modules" |> diff.prevsVenn.measureBitset.toRow,
+    "ir loaded" |> diff.irLoadedVenn.measureBitset.toRow,
+    Table.emptyRow,
+    TransitionMeasure.header.rightPad,
+    "build depth" |> diff.depthTransition.toRow |>.rightPad]
+  return rows
+
+open Meta.Tactic.TryThis WorkspaceModel in
 elab_rules : command
 | `(#import_diff%$tk $spec) => do
   let w ← getWorkspaceModel (extraMods := #[← getMainModule])
   if w.hasErrors then
-    logErrorAt tk m!"Errors when building the import hierarchy:\n\n\
+    throwErrorAt tk m!"Errors when building the import hierarchy:\n\n\
       {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
-  let currentModInfo : CommandElabM (Array <| NeedsKind × Name × ModIdx) := do
+  let currentImportWithIdxs : CommandElabM (Array ImportWithIdx) := do
     (← getEnv).header.imports.filterMapM fun imp => do
       if (`Init).isPrefixOf imp.module then return none
-      let k : NeedsKind := .ofImport imp
-      let some idx := w.getModIdx? imp.module
+      let some modIdx := w.getModIdx? imp.module
         | throwError "Could not find already-imported module `{imp.module}` in the workspace."
-      pure (k, imp.module, idx)
-  let (initMods, finalMods) ← match spec with
+      pure (some <| .ofImport imp modIdx)
+  let modsTransition : Transition (Array ImportWithIdx) ← match spec with
     | `(diffAbsolute| $[from $initMods*]? to $finalMods*) =>
-      let inits ← if let some initMods := initMods then
-          initMods.getElems.mapM w.modInfoOfSyntax
-        else currentModInfo
-      let finals ← finalMods.getElems.mapM w.modInfoOfSyntax
-      pure (inits, finals)
+      let initial ← if let some initMods := initMods then
+          initMods.getElems.mapM w.importWithIdxOfSyntax
+        else currentImportWithIdxs
+      let final ← finalMods.getElems.mapM w.importWithIdxOfSyntax
+      pure { initial, final }
     | `(diffCurrent| $items:diffCurrentItem*) =>
-      let inits ← currentModInfo
+      let initial ← currentImportWithIdxs
       let mut removed := #[]
       let mut added := #[]
       for item in items.getElems do
         match item with
         | `(diffCurrentItem| +$imp:import) => do
-          let info ← w.modInfoOfSyntax imp
+          let info ← w.importWithIdxOfSyntax imp
           if added.contains info then
             throwErrorAt item "`{imp}` has already been added to the import set."
-          if inits.contains info then
+          if initial.contains info then
             throwErrorAt item "The current file's imports already include `{imp}`."
           if removed.contains info then
             throwErrorAt item "`{imp}` has also been removed from the import set."
           added := added.push info
         | `(diffCurrentItem| -$imp:import) => do
-          let info ← w.modInfoOfSyntax imp
+          let info ← w.importWithIdxOfSyntax imp
           if removed.contains info then
             throwErrorAt item "`{imp}` has already been removed from the import set."
-          unless inits.contains info do
+          unless initial.contains info do
             throwErrorAt item "The current file's imports do not include `{imp}`."
           if added.contains info then
             throwErrorAt item "`{imp}` has also been added to the import set."
@@ -163,7 +325,7 @@ elab_rules : command
         | `(diffCurrentItem| -%$dangling) =>
           let removable := (← getEnv).header.imports.filter fun imp =>
             !((`Init).isPrefixOf imp.module)
-              && !removed.any fun (k, name, _) => imp == k.toImport name
+              && !removed.any (imp == ·.toImport)
           if removable.isEmpty then
             logWarningAt dangling m!"No imports can be removed."
           else
@@ -174,125 +336,22 @@ elab_rules : command
               (diffGranularity := .char)
           return
         | _ => throwUnsupportedSyntax
-      let finals := inits.filter (!removed.contains ·) ++ added
-      pure (inits, finals)
+      let final := initial.filter (!removed.contains ·) ++ added
+      pure { initial, final }
     | _ => throwUnsupportedSyntax
-
-  let transNeedsOfMods (mods : Array (NeedsKind × Name × ModIdx)) : Needs := Id.run do
-    let mut needs : Needs := ∅
-    for (k, _, idx) in mods do
-      needs := needs.union k {idx}
-    -- Include `Init` (as non-`prelude` files do) and then transitively close,
-    -- to avoid reporting weird (and untrue) `Init` differences
-    pure w⟦w.implicitInitNeeds needs |>.linearize⟧
-  let initNeeds := transNeedsOfMods initMods
-  let finalNeeds := transNeedsOfMods finalMods
-  let plus := finalNeeds \ initNeeds
-  let minus := initNeeds \ finalNeeds
-  -- NOTE: should we really omit init like this?
-  let shared := (finalNeeds.map₂ initNeeds (· ∩ ·) \ w.transInitNeeds).linearize
-  -- let splitImps (needs : Needs) :=
-  --   let reducedImps := w.toRawImports <| needs.reduce w
-  --   let nonReducedImps := w.toRawImports needs |>.filter (!reducedImps.contains ·)
-  --   (reducedImps, nonReducedImps)
-  -- let plusImps := splitImps plus
-  -- let minusImps := splitImps minus
-  -- let sharedImps := splitImps shared
-  let initIrNeeds := w.irNeeds initNeeds
-  let finalIrNeeds := w.irNeeds finalNeeds
-  let irPlus := finalIrNeeds \ initIrNeeds
-  let irMinus := initIrNeeds \ finalIrNeeds
-  let irShared := (finalIrNeeds ∩ initIrNeeds) \ w.irNeeds w.transInitNeeds
-  let irTally := { plus := irPlus.size, minus := irMinus.size, shared := irShared.size : Tally }
-  let irLabel := "loaded IR"
-
-  let initDepth := initMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
-  let finalDepth := finalMods.map (fun (_,_,idx) => w.mods[idx]!.depth) |>.max?.getD 0
-  let depthTally : Tally := {
-    -- `Nat` subtraction intentional, one of these should always be 0
-    plus := initDepth - finalDepth
-    minus := finalDepth - initDepth
-    shared := min initDepth finalDepth
-  }
-  let initPrevs := initMods.foldl (init := ∅) fun acc (_,_,idx) =>
-    acc ∪ w.mods[idx]!.prevs ∪ {idx}
-  let finalPrevs := finalMods.foldl (init := ∅) fun acc (_,_,idx) =>
-    acc ∪ w.mods[idx]!.prevs ∪ {idx}
-  let prevTally : Tally := {
-      plus := (finalPrevs \ initPrevs).size
-      minus := (initPrevs \ finalPrevs).size
-      shared := (initPrevs ∩ finalPrevs).size }
-
-  let basicNeeds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
-  let privOfPrivNeeds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
-  let ofNeedsKind (k : NeedsKind) : Tally := {
-    plus := plus.get k |>.size
-    minus := minus.get k |>.size
-    shared := shared.get k |>.size }
-
-  let mods : Tally := {
-    -- Must compute these afresh, as flattening `plus` and `minus` would count changes to the
-    -- *kind* of import as different.
-    plus := (finalNeeds.flatten \ initNeeds.flatten).size
-    minus := (initNeeds.flatten \ finalNeeds.flatten).size
-    shared := (initNeeds.flatten ∩ finalNeeds.flatten) \ w.transInitNeeds.flatten |>.size }
-  let mut tableMsgs := #[Tally.header, mods.toRow "modules imported", Table.emptyRow]
-    ++ basicNeeds.map fun k => (ofNeedsKind k).toRow s!"{k}"
-  if privOfPrivNeeds.any (ofNeedsKind · |>.hasShifted) then
-    tableMsgs := tableMsgs ++ privOfPrivNeeds.map fun k =>
-      -- We use `import all` and `meta import all`, since `all` is unclear.
-      (ofNeedsKind k).toRow s!"{k.toImportString}"
-  tableMsgs := tableMsgs ++ #[
-      Table.emptyRow,
-      prevTally.toRow "previous modules",
-      irTally.toRow irLabel,
-      Table.emptyRow,
-      #v["", "Δ", "new", "old", ""],
-      #v["build depth", (finalDepth : Int) - initDepth |>.toStringWithSign, toString finalDepth, toString initDepth, ""]]
-  let header := match !plus.isEmpty, !minus.isEmpty with
-    | true,  true  => s!""
-    | true,  false => s!"Imports strictly increased.\n\n"
-    | false, true  => s!"Imports strictly decreased.\n\n"
-    | false, false => s!"No changes to imports.\n\n"
-  logInfo <| s!"{header}{Table.formatSimple tableMsgs}"
+  let diff := w.toImportDiff modsTransition
+  let header := match diff.importedVenn.compare? (·.isEmpty) with
+    | some .gt => s!"Imports strictly increased.\n\n"
+    | some .lt => s!"Imports strictly decreased.\n\n"
+    | some .eq => s!"No changes to imports.\n\n"
+    | none => ""
+  logInfo <| s!"{header}{Table.formatSimple diff.toTable}"
   -- TODO: show each import. Should exclude "obvious" user-specified imports, right? No, no, the entire point is to see the other ones. So we should show the user-specified ones but just annotate.
   -- TODO: should also allow removing imports that "can't" really be removed, and just say that this is virtual?
   -- TODO: With no arguments, show current stats in a nicer table? Maybe with totals?
   -- TODO: Hmm, show totals somehow anyway. Total public increase, total private increase (including public/private only?)⋯
   -- Equals is confusing
   -- table would be good
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#import_diff
-  +meta import Std
-  -import Lean
-  -import all Lean
-  -public meta import ImportGraph.Lean.MessageData
-
-
-
-
-
-
-
-
-
-#exit
 
 /-- `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
 modules `foo, bar, ...` are added to the set of imports of the file. More precisely, it computes the
