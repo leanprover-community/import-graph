@@ -44,7 +44,8 @@ namespace Table
 in a `Row` are allowed to have any length.) -/
 protected abbrev Row (n : Nat) := Vector String n
 
-/-- Given an array of table rows, arranges them in a table. Each cell is left-aligned. -/
+/-- Given an array of table rows, arranges them in a table. Each cell is left-aligned, and
+separated from the next cell in the row by a space. Spaces at the end of each row are trimmed. -/
 protected def formatSimple (rows : Array (Table.Row n)) : String := Id.run do
   if h : rows.size > 0 then
     let mut colWidths := rows[0].map (·.positions.length)
