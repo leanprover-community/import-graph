@@ -58,8 +58,7 @@ protected def formatSimple (rows : Array (Table.Row n)) : String := Id.run do
           table := table ++ rows[rowIdx][i].rightPad colWidths[i] |>.push ' '
         else
           -- The last column needs neither padding nor a `' '` separator
-          -- However, it may still have spaces (e.g. empty cell) so trim them.
-          -- Do not drop `'\n'`.
+          -- However, it may still have spaces (e.g. empty cell) so trim them; do not drop `'\n'`.
           table := table ++ rows[rowIdx][i] |>.dropEndWhile (· = ' ') |>.copy
       unless rowIdx + 1 == rows.size do
         table := table.push '\n'
