@@ -19,7 +19,7 @@ For now, we only supports tables of strings.
 - Specifying dividers and borders, padding characters, right/left alignment, column widths
   - Ideally this is granular, e.g. per cell/row/column
 - Composing and stacking tables
-- Widget version using HTML tables to avoid awkward reflowing + allow `MessageData`?
+- Widget version using HTML tables to avoid awkward reflowing + allow `MessageData`
 -/
 
 namespace ImportGraph
