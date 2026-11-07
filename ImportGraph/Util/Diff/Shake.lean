@@ -30,6 +30,8 @@ instance : Diff.Measureable Provides where
   measure := (·.flatten.size)
 
 instance : VennLike Provides where
+  -- avoid linearizing to capture one `Provides` providing public while the other provides public
   sdiff := (· \ ·)
-  inter a b := a.map₂ b (· ∩ ·) |>.linearize
+  -- `a` and `b` should be linearized already and remain linearized under intersection
+  inter := Provides.inter
   isEmpty := (·.isEmpty)

@@ -544,4 +544,16 @@ def connecting? (src tgt : Environment.Visibility) (isMeta : Bool := false) : Op
   | .private, .private => some { isExported := false, isMeta, isAll := true }
   | .private, .public  => none
 
-end ImportGraph.Shake.NeedsKind
+end NeedsKind
+
+namespace Provides
+
+/-- Intersects each field of two `Provides`.
+
+Generally, intersection is not meaningful on a bare `Needs`, but is meaningful on a
+transitively closed and linearized `Provides`.
+
+We avoid making this an instance of `Inter` to avoid `a ∩ b` succeeding on `Needs`. -/
+@[inline] def inter (a b : Provides) := a.map₂ b (· ∩ ·)
+
+end Provides
