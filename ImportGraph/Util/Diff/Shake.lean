@@ -14,7 +14,7 @@ namespace ImportGraph.Diff
 
 open ImportGraph Diff Shake
 
-instance : Diff.Measureable Bitset where
+instance : Diff.Measurable Bitset where
   measure := (·.size)
 
 instance : VennLike Bitset where
@@ -26,7 +26,7 @@ instance : VennLike Bitset where
 def Venn.measureNeedsAt (k : NeedsKind) (needs : Venn Needs) : Venn.Measured :=
   needs.map (·.get k |>.size)
 
-instance : Diff.Measureable Provides where
+instance : Diff.Measurable Provides where
   measure := (·.flatten.size)
 
 instance : VennLike Provides where

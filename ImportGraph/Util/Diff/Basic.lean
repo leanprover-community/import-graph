@@ -15,11 +15,11 @@ namespace ImportGraph
 
 namespace Diff
 
-protected class Measureable α where
+protected class Measurable α where
   measure : α → Nat
-export Measureable (measure)
+export Measurable (measure)
 
-instance : Diff.Measureable Nat := ⟨id⟩
+instance : Diff.Measurable Nat := ⟨id⟩
 
 open Diff
 
@@ -41,7 +41,7 @@ namespace Transition
   final := f t.final
 
 /-- The difference between the measures of the `final` state and `initial` state. -/
-@[inline] def delta (t : Transition α) [Diff.Measureable α] : Int :=
+@[inline] def delta (t : Transition α) [Diff.Measurable α] : Int :=
   (measure t.final : Int) - measure t.initial
 
 
@@ -49,13 +49,13 @@ namespace Transition
 `Transition.measure`. -/
 protected abbrev Measured := Transition Nat
 
-@[inline] def measure (t : Transition α) [Diff.Measureable α] : Transition.Measured :=
+@[inline] def measure (t : Transition α) [Diff.Measurable α] : Transition.Measured :=
   t.map Diff.measure
 
 /-- A header row for a table consisting of rows created by `Transition.toRow`. -/
 def header : Table.Row 4 := #v["", "Δ", "new", "old"]
 
-def toRow (rowHeader : String) (t : Transition α) [Diff.Measureable α] : Table.Row 4 :=
+def toRow (rowHeader : String) (t : Transition α) [Diff.Measurable α] : Table.Row 4 :=
   #v[rowHeader, t.delta.toStringWithSign, s!"{Diff.measure t.final}", s!"{Diff.measure t.initial}"]
 
 end Transition
@@ -128,7 +128,7 @@ namespace Venn
 
 /-- The net difference between the implicit initial and final state, collapsing the independent
 measurements of `plus` and `minus` together. -/
-@[inline] def delta (v : Venn α) [Diff.Measureable α] : Int :=
+@[inline] def delta (v : Venn α) [Diff.Measurable α] : Int :=
   (Diff.measure v.plus : Int) - Diff.measure v.minus
 
 /-- A `v : VennMeasure` represents no change iff both `v.plus` and `v.minus` satisfy
@@ -155,7 +155,7 @@ protected abbrev Measured := Venn Nat
 def header : Table.Row 5 := #v["", "Δ", "+", "-", "∩"]
 
 /-- A row in a table for a single `VennMeasure` which follows the order in `VennMeasure.header`. -/
-def toRow (rowHeader : String) (t : Venn α) [Diff.Measureable α]: Table.Row 5 := #v[
+def toRow (rowHeader : String) (t : Venn α) [Diff.Measurable α]: Table.Row 5 := #v[
   rowHeader,
   t.delta.toStringWithSign,
   s!"+{measure t.plus}",
