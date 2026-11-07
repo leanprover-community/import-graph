@@ -1,26 +1,30 @@
 module
 
 public import ImportGraph.Util.Diff.Basic
-public import ImportGraph.Shake.Basic
+public import ImportGraph.Shake.Algebra
+
+public section
+
+namespace ImportGraph.Diff
 
 open ImportGraph Diff Shake
 
 instance : Diff.Measureable Bitset where
-  measure b := b.size
+  measure := (·.size)
 
-instance : VennLike Provides Provides where
+instance : VennLike Bitset where
+  sdiff := (· \ ·)
+  inter := (· ∩ ·)
+  isEmpty := (·.isEmpty)
 
-
-def ofBitsetTransition (t : Transition Bitset) (ignoredShared : Bitset := ∅) : Venn Bitset :=
-  t.toVennBy (sdiff := (· \ ·)) (inter := fun a b => (a ∩ b) \ ignoredShared)
-
-def ofProvidesTransition (t : Transition Provides) (ignoredShared : Provides := ∅) :
-    Venn Provides :=
-  t.toVennBy
-    (sdiff := (· \ ·))
-    (inter := fun a b => (a.map₂ b (· ∩ ·)) \ ignoredShared |>.linearize)
-
-@[inline] def Venn.measureBitset (v : Venn Bitset) : VennMeasure := v.map (·.size)
-
-def Venn.measureNeedsAt (k : NeedsKind) (needs : Venn Needs) : VennMeasure :=
+/-- Measures the Venn diagram of `Bitset`s at the given `NeedsKind`. -/
+def Venn.measureNeedsAt (k : NeedsKind) (needs : Venn Needs) : Venn.Measured :=
   needs.map (·.get k |>.size)
+
+instance : Diff.Measureable Provides where
+  measure := (·.flatten.size)
+
+instance : VennLike Provides where
+  sdiff := (· \ ·)
+  inter a b := a.map₂ b (· ∩ ·) |>.linearize
+  isEmpty := (·.isEmpty)
