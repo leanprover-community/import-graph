@@ -1,8 +1,8 @@
 module
 
-public meta import Lean.Elab.Command
+public meta import ImportGraph.Util.TableMessage
 
-import ImportGraph.Util.TableMessage
+import Lean.Elab.Command
 
 open ImportGraph
 
