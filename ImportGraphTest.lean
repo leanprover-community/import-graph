@@ -7,6 +7,9 @@ import ImportGraphTest.Html
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.MinImports.Basic
+import ImportGraphTest.MinImports.Indirect.Attr
+import ImportGraphTest.MinImports.Indirect.Defs
+import ImportGraphTest.MinImports.IndirectNotMeta
 import ImportGraphTest.MinImports.NewSyntax
 import ImportGraphTest.MinImports.NoDecls
 import ImportGraphTest.MinImports.NonModule
@@ -19,6 +22,7 @@ import ImportGraphTest.NormImports
 import ImportGraphTest.NoLakeAxioms
 import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Shake.Workspace
+import ImportGraphTest.TableMessage
 import ImportGraphTest.ToTarget
 import ImportGraphTest.Unused
 import ImportGraphTest.Used

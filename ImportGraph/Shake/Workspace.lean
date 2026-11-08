@@ -90,7 +90,7 @@ def ImportNeeds.ofExtraModUses (w : WorkspaceModel) (uses : List ExtraModUse)
     (init : ImportNeeds := ∅) : ImportNeeds :=
   uses.foldl (init := init) fun needs use => Id.run do
     let some idx := w.getModIdx? use.module | needs
-    needs.union { use with allowMeta := true } {idx}
+    needs.union { use with meta? := if use.isMeta then true else none } {idx}
 
 -- TODO: make this take in a monadic interface for the module index, so that we can use it both for
 -- an environment and more generally
@@ -115,15 +115,17 @@ def DeclNeeds.toSimultaneousImportNeeds
           (fun _ => return m!"Uses decl `{.ofConstName usedDecl}`") do←
         let some usedStance ← getStance? usedDecl | continue
         for k in ks do
-          trace[ImportGraph.Shake] "{k.pretty}"
+          trace[ImportGraph.Shake] "{k}"
+          -- TODO: split out indirect mod uses to the command level when refactoring
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := w.getModIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
-                { isExported := false, isMeta := false, allowMeta := true } {modIdx}
-          let k := stance.toImportNeedsKind k usedStance
-          declImportNeeds := declImportNeeds.union k {modIdx}
+                { isExported := false, meta? := none } {modIdx}
+          else
+            let k := stance.toImportNeedsKind k usedStance
+            declImportNeeds := declImportNeeds.union k {modIdx}
   return declImportNeeds
 
 /-- Computes a mapping `LibIdx → Array ModIdx` assigning to each library in the workspace model an
@@ -152,5 +154,3 @@ def ImportNeeds.providersByLib (w : WorkspaceModel) (needs : ImportNeeds)
       |>.then (compare pᵢ.size pⱼ.size)
       |>.then (Name.cmp (w.getMod! i).name (w.getMod! j).name) -- for stability if all else fails
       |>.isLT).map (·.1)
-
-initialize registerTraceClass `ImportGraph.Shake

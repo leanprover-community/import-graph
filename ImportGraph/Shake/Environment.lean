@@ -106,7 +106,7 @@ def importNeedsOfExtraModUses (env : Environment) (uses : List ExtraModUse)
     (init : ImportNeeds := ∅) : ImportNeeds :=
   uses.foldl (init := init) fun needs use => Id.run do
     let some idx := env.getModuleIdx? use.module | needs
-    needs.union { use with allowMeta := true } {idx}
+    needs.union { use with meta? := if use.isMeta then true else none } {idx}
 
 /-- Like `DeclNeeds.toSimultaneousImportNeeds`, but uses the environment's notion of `ModuleIdx`
 instead of a workspace model's. -/
@@ -127,15 +127,17 @@ def toSimultaneousImportNeeds (env : Environment)
         let some usedStance ← getStance? usedDecl | continue
         let mut usedKs : DeclDeclNeedsKindSet := {}
         for k in ks do
-          trace[ImportGraph.Shake] "{k.pretty}"
+          trace[ImportGraph.Shake] "{k}"
           if usedKs.contains k then continue
           usedKs := usedKs.insert k
+          -- TODO: split out indirect mod uses to the command level when refactoring
           if let .comptime <| .indirect _ mods := k then
             for modName in mods do
               let some modIdx := env.getModuleIdx? modName | continue
               trace[ImportGraph.Shake] "indirect usage of `{modName}`"
               declImportNeeds := declImportNeeds.union
-                { isExported := false, isMeta := false, allowMeta := true } {modIdx}
-          let k := stance.toImportNeedsKind k usedStance
-          declImportNeeds := declImportNeeds.union k {modIdx}
+                { isExported := false, meta? := none } {modIdx}
+          else
+            let k := stance.toImportNeedsKind k usedStance
+            declImportNeeds := declImportNeeds.union k {modIdx}
   return declImportNeeds

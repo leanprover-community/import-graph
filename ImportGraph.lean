@@ -24,9 +24,13 @@ public import ImportGraph.Shake.EnvExtension
 public import ImportGraph.Shake.Environment
 public import ImportGraph.Shake.Workspace
 public import ImportGraph.Util.FindSorry
+public import ImportGraph.Util.TableMessage
 public import ImportGraph.WorkspaceModel.Base
 public import ImportGraph.WorkspaceModel.Build
 public import ImportGraph.WorkspaceModel.Model
 public import ImportGraph.WorkspaceModel.Summary
 public meta import ImportGraph.Tools
 public meta import ImportGraph.Widget
+
+import ImportGraph.Lean.List
+import ImportGraph.Lean.PHashSet
