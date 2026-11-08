@@ -28,8 +28,8 @@ def header : Table.Row 5 := #v["", "Δ", "+", "-", "∩"]
 def toRow (rowHeader : String) (t : Venn α) [Diff.Measurable α]: Table.Row 5 := #v[
   rowHeader,
   t.delta.toStringWithSign,
-  s!"+{measure t.plus}",
-  s!"-{measure t.minus}",
-  s!"{measure t.shared}"]
+  s!"+{Diff.measure t.plus}",
+  s!"-{Diff.measure t.minus}",
+  s!"{Diff.measure t.shared}"]
 
 end Venn
