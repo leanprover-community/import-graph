@@ -11,7 +11,7 @@ public meta import ImportGraph.Imports.ImportGraph
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Lean.MessageData
 public meta import ImportGraph.Shake.Workspace
-public meta import ImportGraph.Util.TableMessage
+public meta import ImportGraph.Util.Diff
 public meta import Lean.Meta.Tactic.TryThis
 public import ImportGraph.Widget.Collapsible
 public import ImportGraph.Widget.Copy
@@ -74,138 +74,7 @@ def WorkspaceModel.importWithIdxOfSyntax (w : WorkspaceModel) :
       pure { kind, module := mod.getId, modIdx }
   | _ => throwUnsupportedSyntax
 
-namespace ImportDiff
-
-open ImportDiff
-
-/-- If an integer is (strictly) greater than 0, display it with `+`. -/
-def Int.toStringWithSign (i : Int) := if i > 0 then s!"+{i}" else s!"{i}"
-
-/-- A simple structure with two states, `initial : α` and `final : α`, which models a transition. -/
-structure Transition α where
-  /-- The state before `final`. -/
-  initial : α
-  /-- The state after `initial`. -/
-  final : α
-
-namespace Transition
-
-@[inline] def map (t : Transition α) (f : α → β) : Transition β where
-  initial := f t.initial
-  final := f t.final
-
-end Transition
-
-/-- A `Transistion` with an `initial : Nat` and a `final : Nat`. -/
-abbrev TransitionMeasure := Transition Nat
-
-namespace TransitionMeasure
-
-@[inline] def delta (t : TransitionMeasure) : Int := (t.final : Int) - t.initial
-
-def header : Table.Row 4 := #v["", "Δ", "new", "old"]
-
-def toRow (t : TransitionMeasure) (rowHeader : String) : Table.Row 4 :=
-  #v[rowHeader, t.delta.toStringWithSign, s!"{t.final}", s!"{t.initial}"]
-
-end TransitionMeasure
-
-/-- A Venn diagram characterizing the changes between some (implicit, unspecified) initial and
-final state. -/
-structure Venn α where
-  /-- What the final state has gained that was not present in the initial state. -/
-  plus   : α
-  /-- What the initial state has lost that is no longer present in the final state. -/
-  minus  : α
-  /-- What the initial and final state have in common. -/
-  shared : α
-
-def Transition.toVennBy (t : Transition α) (sdiff : α → α → β) (inter : α → α → β) :
-    Venn β where
-  plus := sdiff t.final t.initial
-  minus := sdiff t.initial t.final
-  shared := (inter t.initial t.final)
-
-namespace Venn
-
-@[inline] def map (v : Venn α) (f : α → β) : Venn β where
-  plus := f v.plus
-  minus := f v.minus
-  shared := f v.shared
-
-def ofBitsetTransition (t : Transition Bitset) (ignoredShared : Bitset := ∅) : Venn Bitset :=
-  t.toVennBy (sdiff := (· \ ·)) (inter := fun a b => (a ∩ b) \ ignoredShared)
-
-def ofProvidesTransition (t : Transition Provides) (ignoredShared : Provides := ∅) :
-    Venn Provides :=
-  t.toVennBy
-    (sdiff := (· \ ·))
-    (inter := fun a b => (a.map₂ b (· ∩ ·)) \ ignoredShared |>.linearize)
-
-/-- A `v : VennMeasure` represents no change iff `v.plus = v.minus = 0`. -/
-@[inline] def isUnchanged (v : Venn α) (isZero : α → Bool) := isZero v.plus && isZero v.minus
-/-- A `v : VennMeasure` represents a change of some kind iff `v.plus` is nonzero or `v.minus` is
-nonzero. -/
-@[inline] def isChanged (v : Venn α) (isZero : α → Bool) := !(v.isUnchanged isZero)
-/-- Whether the `Venn` diagram implicitly represents a strict increase (`.gt`), a strict decrease
-(`.lt`), no change (`.eq`), or incomparable final and initial states.  -/
-@[inline] def compare? (v : Venn α) (isZero : α → Bool) : Option Ordering :=
-  match isZero v.plus, isZero v.minus with
-  | true, true => some .eq
-  | true, false => some .lt
-  | false, true => some .gt
-  | false, false => none
-
-end Venn
-
-/-- Measurements of the parts of a Venn diagram comparing an (implicit, unspecified) initial state
-and final state. -/
-abbrev VennMeasure := Venn Nat
-
-namespace VennMeasure
-
-/-- The net difference between the implicit initial and final state, collapsing the independent
-measurements of `plus` and `minus` together. -/
-@[inline] def delta (v : VennMeasure) : Int := (v.plus : Int) - v.minus
-
-open ImportGraph ImportDiff
-
-/-- A header row for a table consisting of rows created by `VennMeasure.toRow`. -/
-def header : Table.Row 5 := #v["", "Δ", "+", "-", "∩"]
-
-/-- A row in a table for a single `VennMeasure` which follows the order in `VennMeasure.header`. -/
-def toRow (rowHeader : String) (t : VennMeasure) : Table.Row 5 := #v[
-  rowHeader,
-  t.delta.toStringWithSign,
-  s!"+{t.plus}",
-  s!"-{t.minus}",
-  s!"{t.shared}"]
-
--- kind of internal, delete?
-def toTable (rows : Array <| Option (String × VennMeasure)) : Array (Table.Row 5) :=
-  #[header] ++ rows.map fun
-    | none => Table.emptyRow
-    | some (rowHeader, v) => v.toRow rowHeader
-
-/-- A `v : VennMeasure` represents no change iff `v.plus = v.minus = 0`. -/
-@[inline] nonrec def isUnchanged (v : VennMeasure) := v.isUnchanged (· = 0)
-/-- A `v : VennMeasure` represents a change of some kind iff `v.plus` is nonzero or `v.minus` is
-nonzero. -/
-@[inline] nonrec def isChanged (v : VennMeasure) := !v.isUnchanged
-/-- Whether the `VennMeasure` represents -/
-@[inline] nonrec def compare? (v : VennMeasure) : Option Ordering :=
-  v.compare? (· = 0)
-
-end VennMeasure
-
-@[inline] def Venn.measureBitset (v : Venn Bitset) : VennMeasure := v.map (·.size)
-
-def Venn.measureNeedsAt (k : NeedsKind) (needs : Venn Needs) : VennMeasure :=
-  needs.map (·.get k |>.size)
-
-end ImportDiff
-
-open ImportDiff
+open Diff
 
 structure ImportTransition where
   directImportsTransition : Transition (Array WorkspaceModel.ImportWithIdx)
@@ -213,7 +82,7 @@ structure ImportTransition where
   providesTransition : Transition Provides
   prevsTransition    : Transition ModuleBitset
   irLoadedTransition : Transition ModuleBitset
-  depthTransition    : TransitionMeasure
+  depthTransition    : Transition Nat
   -- TODO: prevsCurrentPackage, depthCurrentPackage?
 
 structure ImportVenn where
@@ -247,34 +116,34 @@ def WorkspaceModel.toImportDiff (w : WorkspaceModel)
     directImportsTransition := mods
     importedTransition, providesTransition, prevsTransition, irLoadedTransition
     depthTransition := mods.map w.depthOfImportWithIdxs
-    importedVenn := .ofBitsetTransition importedTransition
-      (ignoredShared := w.initProvides.flatten)
-    providesVenn := .ofProvidesTransition providesTransition
-      (ignoredShared := w.initProvides)
-    prevsVenn    := .ofBitsetTransition prevsTransition -- should we exclude init from build graph?
-    irLoadedVenn := .ofBitsetTransition irLoadedTransition
-      (ignoredShared := w.irNeeds w.initProvides)
+    importedVenn := importedTransition.toVenn
+      -- (ignoredShared := w.initProvides.flatten)
+    providesVenn := providesTransition.toVenn
+      -- (ignoredShared := w.initProvides)
+    prevsVenn    := prevsTransition.toVenn -- should we exclude init from build graph?
+    irLoadedVenn := irLoadedTransition.toVenn
+      -- (ignoredShared := w.irNeeds w.initProvides)
   }
 
 def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) := Id.run do
   let basicNeedsKinds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
   let privOfPrivNeedsKinds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
   let mut rows : Array (Table.Row 5) := #[
-    VennMeasure.header,
-    "modules imported" |> diff.importedVenn.measureBitset.toRow,
+    Venn.header,
+    "modules imported" |> diff.importedVenn.measure.toRow,
     Table.emptyRow]
   -- Add rows for each basic `NeedsKind` always, but only add `all`'s if nontrivial
   rows := rows ++ basicNeedsKinds.map fun k => s!"{k}" |> (diff.providesVenn.measureNeedsAt k).toRow
-  if privOfPrivNeedsKinds.any (diff.providesVenn.measureNeedsAt · |>.isChanged) then
+  if privOfPrivNeedsKinds.any fun k => diff.providesVenn.map (·.get k) |>.isChanged then
     rows := rows ++ privOfPrivNeedsKinds.map fun k =>
       -- display as `import all` instead of `all` to avoid ambiguity
       k.toImportString |> (diff.providesVenn.measureNeedsAt k).toRow
   rows := rows ++ #[
     Table.emptyRow,
-    "previous modules" |> diff.prevsVenn.measureBitset.toRow,
-    "ir loaded" |> diff.irLoadedVenn.measureBitset.toRow,
+    "previous modules" |> diff.prevsVenn.measure.toRow,
+    "ir loaded" |> diff.irLoadedVenn.measure.toRow,
     Table.emptyRow,
-    TransitionMeasure.header.rightPad,
+    Transition.header.rightPad,
     "build depth" |> diff.depthTransition.toRow |>.rightPad]
   return rows
 
@@ -340,7 +209,7 @@ elab_rules : command
       pure { initial, final }
     | _ => throwUnsupportedSyntax
   let diff := w.toImportDiff modsTransition
-  let header := match diff.importedVenn.compare? (·.isEmpty) with
+  let header := match diff.importedVenn.compare? with
     | some .gt => s!"Imports strictly increased.\n\n"
     | some .lt => s!"Imports strictly decreased.\n\n"
     | some .eq => s!"No changes to imports.\n\n"
