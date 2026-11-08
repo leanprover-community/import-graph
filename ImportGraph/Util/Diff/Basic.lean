@@ -144,4 +144,7 @@ measurements of `plus` and `minus` together. -/
 and final state. Abbrev for `Venn Nat`. -/
 protected abbrev Measured := Venn Nat
 
+@[inline] def measure (t : Venn α) [Diff.Measurable α] : Venn.Measured :=
+  t.map Diff.measure
+
 end Diff.Venn
