@@ -41,11 +41,20 @@ syntax "#import_diff " (diffAbsolute <|> diffCurrent) : command
 
 open Shake Elab Command
 
+/-- An `Import` with a `ModIdx` in some `WorkspaceModel`.
+
+Note that as a matter of implementation this extends `NeedsKind` (which provides a proof of
+well-formedness of the underlying `VisibilityKind`) instead of `Import` (but provides exactly the
+same data), and may be converted to and from an `Import` via `.toImport` and `.ofImport`. -/
 structure WorkspaceModel.ImportWithIdx extends kind : NeedsKind where
+  /-- The `Name` of the imported module. -/
   module : Name
+  /-- The module index of the import in an ambient `WorkspaceModel`. -/
   modIdx : ModIdx
 deriving BEq, Inhabited, Repr
 
+/-- Bundle an `Import` and its module index in an ambient `WorkspaceModel` together in an
+`ImprotWithIdx`.  -/
 def WorkspaceModel.ImportWithIdx.ofImport (imp : Import) (modIdx : ModIdx) :
     WorkspaceModel.ImportWithIdx where
   kind := .ofImport imp
@@ -54,6 +63,12 @@ def WorkspaceModel.ImportWithIdx.ofImport (imp : Import) (modIdx : ModIdx) :
 
 @[inline] def WorkspaceModel.ImportWithIdx.toImport (i : ImportWithIdx) : Import :=
   { i with }
+
+/-- Bundle an `Import` together with its module index in the given `WorkspaceModel`, if it can be
+found. -/
+@[inline] def WorkspaceModel.importWithIdx? (i : Import) (w : WorkspaceModel)
+    : Option ImportWithIdx :=
+  w.getModIdx? i.module |>.map (.ofImport i)
 
 /-- Converts syntax for an import into a `NeedsKind`, `Name`, and `ModIdx` in the given workspace
 model representing that import, throwing if the module name cannot be found. -/
@@ -167,9 +182,9 @@ elab_rules : command
   let currentImportWithIdxs : CommandElabM (Array ImportWithIdx) := do
     (← getEnv).header.imports.filterMapM fun imp => do
       if (`Init).isPrefixOf imp.module then return none
-      let some modIdx := w.getModIdx? imp.module
+      let some impWithIdx := w.importWithIdx? imp
         | throwError "Could not find already-imported module `{imp.module}` in the workspace."
-      pure (some <| .ofImport imp modIdx)
+      pure impWithIdx
   let modsTransition : Transition (Array ImportWithIdx) ← match spec with
     | `(diffAbsolute| $[from $initMods*]? to $finalMods*) =>
       let initial ← if let some initMods := initMods then
