@@ -153,6 +153,10 @@ The presence of a change is determined by `VennLike.isEmpty`. -/
 /-- Apply `f` to the `shared` field. -/
 @[inline] def modifyShared (v : Venn α) (f : α → α) : Venn α := { v with shared := f v.shared }
 
+/-- Removes `ignored` from the `shared` field, according to `VennLike.sdiff`. This is useful when we want to ignore "obvious" common factors. -/
+def ignoreShared (ignored : α) (v : Venn α) [VennLike α] : Venn α :=
+  v.modifyShared (VennLike.sdiff · ignored)
+
 /-- Measurements of the parts of a Venn diagram comparing an (implicit, unspecified) initial state
 and final state. Abbrev for `Venn Nat`. -/
 protected abbrev Measured := Venn Nat
