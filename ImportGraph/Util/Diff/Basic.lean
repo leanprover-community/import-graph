@@ -5,8 +5,6 @@ Authors: Thomas R. Murrills
 -/
 module
 
-public import ImportGraph.Util.TableMessage
-
 public section
 
 open Lean
@@ -51,12 +49,6 @@ protected abbrev Measured := Transition Nat
 
 @[inline] def measure (t : Transition α) [Diff.Measurable α] : Transition.Measured :=
   t.map Diff.measure
-
-/-- A header row for a table consisting of rows created by `Transition.toRow`. -/
-def header : Table.Row 4 := #v["", "Δ", "new", "old"]
-
-def toRow (rowHeader : String) (t : Transition α) [Diff.Measurable α] : Table.Row 4 :=
-  #v[rowHeader, t.delta.toStringWithSign, s!"{Diff.measure t.final}", s!"{Diff.measure t.initial}"]
 
 end Transition
 
@@ -150,16 +142,5 @@ measurements of `plus` and `minus` together. -/
 /-- Measurements of the parts of a Venn diagram comparing an (implicit, unspecified) initial state
 and final state. Abbrev for `Venn Nat`. -/
 protected abbrev Measured := Venn Nat
-
-/-- A header row for a table consisting of rows created by `VennMeasure.toRow`. -/
-def header : Table.Row 5 := #v["", "Δ", "+", "-", "∩"]
-
-/-- A row in a table for a single `VennMeasure` which follows the order in `VennMeasure.header`. -/
-def toRow (rowHeader : String) (t : Venn α) [Diff.Measurable α]: Table.Row 5 := #v[
-  rowHeader,
-  t.delta.toStringWithSign,
-  s!"+{measure t.plus}",
-  s!"-{measure t.minus}",
-  s!"{measure t.shared}"]
 
 end Diff.Venn
