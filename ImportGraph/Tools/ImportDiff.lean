@@ -125,7 +125,10 @@ def WorkspaceModel.toImportDiff (w : WorkspaceModel)
       -- (ignoredShared := w.irNeeds w.initProvides)
   }
 
-def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) := Id.run do
+/--
+Renders an `ImportVenn` as a table.
+-/
+def ImportVenn.toTable (diff : ImportVenn) : Array (Table.Row 5) := Id.run do
   let basicNeedsKinds := #[NeedsKind.pub, .priv, .metaPub, .metaPriv]
   let privOfPrivNeedsKinds := #[NeedsKind.privOfPriv, .metaPrivOfPriv]
   let mut rows : Array (Table.Row 5) := #[
@@ -141,11 +144,18 @@ def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) := Id.run do
   rows := rows ++ #[
     Table.emptyRow,
     "previous modules" |> diff.prevsVenn.measure.toRow,
-    "ir loaded" |> diff.irLoadedVenn.measure.toRow,
+    "ir loaded" |> diff.irLoadedVenn.measure.toRow]
+  return rows
+
+/--
+Renders an `ImportDiff` as a table. This is the table for the `ImportVenn` part plus the build
+depth reported below.
+-/
+def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) :=
+  diff.venns.toTable ++ #[
     Table.emptyRow,
     Transition.header.rightPad,
     "build depth" |> diff.depthTransition.toRow |>.rightPad]
-  return rows
 
 open Meta.Tactic.TryThis WorkspaceModel in
 elab_rules : command
