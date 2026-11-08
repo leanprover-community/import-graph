@@ -25,11 +25,12 @@ open Diff
 def Int.toStringWithSign (i : Int) := if i > 0 then s!"+{i}" else s!"{i}"
 
 /-- A simple structure with two states, `initial : α` and `final : α`, which models a transition. -/
-structure Transition α where
+structure Transition (α : Type u) where
   /-- The state before `final`. -/
   initial : α
   /-- The state after `initial`. -/
   final : α
+deriving Inhabited, Hashable, BEq, Repr
 
 namespace Transition
 
@@ -42,7 +43,6 @@ namespace Transition
 @[inline] def delta (t : Transition α) [Diff.Measurable α] : Int :=
   (measure t.final : Int) - measure t.initial
 
-
 /-- `abbrev` for `Transition Nat`. The result of measuring a `Transition` with
 `Transition.measure`. -/
 protected abbrev Measured := Transition Nat
@@ -54,13 +54,14 @@ end Transition
 
 /-- A Venn diagram characterizing the changes between some (implicit, unspecified) initial and
 final state. -/
-structure Venn α where
+structure Venn (α : Type u) where
   /-- What the final state has gained that was not present in the initial state. -/
   plus   : α
   /-- What the initial state has lost that is no longer present in the final state. -/
   minus  : α
   /-- What the initial and final state have in common. -/
   shared : α
+deriving Inhabited, Hashable, BEq, Repr
 
 /-- Convert a `Transition α` into a `Venn β` according to the provided notions of set difference
 and interesection. Note that this is slightly more general than using a `VennLike α` instance, as
