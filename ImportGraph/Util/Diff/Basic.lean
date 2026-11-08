@@ -110,8 +110,13 @@ namespace Venn
 `v.minus` is not `isEmpty`. -/
 @[inline] def isChangedBy (v : Venn α) (isEmpty : α → Bool) := !(v.isUnchangedBy isEmpty)
 
-/-- Whether the `Venn` diagram implicitly represents a strict increase (`.gt`), a strict decrease
-(`.lt`), no change (`.eq`), or incomparable final and initial states.  -/
+/-- If comparable, the relationship `final ≷ initial`, according to the provided notion of
+`isEmpty`.
+
+- `some .gt`: the `Venn` diagram implicitly represents a strict increase
+- `some .lt`: the `Venn` diagram implicitly represents a strict decrease
+- `some .eq`: no change in state at all
+- `none`: incomparable states (some increase, some decrease) -/
 @[inline] def compareBy? (v : Venn α) (isEmpty : α → Bool) : Option Ordering :=
   match isEmpty v.plus, isEmpty v.minus with
   | true,  true  => some .eq
@@ -134,11 +139,19 @@ measurements of `plus` and `minus` together. -/
 @[inline] def isChanged (v : Venn α) [VennLike α] :=
   !v.isUnchanged
 
-/-- Whether the `Venn` diagram implicitly represents a strict increase (`.gt`), a strict decrease
-(`.lt`), no change (`.eq`), or incomparable final and initial states, according to
-`VennLike.isEmpty`. -/
+/-- If comparable, the relationship `final ≷ initial`.
+
+- `some .gt`: the `Venn` diagram implicitly represents a strict increase
+- `some .lt`: the `Venn` diagram implicitly represents a strict decrease
+- `some .eq`: no change in state at all
+- `none`: incomparable states (some increase, some decrease)
+
+The presence of a change is determined by `VennLike.isEmpty`. -/
 @[inline] def compare? (v : Venn α) [VennLike α] : Option Ordering :=
   v.compareBy? VennLike.isEmpty
+
+/-- Apply `f` to the `shared` field. -/
+@[inline] def modifyShared (v : Venn α) (f : α → α) : Venn α := { v with shared := f v.shared }
 
 /-- Measurements of the parts of a Venn diagram comparing an (implicit, unspecified) initial state
 and final state. Abbrev for `Venn Nat`. -/
