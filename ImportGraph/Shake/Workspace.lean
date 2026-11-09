@@ -62,6 +62,12 @@ the scenes. -/
 @[inline] def initProvides (w : WorkspaceModel) : Provides :=
   w⟦w.implicitInitNeeds ∅ |>.linearize⟧
 
+/-- The modules prior to the implicit `Init` imports added to every non-`prelude` file behind
+the scenes, but including the `Init` imports themselves. (Empty if `Init` cannot be found.) -/
+@[inline] def initPrevs (w : WorkspaceModel) : ModuleBitset := Id.run do
+  let some initIdx := w.getModIdx? `Init | return ∅
+  return (w.getMod! initIdx |>.prevs) ∪ {initIdx}
+
 /-- Given a `Needs`, the `IR` which loading such a `Needs` would provide. Recall that
 IR is loaded transitively above any `meta` import, disregarding module system annotations, as well
 as non-transitively for any `import all`. -/
