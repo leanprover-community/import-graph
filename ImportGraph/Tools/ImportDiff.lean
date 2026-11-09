@@ -54,8 +54,87 @@ syntax diffCurrentItem :=
 syntax diffCurrent := sepByIndentSemicolon(diffCurrentItem)
 
 /--
-`#import_diff` compares the
+`#import_diff` compares two import states with respect to the import hierarchy, and reports
+statistics on the difference. (The compared imports do not need to be present in the current file.)
 
+There are two ways to use `import_diff`:
+
+**Relative** to the current file's imports, using `+` and `-`:
+
+```
+#import_diff
+  +public import Foo
+  -meta import Bar.Baz
+  +import Bar
+```
+
+This will take the current file's imports as the initial import state, and diff against the final import state constructed by adding in the `+` imports and removing the `-` imports.
+
+**Absolute**, using `to` and optionally `from`. The `from` imports are the initial import state, and the `to` imports the final one. If `from` is omitted, the current file's imports are used as the initial import state.
+
+```
+#import_diff
+  from
+    public import Foo
+    meta import Bar
+    import Baz
+  to
+    public import Foo
+    meta import Bar.Baz
+    import Bar
+    import Baz
+```
+
+Note: in both cases, imports may be separated by `;` instead of newlines, if desired.
+
+The output is a table of the form
+
+```null
+                 Δ   +   -   ∩
+modules imported •   •   •   •
+
+public           •   •   •   •
+private          •   •   •   •
+public meta      •   •   •   •
+private meta     •   •   •   •
+
+previous modules •   •   •   •
+ir loaded        •   •   •   •
+
+                 Δ   new old
+build depth      •   •   •
+```
+
+(Changes due to `import all` are shown only if nonzero.)
+
+**Columns:**
+- `Δ`: the net changes (collapsing `+` and `-`)
+- `+`: the size of the final state not present in the initial state
+- `-`: the size of the initial state not present in the final state
+- `∩`: the size of the overlap between the initial and final states
+
+**Rows:**
+- `modules imported`: The comparison of `modules imported` is module-system aware, and only
+  includes modules that actually make it to the environment (i.e. whose `*.olean`s are actually
+  loaded).
+- `public`/`private`/...: The count of changes to phase and visibility. Note that this might exceed
+  modules imported, as the availability of a module might change between the initial and final
+  state while it is imported in both. E.g., a module may have been upgraded from a private import to
+  a public import while its imported status remained unchanged.
+- `previous modules` compares the total number of prior modules in the build graph, ignoring module
+  system annotations.
+- `ir loaded`: compares the number of modules whose IR is loaded. `meta` imports cause more IR to
+  be loaded, as the IR for every module above them is loaded, ignoring module system annotations.
+  (Note: this is only accurate for `lake build`, as the server loads much more IR.)
+- `build depth`: compares the old and new depth of the build graph, ignoring module system
+  annotations.
+
+### Notes
+
+- Lean prepends `public import Init` and `public meta import Init` to each file behind the scenes
+  (assuming you have not written `prelude`, which suppresses this behavior). However, the shared
+  column (`∩`) deliberately ignores all contributions from these `Init` imports to provide a more
+  useful sense of what two import states have in common.
 -/
 syntax (name := importDiff) (priority := high)
   "#import_diff " (diffAbsolute <|> diffCurrent) : command
@@ -182,17 +261,15 @@ def WorkspaceModel.toImportDiff (w : WorkspaceModel)
   let prevsTransition    := mods.map w.prevsOfImportWithIdxs
   let irLoadedTransition       := providesTransition.map w.irNeeds
   let importedTransition := providesTransition.map (·.flatten)
+  let initProvides := w.initProvides
   {
     directImportsTransition := mods
     importedTransition, providesTransition, prevsTransition, irLoadedTransition
     depthTransition := mods.map w.depthOfImportWithIdxs
-    importedVenn := importedTransition.toVenn
-      -- (ignoredShared := w.initProvides.flatten)
-    providesVenn := providesTransition.toVenn
-      -- (ignoredShared := w.initProvides)
-    prevsVenn    := prevsTransition.toVenn -- should we exclude init from build graph?
-    irLoadedVenn := irLoadedTransition.toVenn
-      -- (ignoredShared := w.irNeeds w.initProvides)
+    importedVenn := importedTransition.toVenn.ignoreShared initProvides.flatten
+    providesVenn := providesTransition.toVenn.ignoreShared initProvides
+    prevsVenn    := prevsTransition.toVenn.ignoreShared w.initPrevs
+    irLoadedVenn := irLoadedTransition.toVenn.ignoreShared <| w.irNeeds initProvides
   }
 
 /--
@@ -219,7 +296,7 @@ def ImportVenn.toTable (diff : ImportVenn) : Array (Table.Row 5) := Id.run do
 
 /--
 Renders an `ImportDiff` as a table. This is the table for the `ImportVenn` part plus the build
-depth reported below.
+depth transition reported below. Other transitions are not reported.
 -/
 def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) :=
   diff.venns.toTable ++ #[
@@ -227,23 +304,25 @@ def ImportDiff.toTable (diff : ImportDiff) : Array (Table.Row 5) :=
     Transition.header.rightPad,
     "build depth" |> diff.depthTransition.toRow |>.rightPad]
 
-open Lean Meta Tactic.TryThis WorkspaceModel in
+open ImportGraph Lean Meta Tactic.TryThis WorkspaceModel in
 elab_rules : command
 | `(#import_diff%$tk $spec) => do
   unless (← getEnv).header.isModule do
-    logWarning m!"`#import_diff` with `+`/`-` or `from`/`to` only works in the module system. \
-      Please use `#import_diff mod₁ mod₂ mod₃ ...`"
+    logWarning m!"`#import_diff` with `+`/`-` or `from`/`to` only works in the module system.\n\n\
+      Please use `#import_diff mod₁ mod₂ mod₃ ...`, or modulize this file."
     return
   let w ← getWorkspaceModel (extraMods := #[← getMainModule])
   if w.hasErrors then
     throwErrorAt tk m!"Errors when building the import hierarchy:\n\n\
       {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
+  -- Imports of the current file:
   let currentImportWithIdxs : CommandElabM (Array ImportWithIdx) := do
     (← getEnv).header.imports.filterMapM fun imp => do
       if (`Init).isPrefixOf imp.module then return none
       let some impWithIdx := w.importWithIdx? imp
         | throwError "Could not find already-imported module `{imp.module}` in the workspace."
       pure impWithIdx
+  -- Transition between the initial and final import states we want to diff:
   let modsTransition : Transition (Array ImportWithIdx) ← match spec with
     | `(diffAbsolute| $[from $initMods*]? to $finalMods*) =>
       let initial ← if let some initMods := initMods then
@@ -293,46 +372,58 @@ elab_rules : command
       pure { initial, final }
     | _ => throwUnsupportedSyntax
   let diff := w.toImportDiff modsTransition
+
+  -- Message niceties:
   let header := match diff.importedVenn.compare? with
     | some .gt => s!"Imports strictly increased.\n\n"
     | some .lt => s!"Imports strictly decreased.\n\n"
     | some .eq => s!"No changes to imports.\n\n"
     | none => ""
+  -- collapsible legend
   let columnDescrs := [
-    ("Δ", "net change from initial to final")
+    ("Δ", "net change from initial to final"),
+    ("+", "number of modules in the final state not in the initial state"),
+    ("-", "number of modules in the initial state not in the final state"),
+    ("∩", "number of modules shared by the initial and final state. \
+      (This ignores the implicit `Init` imports that are secretly inserted by Lean.)"),
   ]
+  let rowDescrs := [
+    ("modules imported", "the total number of modules that are actually \
+      imported (in a module-system aware fashion)"),
+    ("public/private/...", "the number of modules imported at the given \
+      phase and visibility. Note that any module present at public visibility is \
+      necessarily also present at private visibility."),
+    ("previous modules", "the total number of modules prior to the \
+      current module in the build graph, ignoring module system annotations."),
+    ("ir loaded", "the IR loaded by Lean given these imports. (`meta` imports \
+      ignore module system annotations, and load the IR of all prior modules.)"),
+    ("build depth", "the total depth of the build graph, ignoring module system annotations."),
+  ]
+  let renderDescrs (msgs : List (String × String)) : MessageData :=
+    indentD <| .bulletList <| msgs.map fun (item, content) => m!"{item}: {.nestD content}"
   let legend ← liftCoreM <| Widget.collapsible (summary := "Legend") m!"\
-    Columns:\
-      {indentD "Δ: net change from initial to final"}\
-      {indentD "+: number of modules in the final state not in the initial state"}\
-      {indentD "-: number of modules in the initial state not in the final state"}\
-      {indentD m!"∩: {.nestD "number of modules shared by the initial and final state. \
-        (This ignores the implicit `Init` imports that are secretly inserted by Lean.)"}"}\
-    \n\nRows:\
-      {indentD m!"modules imported: {.nestD "the total number of modules that are actually \
-        imported (in a module-system aware fashion)"}"}\
-      {indentD m!"public/private/...: {.nestD "the number of modules imported at the given \
-        phase and visibility. Note that any module present at the public visibility is \
-        necessarily also present at the private visibility."}"}\
-      {indentD m!"previous modules: {.nestD "the total number of modules prior to the \
-        current module in the build graph, ignoring module system annotations."}"}\
-      {indentD m!"ir loaded: {.nestD "the IR loaded by Lean given these imports. (`meta` imports \
-        ignore module system annotations, and load the IR of all prior modules.)"}"}\
-      {indentD m!"build depth: {.nestD "the total depth of the build graph case, \
-        ignoring module system annotations."}"}"
-  let importsMsg (header : MessageData) (mods : Array WorkspaceModel.ImportWithIdx)
+    Columns:{renderDescrs columnDescrs}\
+    \n\n\
+    Rows:{renderDescrs rowDescrs}"
+  -- copyable reduced initial/final imports
+  let importsMsg (header : MessageData) (p : Provides)
       : CoreM MessageData := do
-    if mods.isEmpty then return m!""
-    let imports := Import.pretty <| mods.map (·.toImport)
+    let imports := Import.pretty <| w.toRawImports <| p.reduce w
     let copyIcon ← Widget.copyToClipboard s!"{imports}"
     Widget.collapsible m!"{header} {copyIcon}" m!"{imports}"
-
+  -- Helpful message upon writing just `#import_diff`
+  let noArgsMsg :=
+    if let `(diffCurrent|) := spec then
+      m!"Try adding and removing imports from the current imports with `+`/`-`, or comparing \
+        import blocks with `#import_diff (from ...)? to ...`.\n\n"
+    else m!""
   logInfo m!"\
+    {noArgsMsg}\
     {header}\
     {Table.formatSimple diff.toTable}\
     \n\n{legend}\
-    {← liftCoreM <| importsMsg "Initial imports" diff.directImportsTransition.initial}\
-    {← liftCoreM <| importsMsg "Final imports" diff.directImportsTransition.initial}"
+    {← liftCoreM <| importsMsg "Initial imports (reduced)" diff.providesTransition.initial}\
+    {← liftCoreM <| importsMsg "Final imports (reduced)" diff.providesTransition.final}"
 
 /-- `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
 modules `foo, bar, ...` are added to the set of imports of the file. More precisely, it computes the
@@ -371,5 +462,3 @@ elab (name := oldImportDiff) "#import_diff" n:ident* : command => do
   let import_diff := extended_all_imports.filter (· ∉ reduced_all_imports)
   let out := "\n".intercalate <| import_diff.map Name.toString |>.qsort (· < ·) |>.toList
   Lean.logInfo s!"Found {import_diff.size} additional imports:\n{out}"
-
-#import_diff
