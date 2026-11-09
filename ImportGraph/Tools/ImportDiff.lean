@@ -311,8 +311,28 @@ elab_rules : command
     logWarning m!"`#import_diff` with `+`/`-` or `from`/`to` only works in the module system.\n\n\
       Please use `#import_diff mod₁ mod₂ mod₃ ...`, or modulize this file."
     return
-  let w ← getWorkspaceModel (extraMods := #[← getMainModule])
-  if w.hasErrors then
+  -- Get the modules mentioned in the command and make sure we try to include them in the workspace
+  -- model (in case they are e.g. new files not in the root)
+  let modOfImportStx? : TSyntax ``Parser.Module.import → Option Name
+    | `(Parser.Module.import| $[public]? $[meta]? import $[all]? $mod) =>
+      let mod := mod.getId; if mod.isAnonymous then none else some mod
+    | _ => none
+  let modNames := match spec with
+    | `(diffCurrent| $items:diffCurrentItem*) => items.getElems.filterMap fun
+      | `(diffCurrentItem| +$imp)
+      | `(diffCurrentItem| -$imp) => modOfImportStx? imp
+      | _ => none
+    | `(diffAbsolute| $[from $mods₀*]? to $mods₁*) =>
+      mods₁.getElems.filterMap modOfImportStx?
+        ++ mods₀.elim #[] (·.getElems.filterMap modOfImportStx?)
+    | _ => #[]
+  let w ← getWorkspaceModel (extraMods := modNames.push <|← getMainModule)
+  -- Filter out errors saying that we couldn't read mods in `modNames`. It's nicer to report those
+  -- later, with a correct `ref`, saying we couldn't find them in the workspace.
+  let errors := w.errors.filter fun
+    | .readImportsFailure mod .. => !modNames.contains mod
+    | _ => true
+  unless errors.isEmpty do
     throwErrorAt tk m!"Errors when building the import hierarchy:\n\n\
       {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
   -- Imports of the current file:
