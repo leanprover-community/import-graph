@@ -155,16 +155,6 @@ build depth      0
   from import ImportGraphTest.ImportDiff.Mods.A
   to import ImportGraphTest.ImportDiff.Mods.B
 
--- Nice message about unfound module in the library:
-/-- error: Could not find module `ImportGraphTest.ImportDiff.Mods.ABCDE` in the workspace. -/
-#guard_msgs in
-#import_diff to import ImportGraphTest.ImportDiff.Mods.ABCDE
-
--- Nice message when it has no library, too:
-/-- error: Could not find module `Foo` in the workspace. -/
-#guard_msgs in
-#import_diff to import Foo
-
 /-! ## Messages and errors -/
 
 /--

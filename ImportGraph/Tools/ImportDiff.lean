@@ -127,8 +127,8 @@ build depth      •   •   •
 - `ir loaded`: compares the number of modules whose IR is loaded. `meta` imports cause more IR to
   be loaded, as the IR for every module above them is loaded, ignoring module system annotations.
   (Note: this is only accurate for `lake build`, as the server loads much more IR.)
-- `build depth`: compares the old and new depth of the build graph, ignoring module system
-  annotations.
+- `build depth`: compares the old and new depth of the build graph (counting the current module),
+  ignoring module system annotations.
 
 ### Notes
 
@@ -156,7 +156,7 @@ structure WorkspaceModel.ImportWithIdx extends kind : NeedsKind where
 deriving BEq, Inhabited, Repr
 
 /-- Bundle an `Import` and its module index in an ambient `WorkspaceModel` together in an
-`ImprotWithIdx`.  -/
+`ImportWithIdx`.  -/
 def WorkspaceModel.ImportWithIdx.ofImport (imp : Import) (modIdx : ModIdx) :
     WorkspaceModel.ImportWithIdx where
   kind := .ofImport imp
@@ -253,10 +253,10 @@ def WorkspaceModel.prevsOfImportWithIdxs (w : WorkspaceModel) (mods : Array Impo
 /-- Given direct imports in `ImportWithIdx`s, compute the depth of the build graph of the importing
 module. -/
 def WorkspaceModel.depthOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx) : Nat :=
-  mods.map (fun i => w.mods[i.modIdx]!.depth) |>.max?.getD <|
+  (mods.map (fun i => w.mods[i.modIdx]!.depth) |>.max?.getD <|
     -- Fall back to the depth of `Init` if no imports. Somewhat awkward to compute the depth
     -- without `Init` in the first place, though that would be preferable.
-    w.getInitModIdx?.elim 0 (w.mods[·]!.depth)
+    w.getInitModIdx?.elim 0 (w.mods[·]!.depth)) + 1
 
 /-- Given a `WorkspaceModel` and a transition between an initial and final sets of *direct*
 imports, compute the transitions and Venn diagrams in `ImportDiff`. -/
@@ -431,7 +431,7 @@ elab_rules : command
     ("ir loaded", "the IR loaded by Lean given these imports. (`meta` imports \
       ignore module system annotations, and load the IR of all prior modules.)"),
     ("build depth", "the total depth of the build graph, ignoring module system annotations. \
-      Unlike other statistics, this does include `Init`."),
+      Counts the importing module. Unlike other statistics, this does include `Init`."),
   ]
   let renderDescrs (msgs : List (String × String)) : MessageData :=
     indentD <| .bulletList <| msgs.map fun (item, content) => m!"{item}: {.nestD content}"
