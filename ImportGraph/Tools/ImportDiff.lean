@@ -5,18 +5,17 @@ Authors: Kim Morrison, Paul Lezeau, Thomas R. Murrills
 -/
 module
 
-public meta import Lean.Elab.Command
-public meta import Lean.Widget.UserWidget
-public meta import ImportGraph.Imports.ImportGraph
 public meta import ImportGraph.Imports.Pretty
 public meta import ImportGraph.Lean.MessageData
 public meta import ImportGraph.Shake.Workspace
-public meta import ImportGraph.Util.Diff
+public meta import ImportGraph.Util.Diff.Message
+public meta import ImportGraph.Util.Diff.Shake
+public meta import ImportGraph.Widget.Collapsible
+public meta import ImportGraph.Widget.Copy
 public meta import Lean.Meta.Tactic.TryThis
-public meta import Lean.Meta.Hint
-public import ImportGraph.Widget.Collapsible
-public import ImportGraph.Widget.Copy
-public import ImportGraph.Widget.GoToModule
+public import ImportGraph.Util.Diff.Basic
+public import ImportGraph.Util.TableMessage
+public import Lean.Elab.Command
 
 /-!
 # `import_diff`: comparing different import states
