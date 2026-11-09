@@ -399,9 +399,17 @@ elab_rules : command
 
   -- Message niceties:
   let header := match diff.importedVenn.compare? with
-    | some .gt => s!"Imports strictly increased.\n\n"
-    | some .lt => s!"Imports strictly decreased.\n\n"
-    | some .eq => s!"No changes to imports.\n\n"
+    | some .gt => "Imports strictly increased.\n\n"
+    | some .lt => "Imports strictly decreased.\n\n"
+    | some .eq =>
+      match diff.providesVenn.compare? with
+      | some .gt => "No changes to imported modules, \
+        but the availability of some modules increased.\n\n"
+      | some .lt => "No changes to imported modules, \
+        but the availability of some modules decreased.\n\n"
+      | some .eq => "No changes to imports.\n\n"
+      | none => "No changes to imported modules, \
+        but the availability of some modules changed.\n\n"
     | none => ""
   -- collapsible legend
   let columnDescrs := [
@@ -421,7 +429,8 @@ elab_rules : command
       current module in the build graph, ignoring module system annotations."),
     ("ir loaded", "the IR loaded by Lean given these imports. (`meta` imports \
       ignore module system annotations, and load the IR of all prior modules.)"),
-    ("build depth", "the total depth of the build graph, ignoring module system annotations."),
+    ("build depth", "the total depth of the build graph, ignoring module system annotations. \
+      Unlike other statistics, this does include `Init`."),
   ]
   let renderDescrs (msgs : List (String × String)) : MessageData :=
     indentD <| .bulletList <| msgs.map fun (item, content) => m!"{item}: {.nestD content}"
