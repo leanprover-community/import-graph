@@ -343,7 +343,6 @@ elab_rules : command
   -- Imports of the current file:
   let currentImportWithIdxs : CommandElabM (Array ImportWithIdx) := do
     (← getEnv).header.imports.filterMapM fun imp => do
-      if (`Init).isPrefixOf imp.module then return none
       let some impWithIdx := w.importWithIdx? imp
         | throwError "Could not find already-imported module `{imp.module}` in the workspace."
       pure impWithIdx
