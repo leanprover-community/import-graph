@@ -120,7 +120,8 @@ build depth      •   •   •
 - `public`/`private`/...: The count of changes to phase and visibility. Note that this might exceed
   modules imported, as the availability of a module might change between the initial and final
   state while it is imported in both. E.g., a module may have been upgraded from a private import to
-  a public import while its imported status remained unchanged.
+  a public import, or a module might now be imported as both meta and non-meta, while its imported
+  status remained unchanged.
 - `previous modules` compares the total number of prior modules in the build graph, ignoring module
   system annotations.
 - `ir loaded`: compares the number of modules whose IR is loaded. `meta` imports cause more IR to
