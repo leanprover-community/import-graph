@@ -178,7 +178,7 @@ info: The following imports in this file may be deleted:
     • public/private/...: the number of modules imported at the given phase and visibility. Note that any module present at public visibility is necessarily also present at private visibility.
     • previous modules: the total number of modules prior to the current module in the build graph, ignoring module system annotations.
     • ir loaded: the IR loaded by Lean given these imports. (`meta` imports ignore module system annotations, and load the IR of all prior modules.)
-    • build depth: the total depth of the build graph, ignoring module system annotations. Unlike other statistics, this does include `Init`.
+    • build depth: the total depth of the build graph, ignoring module system annotations. Counts the importing module. Unlike other statistics, this does include `Init`.
 ▼ Initial imports (reduced) [click-to-copy] (Will copy:
   import ImportGraphTest.ImportDiff.Mods.A)
   import ImportGraphTest.ImportDiff.Mods.A
