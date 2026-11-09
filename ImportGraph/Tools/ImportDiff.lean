@@ -339,7 +339,7 @@ elab_rules : command
     | .noLibOfModule mod => !modNames.contains mod
   unless errors.isEmpty do
     throwErrorAt tk m!"Errors when building the import hierarchy:\n\n\
-      {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
+      {m!"\n\n".joinSep (errors.map toMessageData |>.toList)}"
   -- Imports of the current file:
   let currentImportWithIdxs : CommandElabM (Array ImportWithIdx) := do
     (← getEnv).header.imports.filterMapM fun imp => do
