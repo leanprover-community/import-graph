@@ -33,6 +33,7 @@ open Lean
 
 namespace ImportGraph
 
+-- No docstring to not interfere with hovers.
 syntax diffAbsolute :=
   (&"from" ppLine sepByIndentSemicolon(Parser.Module.import))?
   &"to" ppLine sepByIndentSemicolon(Parser.Module.import)
@@ -48,6 +49,7 @@ syntax diffCurrentItem :=
   withPosition(importMinus (colGt Parser.Module.import)?)
     <|> withPosition(importPlus colGt Parser.Module.import)
 
+-- No docstring to not interfere with hovers.
 syntax diffCurrent := sepByIndentSemicolon(diffCurrentItem)
 
 /--
