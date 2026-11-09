@@ -39,6 +39,7 @@ syntax diffAbsolute :=
 
 /-- Removes one of the current imports to this file. -/
 syntax importMinus := &"-"
+/-- Adds an import to the current imports of this file. -/
 syntax importPlus := &"+"
 
 /-- An import added to (`+`) or removed from (`-`) the imports of the current file to form the
