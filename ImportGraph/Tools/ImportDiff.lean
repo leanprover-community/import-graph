@@ -458,6 +458,8 @@ elab_rules : command
     {← liftCoreM <| importsMsg "Initial imports (reduced)" diff.providesTransition.initial}\
     {← liftCoreM <| importsMsg "Final imports (reduced)" diff.providesTransition.final}"
 
+/-! ## Non-module `#import_diff` -/
+
 /-- `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
 modules `foo, bar, ...` are added to the set of imports of the file. More precisely, it computes the
 import diff between when `foo, bar, ...` are added to the imports and when `foo, bar, ...` are removed
