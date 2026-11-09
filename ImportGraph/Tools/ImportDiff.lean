@@ -327,11 +327,11 @@ elab_rules : command
         ++ mods₀.elim #[] (·.getElems.filterMap modOfImportStx?)
     | _ => #[]
   let w ← getWorkspaceModel (extraMods := modNames.push <|← getMainModule)
-  -- Filter out errors saying that we couldn't read mods in `modNames`. It's nicer to report those
+  -- Filter out errors about modules in `modNames`. It's nicer to report those
   -- later, with a correct `ref`, saying we couldn't find them in the workspace.
   let errors := w.errors.filter fun
-    | .readImportsFailure mod .. => !modNames.contains mod
-    | _ => true
+    | .readImportsFailure mod ..
+    | .noLibOfModule mod => !modNames.contains mod
   unless errors.isEmpty do
     throwErrorAt tk m!"Errors when building the import hierarchy:\n\n\
       {m!"\n\n".joinSep (w.errors.map toMessageData |>.toList)}"
