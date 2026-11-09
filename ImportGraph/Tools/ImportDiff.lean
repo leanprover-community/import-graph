@@ -13,9 +13,6 @@ public meta import ImportGraph.Util.Diff.Shake
 public meta import ImportGraph.Widget.Collapsible
 public meta import ImportGraph.Widget.Copy
 public meta import Lean.Meta.Tactic.TryThis
-public import ImportGraph.Util.Diff.Basic
-public import ImportGraph.Util.TableMessage
-public import Lean.Elab.Command
 
 /-!
 # `import_diff`: comparing different import states
