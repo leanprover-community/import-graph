@@ -134,7 +134,8 @@ build depth      •   •   •
 - Lean prepends `public import Init` and `public meta import Init` to each file behind the scenes
   (assuming you have not written `prelude`, which suppresses this behavior). However, the shared
   column (`∩`) deliberately ignores all contributions from these `Init` imports to provide a more
-  useful sense of what two import states have in common.
+  useful sense of what two import states have in common. (`build depth` is the only statistic which
+  *does* include contributions from `Init`.)
 -/
 syntax (name := importDiff) (priority := high)
   "#import_diff " (diffAbsolute <|> diffCurrent) : command
@@ -238,20 +239,23 @@ structure ImportDiff extends transitions : ImportTransition, venns : ImportVenn
 provide to the importing module). -/
 def WorkspaceModel.providesOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx)
     : Provides :=
-  let needs := mods.foldl (init := ∅) fun needs { kind, modIdx .. } =>
+  let needs := mods.foldl (init := w.initNeeds) fun needs { kind, modIdx .. } =>
     needs.union kind {modIdx}
-  w⟦w.implicitInitNeeds needs |>.linearize⟧
+  w⟦needs.linearize⟧
 
 /-- Given direct imports in `ImportWithIdx`s, compute all modules prior to the module importing
-them. -/
+them. Includes `Init` by default. -/
 def WorkspaceModel.prevsOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx)
     : ModuleBitset :=
-  mods.foldl (init := ∅) fun acc i => acc ∪ w.mods[i.modIdx]!.prevs ∪ {i.modIdx}
+  mods.foldl (init := w.initPrevs) fun acc i => acc ∪ w.mods[i.modIdx]!.prevs ∪ {i.modIdx}
 
 /-- Given direct imports in `ImportWithIdx`s, compute the depth of the build graph of the importing
 module. -/
 def WorkspaceModel.depthOfImportWithIdxs (w : WorkspaceModel) (mods : Array ImportWithIdx) : Nat :=
-  mods.map (fun i => w.mods[i.modIdx]!.depth) |>.max?.getD 0
+  mods.map (fun i => w.mods[i.modIdx]!.depth) |>.max?.getD <|
+    -- Fall back to the depth of `Init` if no imports. Somewhat awkward to compute the depth
+    -- without `Init` in the first place, though that would be preferable.
+    w.getInitModIdx?.elim 0 (w.mods[·]!.depth)
 
 /-- Given a `WorkspaceModel` and a transition between an initial and final sets of *direct*
 imports, compute the transitions and Venn diagrams in `ImportDiff`. -/

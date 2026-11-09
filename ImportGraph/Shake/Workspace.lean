@@ -49,23 +49,27 @@ def toRawImports (w : WorkspaceModel) (n : Needs) (skipInit := true) :
     out := out.push { k with module, importAll := k.isAll }
   return out
 
+/-- The index of `Init.lean`. -/
+@[inline] def getInitModIdx? (w : WorkspaceModel) : Option ModIdx :=
+  w.getModIdx? `Init
+
 /-- Every non-`prelude` file adds `public import Init` and `public meta import Init` to every file
-behind the scenes. This repesents (exactly) those two files. This should be added to any
-`base : Needs` which should represent what a typical file actually gets. Returns `base` unchanged
-if `Init` is not in the workspace model (this should be impossible). -/
-def implicitInitNeeds (w : WorkspaceModel) (base : Needs) : Needs := Id.run do
-  let some initIdx := w.getModIdx? `Init | base
-  return base.union .pub {initIdx} |>.union .metaPub {initIdx}
+behind the scenes. This repesents (exactly) those two files. This should be added to any synthetic
+`Needs` to represent what a typical file actually gets. Returns `∅` if `Init` is not in the
+workspace model (this should be impossible). -/
+def initNeeds (w : WorkspaceModel) : Needs := Id.run do
+  let some initIdx := w.getInitModIdx? | return ∅
+  return Needs.single initIdx .pub |>.union .metaPub {initIdx}
 
 /-- The transitive closure of the implicit `Init` imports added to every non-`prelude` file behind
 the scenes. -/
 @[inline] def initProvides (w : WorkspaceModel) : Provides :=
-  w⟦w.implicitInitNeeds ∅ |>.linearize⟧
+  w⟦w.initNeeds.linearize⟧
 
 /-- The modules prior to the implicit `Init` imports added to every non-`prelude` file behind
 the scenes, but including the `Init` imports themselves. (Empty if `Init` cannot be found.) -/
 @[inline] def initPrevs (w : WorkspaceModel) : ModuleBitset := Id.run do
-  let some initIdx := w.getModIdx? `Init | return ∅
+  let some initIdx := w.getInitModIdx? | return ∅
   return (w.getMod! initIdx |>.prevs) ∪ {initIdx}
 
 /-- Given a `Needs`, the `IR` which loading such a `Needs` would provide. Recall that
