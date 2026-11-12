@@ -32,7 +32,7 @@ private def getNumberOfDeclsPerFile (env: Environment) : NameMap Nat := Id.run d
     let mod := env.allImportedModuleNames[idx]!
     for n in env.header.moduleData[idx].constNames do
       unless isBlackListed env n do
-        acc := acc.insert mod ((acc.getD mod 0) + 1)
+        acc := acc.alter mod fun count? => some <| count?.getD 0 + 1
   return acc
 
 /-- Gexf template for a node in th graph. -/
