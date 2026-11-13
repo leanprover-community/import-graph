@@ -22,6 +22,7 @@ import ImportGraphTest.NormImports
 import ImportGraphTest.NoLakeAxioms
 import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Shake.Workspace
+import ImportGraphTest.TableMessage
 import ImportGraphTest.ToTarget
 import ImportGraphTest.Unused
 import ImportGraphTest.Used
