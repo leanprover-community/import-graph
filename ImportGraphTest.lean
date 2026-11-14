@@ -4,6 +4,7 @@ import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FindHome.Viewpoint
 import ImportGraphTest.FromSource
 import ImportGraphTest.Html
+import ImportGraphTest.ImportDiff.Test
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.MinImports.Basic
@@ -22,6 +23,7 @@ import ImportGraphTest.NormImports
 import ImportGraphTest.NoLakeAxioms
 import ImportGraphTest.Shake.Algebra
 import ImportGraphTest.Shake.Workspace
+import ImportGraphTest.TableMessage
 import ImportGraphTest.ToTarget
 import ImportGraphTest.Unused
 import ImportGraphTest.Used

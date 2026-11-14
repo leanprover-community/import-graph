@@ -120,12 +120,14 @@ structure Module extends ModuleHeader where
   /-- Dependency arrows: Every module that must be built before the current module. -/
   prevs : ModuleBitset
   -- TODO: consider calculating lazily instead of eagerly.
+  /-- Dependency statistic: The longest chain of modules that must be built before building this module, including this module. -/
+  depth : Nat
   /-- Dependency statistic: Per library, the longest chain of modules from that library that must
-  be built before building this modules, including this module. `0` indicates non-dependence on the
+  be built before building this module, including this module. `0` indicates non-dependence on the
   library. The `Array` index is the library's `LibIdx`. -/
   depthsPerLib : Array Nat
   /-- Dependency statistic: Per package, the longest chain of modules from a given package that
-  must be built before building this modules, including this module. `0` indicates non-dependence on the package. The `Array` index is the package's `PkgIdx`. -/
+  must be built before building this module, including this module. `0` indicates non-dependence on the package. The `Array` index is the package's `PkgIdx`. -/
   depthsPerPkg : Array Nat
   /-- Workspace relation: The library this module belongs to. -/
   libIdx : LibIdx

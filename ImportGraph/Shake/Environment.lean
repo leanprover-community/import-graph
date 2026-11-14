@@ -42,6 +42,11 @@ def implicitInitNeeds (env : Environment) (base : Needs) : Needs := Id.run do
   let some initIdx := env.getModuleIdx? `Init | base
   return base.union .pub {initIdx} |>.union .metaPub {initIdx}
 
+/-- The transitive closure of the implicit `Init` imports added to every non-`prelude` file behind
+the scenes. NOTE: This assumes `Init` can be found. It will be empty in e.g. a `prelude` file. -/
+@[inline] def transInitNeeds (env : Environment) (transDeps : ArrayHierarchy) : Needs :=
+  transDeps⟦env.implicitInitNeeds ∅⟧
+
 /-- Computes the transitive closure of a set of imports with respect to an import hierarchy
 `transDeps`, as far as the environment allows. -/
 def transitiveClosureOf (env : Environment)

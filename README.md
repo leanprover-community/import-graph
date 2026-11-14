@@ -66,12 +66,14 @@ There are a few commands implemented, which help you analysing the imports of a 
 * `#min_imports`: attempts to construct a minimal set of imports for the commands in the current file, and suggests the result. This may be run at any point in the file, and will still take the whole file into account.
 * `#find_home for <cmd>`: suggests files higher up in the import hierarchy to which the command and any dependencies from the same file could be moved.
 * `#show_imports for <cmd>`: shows the minimal imports needed for a given command, and allows clicking to copy the imports. Also shows new constants produced by the command and shake records.
+* `#import_diff` reports module-system-aware statistics comparing some initial imports to some final imports.
+  * `#import_diff +public import Foo; -meta import Bar; ...` takes the current file's imports as the initial imports and modifies them with `+`/`-` to produce the final imports.
+  * `#import_diff from public meta import Baz; ... to public import Bar; ...` takes the import block after `from` as the initial imports and the import block after `to` as the final imports, without regard to the current file's imports. (If `from` is omitted, the current file's imports are taken as the initial imports.)
 
 **Commands not yet aware of the module system:**
 
 * `#redundant_imports`: lists any transitively redundant imports in the current module.
-* `#import_diff foo bar ...` computes the new transitive imports that are added to a given file when
-  modules `foo, bar, ...` are added to the set of imports of the file.
+* `#import_diff foo bar ...` works outside of the module system, and computes the new transitive imports that are added to a given file when modules `foo, bar, ...` are added to the set of imports of the file.
 
 ## Widgets
 

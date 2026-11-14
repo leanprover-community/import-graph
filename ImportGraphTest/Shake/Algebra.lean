@@ -7,6 +7,7 @@ module
 
 public meta import ImportGraph.Shake.Algebra
 public meta import Lean.Elab.Command
+public meta import ImportGraph.Util.TableMessage
 
 /-!
 # Tests for the import hierarchy algebra
@@ -35,26 +36,26 @@ def NeedsKind.allPairs : Array (NeedsKind × NeedsKind) :=
 def pad (n : Nat) (s : String) : String := s ++ "".pushn ' ' (n - s.length)
 
 /-- The composition table of `NeedsKind.andThen`, with the first factor on the left. -/
-meta def compositionTable : String :=
-  let row (cells : List String) := (String.join <| cells.map (pad 7)).trimAsciiEnd.toString
+meta def compositionTable : String := Id.run do
   -- push meta to the end instead of `all` for a cleaner table
-  let ks := NeedsKind.all.insertionSort (!·.isMeta && ·.isMeta) |>.toList
-  "\n".intercalate <|
-    row ("(↓) ≫ (→) " :: ks.map shortName) ::
-      ks.map fun k₁ =>
-        row <| pad 10 (shortName k₁) :: ks.map fun k₂ =>
-          if h : k₁.target = k₂.source then shortName (andThen k₁ k₂) else "-"
+  let ks := NeedsKind.all.insertionSort (!·.isMeta && ·.isMeta)
+  let mut rows : Array (Table.Row (1 + ks.size)) :=
+    #[#v["(↓) ≫ (→)"] ++ ks.toVector.map shortName]
+  rows := rows ++ ks.map fun k₁ =>
+    #v[shortName k₁] ++ (ks.toVector.map fun k₂ =>
+      if h : k₁.target = k₂.source then shortName (k₁.andThen k₂) else "-")
+  Table.formatSimple rows
 
 /--
 info:
 
-(↓) ≫ (→) pub    priv   all    𝓶pub   𝓶priv  𝓶all
-pub       pub    priv   -      𝓶pub   𝓶priv  -
-priv      -      -      priv   -      -      𝓶priv
-all       -      -      all    -      -      𝓶all
-𝓶pub      𝓶pub   𝓶priv  -      𝓶pub   𝓶priv  -
-𝓶priv     -      -      𝓶priv  -      -      𝓶priv
-𝓶all      -      -      𝓶all   -      -      𝓶all
+(↓) ≫ (→) pub  priv  all   𝓶pub 𝓶priv 𝓶all
+pub       pub  priv  -     𝓶pub 𝓶priv -
+priv      -    -     priv  -    -     𝓶priv
+all       -    -     all   -    -     𝓶all
+𝓶pub      𝓶pub 𝓶priv -     𝓶pub 𝓶priv -
+𝓶priv     -    -     𝓶priv -    -     𝓶priv
+𝓶all      -    -     𝓶all  -    -     𝓶all
 -/
 #guard_msgs in
 #eval IO.println s!"\n\n{compositionTable}"
@@ -165,7 +166,7 @@ protected def Needs.randM (hierarchySize : Nat)
 
 -- TODO: should maybe choose randomly how many are in each "layer"?
 /-- A topologically sorted array of needs, i.e. one in which each `Needs` only refers to prior
-ones. If the config is `none`, it's randomized each time. This allows for more module-tomodule
+ones. If the config is `none`, it's randomized each time. This allows for more module-to-module
 variation in quality, perhaps more like a real repo. -/
 def Needs.randArrayM (hierarchySize : Nat)
     (cfg? : Option RandNeedsConfig := none) :
