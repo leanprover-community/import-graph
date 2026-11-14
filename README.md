@@ -70,9 +70,9 @@ There are a few commands implemented, which help you analysing the imports of a 
   * `#import_diff +public import Foo; -meta import Bar; ...` takes the current file's imports as the initial imports and modifies them with `+`/`-` to produce the final imports.
   * `#import_diff from public meta import Baz; ... to public import Bar; ...` takes the import block after `from` as the initial imports and the import block after `to` as the final imports, without regard to the current file's imports. (If `from` is omitted, the current file's imports are taken as the initial imports.)
 
-**Commands not yet aware of the module system:**
+**Commands outside the module system:**
 
-* `#redundant_imports`: lists any transitively redundant imports in the current module.
+* `#redundant_imports`: lists any transitively redundant imports in the current module. Superseded by `#norm_imports` in the module system.
 * `#import_diff foo bar ...` works outside of the module system, and computes the new transitive imports that are added to a given file when modules `foo, bar, ...` are added to the set of imports of the file.
 
 ## Widgets
