@@ -12,11 +12,11 @@ public import Lean.CoreM
 TODO: Some declarations in this file are duplicated from mathlib, but especially `isBlacklisted`
 is deemed to specific for upstreaming to Batteries.
 -/
-namespace Lean.Name
+namespace ImportGraph
 
 open Lean Meta Elab
 
-namespace ImportGraph
+namespace Lean.Name
 
 /-- Note: copied from `Mathlib.Lean.Name` -/
 private def isBlackListed (declName : Name) : CoreM Bool := do
@@ -56,11 +56,25 @@ public def allNamesByModule (p : Name → Bool) : CoreM (Std.HashMap Name (Array
     else
       return names
 
+end ImportGraph.Lean.Name
+
+section deprecated
+
+namespace Lean.Name.ImportGraph
+
+@[deprecated ImportGraph.Lean.Name.allNamesByModule (since := "2026-11-14")]
+public abbrev allNamesByModule := ImportGraph.Lean.Name.allNamesByModule
+
+@[deprecated ImportGraph.Lean.Name.allNames (since := "2026-11-14")]
+public abbrev allNames := ImportGraph.Lean.Name.allNames
+
 /-- Returns the very first part of a name: for `ImportGraph.Lean.NameMap` it
-returns `ImportGraph`.
--/
+returns `ImportGraph`. -/
+@[deprecated Lean.Name.getRoot +typeChanged (since := "2026-11-14")]
 public def getModule (name : Name) (s := "") : Name :=
   match name with
     | .anonymous => .mkSimple s
     | .num _ _ => panic s!"panic in `getModule`: did not expect numerical name: {name}."
     | .str pre s => getModule pre s
+
+end Lean.Name.ImportGraph
