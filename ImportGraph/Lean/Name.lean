@@ -70,7 +70,9 @@ public abbrev allNames := ImportGraph.Lean.Name.allNames
 
 /-- Returns the very first part of a name: for `ImportGraph.Lean.NameMap` it
 returns `ImportGraph`. -/
-@[deprecated Lean.Name.getRoot +typeChanged (since := "2026-11-14")]
+@[deprecated Lean.Name.getRoot
+  "Use `Lean.Name.getRoot`; if using the `s : String` parameter, check for `Name.anonymous`."
+  +typeChanged (since := "2026-11-14")]
 public def getModule (name : Name) (s := "") : Name :=
   match name with
     | .anonymous => .mkSimple s
