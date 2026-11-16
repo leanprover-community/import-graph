@@ -13,6 +13,7 @@ rev = "v4.36.0-rc2"
 
 [[lean_lib]]
 name = "ImportGraph"
+precompileLibrary = true
 
 [[lean_lib]]
 name = "ImportGraphLake"
