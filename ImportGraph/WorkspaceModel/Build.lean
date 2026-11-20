@@ -103,6 +103,7 @@ private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceMod
   let mut transDeps := Needs.reflOf modIdx
   let mut prevs := ∅
   -- TODO: dynamically extend arrays?
+  let mut depth := 0
   let mut depthsPerLib := Array.replicate wm.libs.size 0
   let mut depthsPerPkg := Array.replicate wm.packages.size 0
   for imp in header.imports do
@@ -113,14 +114,16 @@ private partial def collect (mod : Name) (wm : WorkspaceModel) : IO WorkspaceMod
       transPkgDeps := transPkgDeps ∪ impModData.transPkgDeps ∪ {impModData.pkgIdx}
       transDeps := transDeps ∪ impModData.transDeps ≫ imp
       prevs := prevs ∪ impModData.prevs ∪ {j}
+      depth := max depth impModData.depth
       depthsPerLib := depthsPerLib.zipWith max impModData.depthsPerLib
       depthsPerPkg := depthsPerPkg.zipWith max impModData.depthsPerPkg
   transDeps := transDeps.linearize
+  depth := depth + 1
   depthsPerLib := depthsPerLib.modify libIdx (· + 1)
   depthsPerPkg := depthsPerPkg.modify pkgIdx (· + 1)
   let isPrelude := !(hasImplicitInit header)
   let modData : WorkspaceModel.Module := { header with
-    name := mod, srcFile, isPrelude, prevs, depthsPerLib, depthsPerPkg
+    name := mod, srcFile, isPrelude, prevs, depth, depthsPerLib, depthsPerPkg
     transDeps, transLibDeps, transPkgDeps, libIdx, pkgIdx }
   return { wm with
     idxOfMod := wm.idxOfMod.insert mod modIdx

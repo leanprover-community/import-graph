@@ -4,6 +4,7 @@ import ImportGraphTest.FileWithTransitiveImports
 import ImportGraphTest.FindHome.Viewpoint
 import ImportGraphTest.FromSource
 import ImportGraphTest.Html
+import ImportGraphTest.ImportDiff.Test
 import ImportGraphTest.Imports
 import ImportGraphTest.ImportPretty
 import ImportGraphTest.MinImports.Basic

@@ -43,12 +43,11 @@ open Lean System ImportGraph
   return header.imports.map Import.module |>.filter
     fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest]
 
-/--
-info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Imports.ImportGraph, `ImportGraph.Tools.ImportDiff]
--/
+/-- info: #[`ImportGraphTest.Unused, `ImportGraphTest.Used, `ImportGraph.Tools.ImportDiff] -/
 #guard_msgs in
 #eval do
   let transitive ← findTransitiveImportsFromSource "ImportGraphTest/FileWithTransitiveImports.lean"
-  -- Filter to only ImportGraph modules
-  let filtered := transitive.toArray.filter (fun (n : Name) => n.getRoot ∈ [`ImportGraph, `ImportGraphTest])
+  -- Filter to only ImportGraph.Tools and ImportGraphTest modules
+  let filtered := transitive.toArray.filter fun (n : Name) =>
+    (`ImportGraph.Tools).isPrefixOf n || (`ImportGraphTest).isPrefixOf n
   return filtered.qsort Name.lt
