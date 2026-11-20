@@ -301,6 +301,9 @@ Rephrasing of `f (n.get k)` for readability. -/
 @[inline] def foldWithKind (n : Needs) (f : α → NeedsKind → Bitset → α) (init : α) : α :=
   NeedsKind.all.foldl (init := init) fun a k => n.applyAt k (f a k)
 
+/-- The union of all bitsets in a `Needs`-/
+def flatten (n : Needs) : Bitset := n.fold (· ∪ ·) (init := ∅)
+
 /-- Applies `f` to all component `Bitset`s of the given `Needs`. -/
 @[specialize f] def map (n : Needs) (f : Bitset → Bitset) : Needs where
   pub      := f n.pub
@@ -429,6 +432,17 @@ instance : ToString NeedsKind where
     | .privOfPriv     => "all"
     | .metaPrivOfPriv => "meta all"
 
+/-- The prefix to the import command corresponding to the import. If `clarifyPriv` is `true`,
+(default `false`), we include "`private`" in front of private imports. This is useful in display
+situations, even though it is not a valid form of `import`. -/
+def toImportString (clarifyPriv := false) : NeedsKind → String
+  | .pub      => "public import"
+  | .metaPub  => "public meta import"
+  | .priv     => s!"{if clarifyPriv then "private " else ""}import"
+  | .metaPriv => s!"{if clarifyPriv then "private " else ""}meta import"
+  | .privOfPriv     => "import all"
+  | .metaPrivOfPriv => "meta import all"
+
 /-- The `NeedsKind`s which land (directly) in the private scope. -/
 @[inline, expose, grind] def toPrivate   : Array NeedsKind :=
   #[.priv, .privOfPriv, .metaPriv, .metaPrivOfPriv]
@@ -530,4 +544,16 @@ def connecting? (src tgt : Environment.Visibility) (isMeta : Bool := false) : Op
   | .private, .private => some { isExported := false, isMeta, isAll := true }
   | .private, .public  => none
 
-end ImportGraph.Shake.NeedsKind
+end NeedsKind
+
+namespace Provides
+
+/-- Intersects each field of two `Provides`.
+
+Generally, intersection is not meaningful on a bare `Needs`, but is meaningful on a
+transitively closed and linearized `Provides`.
+
+We avoid making this an instance of `Inter` to avoid `a ∩ b` succeeding on `Needs`. -/
+@[inline] def inter (a b : Provides) := a.map₂ b (· ∩ ·)
+
+end Provides

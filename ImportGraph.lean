@@ -23,6 +23,7 @@ public import ImportGraph.Shake.DeclNeeds
 public import ImportGraph.Shake.EnvExtension
 public import ImportGraph.Shake.Environment
 public import ImportGraph.Shake.Workspace
+public import ImportGraph.Util.Diff
 public import ImportGraph.Util.FindSorry
 public import ImportGraph.Util.TableMessage
 public import ImportGraph.WorkspaceModel.Base
